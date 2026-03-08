@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, redirect
 import sqlite3
+from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 
@@ -19,6 +20,8 @@ def signup():
         child_dob = request.form["child_dob"]
         password = request.form["password"]
 
+        hashed_password = generate_password_hash(password)
+
         # Connect to the database
         conn = sqlite3.connect("app.db")
         cursor = conn.cursor() # tells it what to add to the database
@@ -28,7 +31,7 @@ def signup():
             """
             INSERT INTO users (username, email, password, parent_name, child_name, child_dob) VALUES (?, ?, ?, ?, ?, ?)
             """, 
-            (username, email, parent_name, child_name, child_dob, password)
+            (username, email, hashed_password, parent_name, child_name, child_dob)
         ) 
 
         # Commit the changes to db and close

@@ -1,3 +1,19 @@
+:root {
+    --orange-primary: #fda330;
+    --orange-light: #feba44;
+    --orange-hover1: #fa9837;
+    --orange-hover2: #ff8f1f;
+
+    --blue-primary: #5021fb;
+    --blue-light: #4a62ea;
+    --blue-hover1: #4013e2;
+    --blue-hover2: #3005cb;
+
+    --text-gray: rgba(114,114,114,0.92);
+    --link-blue: #7ebee2;
+    --link-blue-hover: #4a97c4;
+}
+
 html {
     height: 100%;
     margin: 0;
