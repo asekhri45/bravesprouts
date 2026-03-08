@@ -26,9 +26,9 @@ def signup():
         # Sqlite Injections/Execute database code
         cursor.execute(
             """
-            INSERT INTO users (email, username, password, parent_name, child_name, child_dob) VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO users (username, email, password, parent_name, child_name, child_dob) VALUES (?, ?, ?, ?, ?, ?)
             """, 
-            (email, username, parent_name, child_name, child_dob, password)
+            (username, email, parent_name, child_name, child_dob, password)
         ) 
 
         # Commit the changes to db and close

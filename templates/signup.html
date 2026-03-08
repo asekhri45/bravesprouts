@@ -11,6 +11,13 @@
             <form method="POST">
 
                 <div class="input-box">
+                    <input type="text" name="username" id="username" required>
+                    <span>Username</span>
+                    <i></i>
+                    <img src="{{ url_for('static', filename='images/lockiconblue.svg') }}" class="input-icon">
+                </div>
+
+                <div class="input-box">
                     <input type="text" name="parent_name" id="parent_name" required>
                     <span>Parent Name</span>
                     <i></i>
