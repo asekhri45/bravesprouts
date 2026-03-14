@@ -1,43 +1,67 @@
-{% extends "base.html" %}
-{% block body_class %}login-page{% endblock %}
-{% block content %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BraveSprouts Login</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/loging.css') }}">
+</head>
+<body>
+  <div class="page">
+    <header class="topbar">
+      <img src="{{ url_for('static', filename='images/logo_v2.png') }}" class="logo">
 
-<div class="contain">
-    <div class="login-card">
+      <a href="/" class="back-home">← Back to Home</a>
+    </header>
 
-        <div class="form-container">
-            <h1>Welcome back&nbsp;&nbsp;👋</h1>
+    <main class="login-layout">
+      <section class="login-card">
+        <h1>Welcome back!</h1>
+        <p class="subtitle">Continue your child’s journey with BraveSprouts</p>
 
-            <form method="POST">
+        <form class="login-form">
+          <div class="input-group">
+            <img src="{{ url_for('static', filename='images/emailiconblue.svg') }}" class="input-icon">
+            <input type="email" placeholder="Email address" />
+          </div>
 
-                <div class="input-box">
-                    <input type="email" name="email" required>
-                    <span>Email</span>
-                    <i></i>
-                    <img src="{{ url_for('static', filename='images/emailicon.svg') }}" class="input-icon">
-                </div>
+          <div class="input-group">
+            <img src="{{ url_for('static', filename='images/lockiconblue.svg') }}" class="input-icon">
+            <input type="password" id="password" placeholder="Password">
 
-                <div class="input-box">
-                    <input type="password" name="password" required>
-                    <span>Password</span>
-                    <i></i>
-                    <img src="{{ url_for('static', filename='images/lockicon.svg') }}" class="input-icon">
-                </div>
+            <img src="{{ url_for('static', filename='images/eye-closed.png') }}" class="password-toggle" id="togglePassword"></div>
+          <div class="form-row">
+            <label class="remember-me">
+              <input type="checkbox" checked />
+              <span>Remember me</span>
+            </label>
 
-                <p class="forgot-password">
-                    <a href="#">Forgot Password?</a>
-                </p>
+            <a href="#" class="forgot-link">Forgot password?</a>
+          </div>
 
-                <input type="submit" value="Let's Practice ⌯⌲" class="submit_button">
-
-            </form>
-
-            <p class="signup-text">
-                Don't have an account? <a href="{{ url_for('signup') }}">Sign up</a>
-            </p>
+        <div class="login-buttons">
+            <button type="submit" class="login-btn">LOG IN ⌯⌲</button>
         </div>
+        </form>
 
-    </div>
-</div>
+        <div class="signup-row">
+          <span>Don’t have an account?</span>
+          <a href="/signup">Get started →</a>
+        </div>
+      </section>
 
-{% endblock %}
+      <section class="illustration-area">
+        <div class="bg-circle big"></div>
+        <div class="bg-circle small"></div>
+        <div class="bg-blob"></div>
+        <div class="sparkle sparkle-1">✦</div>
+        <div class="sparkle sparkle-2">✦</div>
+
+          <img src="{{ url_for('static', filename='images/star.png') }}" class="image-placeholder"></div>
+
+      </section>
+    </main>
+  </div>
+</body>
+</html>

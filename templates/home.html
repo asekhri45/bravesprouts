@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title> Bravesprouts </title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/home.css') }}?v=2">
+</head>
+
+<body class="{% block body_class %}{% endblock %}">
+    <header class="navbar">
+        <div class="nav-inner">
+
+        <img src="{{ url_for('static', filename='images/logo_v2.png') }}" class="logo">
+
+        <div class="nav-buttons">
+            <a href="/signup" class="hero-btn primary">Get Started</a>
+            <a href="/login" class="hero-btn secondary">Login</a>
+        </div>
+
+    </div>
+    </header>
+
+    <main class="hero-section">
+        <div class="hero-container">
+
+            <div class="hero-image">
+                <img src="{{ url_for('static', filename='images/heroimage_2.gif') }}" alt="BraveSprouts hero illustration">
+            </div>
+
+            <div class="hero-text">
+                <h1>Help Kids Practice Real Conversations</h1>
+
+                <p>
+                    BraveSprouts helps children build confidence speaking through guided AI conversations, with evolving and interactive animated characters.
+                </p>
+
+                <div class="hero-buttons">
+                    <a href="/signup" class="hero-btn primary">Get Started</a>
+                    <a href="/login" class="hero-btn secondary">I Already Have an Account</a>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <section class="feature-strip">
+        <div class="feature-strip-track">
+            <div class = "group">
+            <div class="feature-item">
+                <img src="{{ url_for('static', filename='images/26convos.gif') }}" alt="Real-world conversations" class="feature-image">
+                <div class="feature-text">
+                    <span class="feature-number">26</span>
+                    <p class="feature-label">Real-World<br>Scenarios</p>
+                </div>
+            </div>
+
+            <div class="feature-divider"></div>
+
+            <div class="feature-item">
+                <img src="{{ url_for('static', filename='images/4chars.gif') }}" alt="Interactive characters" class="feature-image">
+                <div class="feature-text">
+                    <span class="feature-number">4</span>
+                    <p class="feature-label">Interactive<br>Characters</p>
+                </div>
+            </div>
+
+            <div class="feature-divider"></div>
+
+            <div class="feature-item">
+                <img src="{{ url_for('static', filename='images/3scenes.png') }}" alt="Everyday settings" class="feature-image settings-image">
+                <div class="feature-text">
+                    <span class="feature-number">3</span>
+                    <p class="feature-label">Everyday<br>Settings</p>
+                </div>
+            </div>
+
+            <div class="feature-divider"></div>
+
+            <div class="feature-item">
+                <img src="{{ url_for('static', filename='images/26convos.gif') }}" alt="Real-world conversations" class="feature-image">
+                <div class="feature-text">
+                    <span class="feature-number">26</span>
+                    <p class="feature-label">Real-World<br>Scenarios</p>
+                </div>
+            </div>
+
+            <div class="feature-divider"></div>
+
+            <div class="feature-item">
+                <img src="{{ url_for('static', filename='images/4chars.gif') }}" alt="Interactive characters" class="feature-image">
+                <div class="feature-text">
+                    <span class="feature-number">4</span>
+                    <p class="feature-label">Interactive<br>Characters</p>
+                </div>
+            </div>
+
+            <div class="feature-divider"></div>
+
+           <div class="feature-item">
+                <img src="{{ url_for('static', filename='images/3scenes.png') }}" alt="Everyday settings" class="feature-image settings-image">
+                <div class="feature-text">
+                    <span class="feature-number">3</span>
+                    <p class="feature-label">Everyday<br>Settings</p>
+                </div>
+            </div>
+
+            <div class="feature-divider"></div>
+
+        </div>
+
+        <div aria-hidden class = "group">
+            <div class="feature-item">
+                <img src="{{ url_for('static', filename='images/26convos.gif') }}" alt="Real-world conversations" class="feature-image">
+                <div class="feature-text">
+                    <span class="feature-number">26</span>
+                    <p class="feature-label">Real-World<br>Scenarios</p>
+                </div>
+            </div>
+
+            <div class="feature-divider"></div>
+
+            <div class="feature-item">
+                <img src="{{ url_for('static', filename='images/4chars.gif') }}" alt="Interactive characters" class="feature-image">
+                <div class="feature-text">
+                    <span class="feature-number">4</span>
+                    <p class="feature-label">Interactive<br>Characters</p>
+                </div>
+            </div>
+
+            <div class="feature-divider"></div>
+
+            <div class="feature-item">
+                <img src="{{ url_for('static', filename='images/3scenes.png') }}" alt="Everyday settings" class="feature-image settings-image">
+                <div class="feature-text">
+                    <span class="feature-number">3</span>
+                    <p class="feature-label">Everyday<br>Settings</p>
+                </div>
+            </div>
+
+            <div class="feature-divider"></div>
+
+            <div class="feature-item">
+                <img src="{{ url_for('static', filename='images/26convos.gif') }}" alt="Real-world conversations" class="feature-image">
+                <div class="feature-text">
+                    <span class="feature-number">26</span>
+                    <p class="feature-label">Real-World<br>Scenarios</p>
+                </div>
+            </div>
+
+            <div class="feature-divider"></div>
+
+            <div class="feature-item">
+                <img src="{{ url_for('static', filename='images/4chars.gif') }}" alt="Interactive characters" class="feature-image">
+                <div class="feature-text">
+                    <span class="feature-number">4</span>
+                    <p class="feature-label">Interactive<br>Characters</p>
+                </div>
+            </div>
+
+            <div class="feature-divider"></div>
+
+           <div class="feature-item">
+                <img src="{{ url_for('static', filename='images/3scenes.png') }}" alt="Everyday settings" class="feature-image settings-image">
+                <div class="feature-text">
+                    <span class="feature-number">3</span>
+                    <p class="feature-label">Everyday<br>Settings</p>
+                </div>
+            </div>
+
+            <div class="feature-divider"></div>
+
+        </div>
+
+        </div>
+    </section>
+    <section class="approach-section">
+    <div class="approach-container">
+
+        <div class="approach-row reveal">
+            <div class="approach-visual">
+                <div class="approach-decor decor-one"></div>
+                <div class="approach-decor decor-two"></div>
+                <img src="{{ url_for('static', filename='images/star1.png') }}" class="floating-image">
+            </div>
+
+            <div class="approach-text">
+                <h2>start with the star</h2>
+                <p>
+                    With the help of a parent, children first interact with the BraveSprouts star through
+                    simple games and playful activities. This stage focuses on helping the child feel
+                    comfortable, safe, and familiar with the experience.
+                </p>
+            </div>
+        </div>
+
+        <div class="approach-row reverse reveal">
+            <div class="approach-visual">
+                <div class="approach-decor decor-one"></div>
+                <div class="approach-decor decor-two"></div>
+                <img src="{{ url_for('static', filename='images/stage2.gif') }}" class="floating-image">
+            </div>
+
+            <div class="approach-text two">
+                <h2>meet new friends</h2>
+                <p>
+                    Once the child feels more at ease, the star introduces additional characters through
+                    interactive games and guided activities. Each new character gently expands the child's
+                    comfort zone while keeping the experience playful.
+                </p>
+            </div>
+        </div>
+
+        <div class="approach-row reveal">
+            <div class="approach-visual">
+                <div class="approach-decor decor-one"></div>
+                <div class="approach-decor decor-two"></div>
+                <img src="{{ url_for('static', filename='images/teacheranimation.gif') }}" class="floating-image">
+            </div>
+
+            <div class="approach-text">
+                <h2>practice conversations</h2>
+                <p>
+                    After meeting the characters, children begin practicing short guided conversations.
+                    These scenarios are supportive and structured, helping kids respond and participate
+                    while building confidence step by step.
+                </p>
+            </div>
+        </div>
+
+        <div class="approach-row reverse reveal">
+            <div class="approach-visual">
+                <div class="approach-decor decor-one"></div>
+                <div class="approach-decor decor-two"></div>
+                <img src="{{ url_for('static', filename='images/4th.gif') }}" class="floating-image">
+            </div>
+
+            <div class="approach-text two">
+                <h2>speak with confidence</h2>
+                <p>
+                    As confidence grows, conversations become more realistic and dynamic. Characters,
+                    voices, and situations gradually resemble real-life interactions, preparing children
+                    for everyday speaking moments.
+                </p>
+            </div>
+        </div>
+
+    </div>
+    </section>
+    <section class="bottom-cta">
+
+    <div class="bottom-cta-content reveal">
+        <h2>Ready to help your child speak with confidence?</h2>
+
+        <p>
+            Start playful conversations, build comfort step-by-step,
+            and help your child grow toward real-world speaking.
+        </p>
+
+        <a href="/signup" class="hero-btn primary bottom-cta-btn">
+            Get Started
+        </a>
+    </div>
+
+    <div class="bottom-cta-image">
+        <img src="{{ url_for('static', filename='images/ctabottom.gif') }}" alt="BraveSprouts illustration">
+    </div>
+
+    <div class="bottom-cta-ground"></div>
+
+    </section>
+    <script src="{{ url_for('static', filename='js/nav-bar.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/approach-animation.js') }}"></script>
+</body>
+
+</html>

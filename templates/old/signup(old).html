@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block body_class %}register-page{% endblock %}
+{% block content %}
+
+<div class="contain">
+    <div class="login-card">
+
+        <div class="form-container">
+            <h1>Welcome&nbsp;&nbsp;👋</h1>
+
+            <form method="POST">
+
+                <div class="input-box">
+                    <input type="text" name="username" id="username" required>
+                    <span>Username</span>
+                    <i></i>
+                    <img src="{{ url_for('static', filename='images/lockiconblue.svg') }}" class="input-icon">
+                </div>
+
+                <div class="input-box">
+                    <input type="text" name="parent_name" id="parent_name" required>
+                    <span>Parent Name</span>
+                    <i></i>
+                    <img src="{{ url_for('static', filename='images/lockiconblue.svg') }}" class="input-icon">
+                </div>
+
+                <div class="child-info-row">
+                    <div class="input-box">
+                        <input type="text" name="child_name" id="child_name" required>
+                        <span>Child Name</span>
+                    <i></i>
+                    <img src="{{ url_for('static', filename='images/lockiconblue.svg') }}" class="input-icon">
+                    </div>
+
+                    <div class="input-box">
+                        <input type="date" name="child_dob" id="child_dob" required>
+                        <span>Child Date of Birth</span>
+                        <i></i>
+                        <img src="{{ url_for('static', filename='images/lockiconblue.svg') }}" class="input-icon">
+                    </div>
+                </div>
+                     
+                
+                <div class="input-box">
+                    <input type="email" name="email" required>
+                    <span>Email</span>
+                    <i></i>
+                    <img src="{{ url_for('static', filename='images/emailiconblue.svg') }}" class="input-icon">
+                </div>
+
+                <div class="input-box">
+                    <input type="password" name="password" id="password" required>
+                    <span>Password</span>
+                    <i></i>
+                    <img src="{{ url_for('static', filename='images/lockiconblue.svg') }}" class="input-icon">
+                </div>
+
+                <div class="input-box">
+                    <input type="password" name="confirm_password" id="confirm_password" required>
+                    <span>Confirm Password</span>
+                    <i></i>
+                    <img src="{{ url_for('static', filename='images/lockiconblue.svg') }}" class="input-icon">
+                </div>
+
+                <input type="submit" value="Let's Practice ⌯⌲" class="submit_button">
+
+            </form>
+
+            <p class="login-text">
+                Already have an account? <a href="{{ url_for('login') }}">Login</a>
+            </p>
+        </div>
+
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/register.js') }}"></script>
+
+{% endblock %}
