@@ -296,7 +296,7 @@ input, button, textarea, select, a {
 .image-placeholder {
     position: relative;
     z-index: 3;
-    width: 700px;
+    width: 550px;
     height: auto;
     display: flex;
     align-items: center;
@@ -305,7 +305,7 @@ input, button, textarea, select, a {
     font-weight: 700;
     letter-spacing: 1px;
     text-align: center;
-    margin-left: 100px;
+    margin-left: 0px;
     padding: 18px;
 }
 
