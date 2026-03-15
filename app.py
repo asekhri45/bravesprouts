@@ -2,8 +2,32 @@ from flask import Flask, render_template, request, redirect
 import sqlite3
 from werkzeug.security import generate_password_hash, check_password_hash
 
+from flask_talisman import Talisman
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+
 app = Flask(__name__)
 
+# HTTP Security Policies
+csp = {
+    "default-src": "'self'",
+    "script-src": "'self'",
+    "style-src": "'self'"
+}
+
+Talisman(app, content_security_policy=csp)
+
+# RATE Limiting
+limiter = Limiter(
+    get_remote_address,
+    app = app,
+    default_limits=["200 per day", "50 per hour"]
+)
+
+
+
+
+# ROUTES 
 @app.route("/")
 def home():
     return render_template("home.html")
