@@ -106,6 +106,7 @@ input, button, textarea, select, a {
 /* ── Card ── */
 
 .login-card {
+    z-index: 10;
     width: 100%;
     max-width: 700px;
     background: var(--color-card-bg);
@@ -326,8 +327,8 @@ input[type="date"]:valid {
 .image-placeholder {
     position: relative;
     z-index: 3;
-    width: 414px;
-    height: 414px;
+    width: 750px;
+    height: auto;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -335,6 +336,7 @@ input[type="date"]:valid {
     font-weight: 700;
     letter-spacing: 1px;
     text-align: center;
+    margin-left: 70px;
     padding: 18px;
 }
 
