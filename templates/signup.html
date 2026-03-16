@@ -20,6 +20,8 @@
         <h1>Welcome!</h1>
         <p class="subtitle">Begin your child’s journey with BraveSprouts</p>
 
+<form method="POST">
+
         <form method="POST" class="login-form">
 
             <div class="dual-row">
@@ -39,6 +41,12 @@
               </div>
             </div>
           </div>
+
+          {% if error %}
+            <div class="error-message">
+              {{ error }}
+            </div>
+          {% endif %}
 
           <div class="input-group">
             <img src="{{ url_for('static', filename='images/emailiconblue.svg') }}" class="input-icon">

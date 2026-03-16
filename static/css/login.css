@@ -281,6 +281,14 @@ input, button, textarea, select, a {
     text-decoration: underline;
 }
 
+.error-message {
+    font-size: 15px;
+    color: rgb(219, 83, 83);
+    font-weight: 600;
+    margin-left: 20px;
+    margin-bottom: 10px;
+}
+
 /* ── Illustration ── */
 
 .illustration-area {

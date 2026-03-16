@@ -340,6 +340,14 @@ input[type="date"]:valid {
     padding: 18px;
 }
 
+.error-message {
+    font-size: 13px;
+    color: rgb(219, 83, 83);
+    font-weight: 600;
+    margin-left: 20px;
+    margin-bottom: 5px;
+}
+
 .bg-circle {
     position: absolute;
     border-radius: 50%;

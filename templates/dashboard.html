@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title> BraveSprouts Dashboard </title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}?v=2">
+</head>
+
+<body>
+    <h1>Hello {{ parent }}!</h1>
+    <p>Welcome back. {{ child }} is ready to practice today.</p>
+    <div class="nav-buttons">
+        <a href="/logout" class="logout-button">Log Out</a>
+    </div>
+</body>
+
+</html>

@@ -20,17 +20,26 @@
         <h1>Welcome back!</h1>
         <p class="subtitle">Continue your child’s journey with BraveSprouts</p>
 
-        <form class="login-form">
+        <form class="login-form" method="POST">
+
+          {% if error %}
+            <div class="error-message">
+              {{ error }}
+            </div>
+          {% endif %}
+
           <div class="input-group">
             <img src="{{ url_for('static', filename='images/emailiconblue.svg') }}" class="input-icon">
-            <input type="email" placeholder="Email address" />
+            <input type="email" name="email" placeholder="Email address" />
           </div>
 
           <div class="input-group">
             <img src="{{ url_for('static', filename='images/lockiconblue.svg') }}" class="input-icon">
-            <input type="password" id="password" placeholder="Password">
+            <input type="password" name="password" id="password" placeholder="Password">
 
-            <img src="{{ url_for('static', filename='images/eye-closed.png') }}" class="password-toggle" id="togglePassword"></div>
+            <img src="{{ url_for('static', filename='images/eye-closed.png') }}" class="password-toggle" id="togglePassword">
+          </div>
+
           <div class="form-row">
             <label class="remember-me">
               <input type="checkbox" checked />
