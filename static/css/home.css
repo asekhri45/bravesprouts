@@ -93,7 +93,7 @@ body::after {
 }
 
 .logo {
-    width: 200px;
+    width: 300px;
 }
 
 /* ── Hero ── */
@@ -411,17 +411,17 @@ body::after {
 
 @keyframes floatY {
     0%,100% { transform: translateY(0px); }
-    50%      { transform: translateY(-12px); }
+    50% { transform: translateY(-12px); }
 }
 
 @keyframes drift {
     0%,100% { transform: translateY(0px) translateX(0px); }
-    50%      { transform: translateY(-10px) translateX(8px); }
+    50% { transform: translateY(-10px) translateX(8px); }
 }
 
 @media (max-width: 950px) {
     .approach-container { gap: 80px; }
-    .approach-section   { padding: 80px 0; }
+    .approach-section { padding: 80px 0; }
 
     .approach-row,
     .approach-row.reverse {
@@ -438,9 +438,9 @@ body::after {
         margin: 0 auto;
     }
 
-    .approach-text h2  { white-space: normal; }
-    .approach-text p   { max-width: 100%; }
-    .approach-visual   { min-height: unset; }
+    .approach-text h2 { white-space: normal; }
+    .approach-text p { max-width: 100%; }
+    .approach-visual { min-height: unset; }
 }
 
 /* ── Bottom CTA ── */
@@ -503,27 +503,71 @@ body::after {
     height: auto;
     display: block;
     margin-bottom: 50px;
-    animation: bottomFloat 5s ease-in-out infinite;
+    animation: bottomFloat 6s ease-in-out infinite;
 }
 
 .bottom-cta-ground {
     position: relative;
     width: 100%;
-    height: 100px;
+    min-height: 140px;
     background: var(--color-blue-brand);
     margin-top: -60px;
+
+    display: flex;
+    align-items: center;
+}
+
+.footer-links {
+    width: var(--container-width);
+    margin: 0 auto;
+
+    display: flex;
+    justify-content: center;   /* key change */
+    align-items: center;
+    gap: 200px;                /* control spacing here */
+}
+
+.footer-links a,
+.footer-links p {
+    color: white;
+    text-decoration: none;
+    font-size: 1rem;
+    margin: 0;
+    opacity: 0.9;
+    transition: opacity 0.2s ease;
+}
+
+.footer-links a:hover {
+    opacity: 1;
+    text-decoration: underline;
 }
 
 @keyframes bottomFloat {
     0%,100% { transform: translateY(0px); }
-    50%      { transform: translateY(-10px); }
+    50% { transform: translateY(-4px); }
 }
 
 @media (max-width: 900px) {
-    .bottom-cta          { padding-top: 80px; }
-    .bottom-cta-ground   { height: 220px; }
+    .bottom-cta { padding-top: 80px; }
+    .bottom-cta-ground {
+        min-height: 260px;
+        padding: 40px 0;
+    }
 
     .bottom-cta-content h2 {
         font-size: clamp(2rem, 6vw, 2.6rem);
+    }
+
+    .footer-links {
+        flex-direction: column;
+        gap: 24px;
+    }
+
+    .footer-spacer {
+        display: none;
+    }
+
+    .footer-brand {
+        align-self: flex-start;
     }
 }

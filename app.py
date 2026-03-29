@@ -74,6 +74,7 @@ def signup():
         child_name = request.form["child_name"]
         child_dob = request.form["child_dob"]
         password = request.form["password"]
+        terms_check = 1 if request.form.get("terms_check") else 0
 
         hashed_password = generate_password_hash(password)
 
@@ -95,9 +96,9 @@ def signup():
         # Sqlite Injections/Execute database code
         cursor.execute(
             """
-            INSERT INTO users (email, password, parent_name, child_name, child_dob) VALUES (?, ?, ?, ?, ?)
+            INSERT INTO users (email, password, parent_name, child_name, child_dob, terms_check) VALUES (?, ?, ?, ?, ?, ?)
             """, 
-            (email, hashed_password, parent_name, child_name, child_dob)
+            (email, hashed_password, parent_name, child_name, child_dob, terms_check)
         ) 
 
         # Commit the changes to db and close
@@ -118,6 +119,14 @@ def dashboard():
 def logout():
     session.clear()
     return redirect("/login")
+
+@app.route("/terms-of-use")
+def terms():
+    return render_template("terms.html")
+
+@app.route("/privacy-policy")
+def privacy():
+    return render_template("privacy.html")
 
 if __name__ == "__main__":
     app.run(debug=True)

@@ -111,7 +111,7 @@ input, button, textarea, select, a {
     max-width: 700px;
     background: var(--color-card-bg);
     border-radius: var(--border-radius-card);
-    padding: 54px 67px 47px;
+    padding: 45px 67px 47px;
     box-shadow: 0 10px 32px var(--color-shadow-card);
     border: 1px solid var(--color-border-card);
     margin-left: -100px;
@@ -170,6 +170,37 @@ input, button, textarea, select, a {
 
 .input-group input::placeholder {
     color: var(--color-text-placeholder);
+}
+
+.terms-checked {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin: 10px 4px 10px;
+    font-size: 15px;
+    line-height: 1.5;
+    color: var(--color-text-muted);
+    cursor: pointer;
+}
+
+.terms-checked input {
+    margin-top: 3px;
+    margin-left: 5px;
+    align-self: left;
+    width: 18px;
+    height: 18px;
+    accent-color: var(--color-blue-brand);
+    flex-shrink: 0;
+}
+
+.terms-checked a {
+    color: var(--color-blue-brand);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.terms-checked a:hover {
+    text-decoration: underline;
 }
 
 .dual-row {
@@ -269,6 +300,7 @@ input[type="date"]:valid {
     border-radius: var(--border-radius-pill);
     font-size: 0.95rem;
     font-weight: 700;
+    margin-bottom: -5px;
     letter-spacing: 0.02em;
     text-transform: uppercase;
     transition: 0.2s ease;
