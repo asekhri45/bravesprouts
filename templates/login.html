@@ -1,76 +1,72 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>BraveSprouts Login</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
-</head>
-<body>
-  <div class="page">
-    <header class="topbar">
-      <img src="{{ url_for('static', filename='images/logo_v2.png') }}" class="logo">
+{% extends "base.html" %}
 
-      <a href="/" class="back-home">← Back to Home</a>
-    </header>
+{% block title %}BraveSprouts Login{% endblock %}
 
-    <main class="login-layout">
-      <section class="login-card">
-        <h1>Welcome back!</h1>
-        <p class="subtitle">Continue your child’s journey with BraveSprouts</p>
+{% block head %}
+<link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+{% endblock %}
 
-        <form class="login-form" method="POST">
+{% block content %}
+<div class="page">
+  <header class="topbar">
+    <img src="{{ url_for('static', filename='images/logo_v2.png') }}" class="logo">
+    <a href="/" class="back-home">← Back to Home</a>
+  </header>
 
-          {% if error %}
-            <div class="error-message">
-              {{ error }}
-            </div>
-          {% endif %}
+  <main class="login-layout">
+    <section class="login-card">
+      <h1>Welcome back!</h1>
+      <p class="subtitle">Continue your child’s journey with BraveSprouts</p>
 
-          <div class="input-group">
-            <img src="{{ url_for('static', filename='images/emailiconblue.svg') }}" class="input-icon">
-            <input type="email" name="email" placeholder="Email address" />
+      <form class="login-form" method="POST">
+
+        {% if error %}
+          <div class="error-message">
+            {{ error }}
           </div>
+        {% endif %}
 
-          <div class="input-group">
-            <img src="{{ url_for('static', filename='images/lockiconblue.svg') }}" class="input-icon">
-            <input type="password" name="password" id="password" placeholder="Password">
+        <div class="input-group">
+          <img src="{{ url_for('static', filename='images/emailiconblue.svg') }}" class="input-icon">
+          <input type="email" name="email" placeholder="Email address" />
+        </div>
 
-            <img src="{{ url_for('static', filename='images/eye-closed.png') }}" class="password-toggle" id="togglePassword">
-          </div>
+        <div class="input-group">
+          <img src="{{ url_for('static', filename='images/lockiconblue.svg') }}" class="input-icon">
+          <input type="password" name="password" id="password" placeholder="Password">
+          <img src="{{ url_for('static', filename='images/eye-closed.png') }}" class="password-toggle" id="togglePassword">
+        </div>
 
-          <div class="form-row">
-            <label class="remember-me">
-              <input type="checkbox" checked />
-              <span>Remember me</span>
-            </label>
+        <div class="form-row">
+          <label class="remember-me">
+            <input type="checkbox" checked />
+            <span>Remember me</span>
+          </label>
 
-            <a href="#" class="forgot-link">Forgot password?</a>
-          </div>
+          <a href="#" class="forgot-link">Forgot password?</a>
+        </div>
 
         <div class="login-buttons">
-            <button type="submit" class="login-btn">LOG IN ⌯⌲</button>
+          <button type="submit" class="login-btn">LOG IN ⌯⌲</button>
         </div>
-        </form>
+      </form>
 
-        <div class="signup-row">
-          <span>Don’t have an account?</span>
-          <a href="/signup">Get started →</a>
-        </div>
-      </section>
+      <div class="signup-row">
+        <span>Don’t have an account?</span>
+        <a href="/signup">Get started →</a>
+      </div>
+    </section>
 
-      <section class="illustration-area">
-        <div class="bg-circle big"></div>
-        <div class="bg-circle small"></div>
-        <div class="bg-blob"></div>
-        <div class="sparkle sparkle-1">✦</div>
-        <div class="sparkle sparkle-2">✦</div>
+    <section class="illustration-area">
+      <div class="bg-circle big"></div>
+      <div class="bg-circle small"></div>
+      <div class="bg-blob"></div>
+      <div class="sparkle sparkle-1">✦</div>
+      <div class="sparkle sparkle-2">✦</div>
 
-          <img src="{{ url_for('static', filename='images/anim_v4.gif') }}" class="image-placeholder"></div>
-
-      </section>
-    </main>
-  </div>
-</body>
-</html>
+      <img src="{{ url_for('static', filename='images/anim_v4.gif') }}" class="image-placeholder">
+    </section>
+  </main>
+</div>
+{% endblock %}

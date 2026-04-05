@@ -7,6 +7,8 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
 import secrets
+from functools import wraps
+import re
 
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(32)
@@ -75,6 +77,9 @@ def signup():
         child_dob = request.form["child_dob"]
         password = request.form["password"]
         terms_check = 1 if request.form.get("terms_check") else 0
+        error = validate_password(password)
+        if error:
+            return render_template("signup.html", error=error)
 
         hashed_password = generate_password_hash(password)
 
@@ -109,7 +114,27 @@ def signup():
 
     return render_template("signup.html")
 
+def login_required(f):
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        if "user_id" not in session:
+            return redirect("/login")
+        return f(*args, **kwargs)
+    return wrapper
+
+def validate_password(password):
+    if len(password) < 8:
+        return "The password must be at least 8 characters"
+    if not re.search(r"[A-Z]", password):
+        return "Must have an uppercase letter"
+    if not re.search(r"[a-z]", password):
+        return "Must have a lowercase letter"
+    if not re.search(r"[!@#$%^&*(),.?/<>|=+\-_^~`]", password):
+        return "Must have a special character"
+    
+
 @app.route("/dashboard")
+@login_required
 def dashboard():
     return render_template("dashboard.html",
                            parent=session["parent_name"],
@@ -127,6 +152,13 @@ def terms():
 @app.route("/privacy-policy")
 def privacy():
     return render_template("privacy.html")
+
+@app.route("/welcome-activity")
+@login_required
+def welcomeActivity():
+    return render_template("activity1.html",
+                           parent=session["parent_name"],
+                           child=session["child_name"])
 
 if __name__ == "__main__":
     app.run(debug=True)

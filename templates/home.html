@@ -1,11 +1,12 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title> Bravesprouts </title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/home.css') }}?v=2">
-</head>
+{% extends "base.html" %}
 
-<body class="{% block body_class %}{% endblock %}">
+{% block title %} Bravesprouts - Home {% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/home.css') }}">
+{% endblock %}
+
+{% block content %}
     <header class="navbar">
         <div class="nav-inner">
 
@@ -275,5 +276,4 @@
 
     <script src="{{ url_for('static', filename='js/nav-bar.js') }}"></script>
     <script src="{{ url_for('static', filename='js/approach-animation.js') }}"></script>
-</body>
-</html>
+{% endblock %}

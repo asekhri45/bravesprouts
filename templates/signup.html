@@ -1,105 +1,102 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>BraveSprouts Sign Up</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/signup.css') }}">
-</head>
-<body>
-  <div class="page">
-    <header class="topbar">
-      <img src="{{ url_for('static', filename='images/logo_v2.png') }}" class="logo">
+{% extends "base.html" %}
 
-      <a href="/" class="back-home">← Back to Home</a>
-    </header>
+{% block title %}BraveSprouts Sign Up{% endblock %}
 
-    <main class="login-layout">
-      <section class="login-card">
-        <h1>Welcome!</h1>
-        <p class="subtitle">Begin your child’s journey with BraveSprouts</p>
+{% block head %}
+<link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/signup.css') }}">
+{% endblock %}
 
-<form method="POST">
+{% block content %}
+<div class="page">
+  <header class="topbar">
+    <img src="{{ url_for('static', filename='images/logo_v2.png') }}" class="logo">
+    <a href="/" class="back-home">← Back to Home</a>
+  </header>
 
-        <form method="POST" class="login-form">
+  <main class="login-layout">
+    <section class="login-card">
+      <h1>Welcome!</h1>
+      <p class="subtitle">Begin your child’s journey with BraveSprouts</p>
 
-            <div class="dual-row">
-            <div class="field-col">
-              <label for="child_name" class="field-label">Child's Name</label>
-              <div class="input-group">
-                <img src="{{ url_for('static', filename='images/profile.svg') }}" class="input-icon">
-                <input type="text" placeholder="First Name Only" name="child_name" id="child_name" required/>
-              </div>
-            </div>
+      <form method="POST" class="login-form">
 
-            <div class="field-col dob-col">
-              <label for="child_dob" class="field-label">Child's Date of Birth</label>
-              <div class="input-group">
-                <img src="{{ url_for('static', filename='images/calendar.svg') }}" class="input-icon">
-                <input type="date" name="child_dob" id="child_dob" required/>
-              </div>
+        <div class="dual-row">
+          <div class="field-col">
+            <label for="child_name" class="field-label">Child's Name</label>
+            <div class="input-group">
+              <img src="{{ url_for('static', filename='images/profile.svg') }}" class="input-icon">
+              <input type="text" placeholder="First Name Only" name="child_name" id="child_name" required/>
             </div>
           </div>
 
-          {% if error %}
-            <div class="error-message">
-              {{ error }}
+          <div class="field-col dob-col">
+            <label for="child_dob" class="field-label">Child's Date of Birth</label>
+            <div class="input-group">
+              <img src="{{ url_for('static', filename='images/calendar.svg') }}" class="input-icon">
+              <input type="date" name="child_dob" id="child_dob" required/>
             </div>
-          {% endif %}
-
-          <div class="input-group">
-            <img src="{{ url_for('static', filename='images/emailiconblue.svg') }}" class="input-icon">
-            <input type="email" placeholder="Email address" name="email" id="email" required/>
           </div>
-
-          <div class="input-group">
-            <img src="{{ url_for('static', filename='images/profile.svg') }}" class="input-icon">
-            <input type="text" placeholder="Parent Name (Full Name)" name="parent_name" id="parent_name" required/>
-          </div>
-
-          <div class="input-group">
-            <img src="{{ url_for('static', filename='images/lockiconblue.svg') }}" class="input-icon">
-            <input type="password" id="password" name="password" placeholder="Password" required>
-          </div>
-
-          <div class="input-group">
-            <img src="{{ url_for('static', filename='images/lockiconblue.svg') }}" class="input-icon">
-            <input type="password" id="confirm_password" name="confirm_password" placeholder="Confirm Password" required>
-          </div>
-
-          <label class="terms-checked">
-           <input type="checkbox" name="terms_check" required>
-            <span>
-                I agree to the
-                <a href="/terms" target="_blank">Terms of Use</a>
-                and
-                <a href="/privacy" target="_blank">Privacy Policy</a>
-            </span>
-          </label>
-
-          <div class="login-buttons">
-            <button type="submit" class="login-btn">SIGN UP ⌯⌲</button>
-          </div>
-        </form>
-
-        <div class="signup-row">
-          <span>Already have an account?</span>
-          <a href="/login">Login →</a>
         </div>
-      </section>
 
-      <section class="illustration-area">
-        <div class="bg-circle big"></div>
-        <div class="bg-circle small"></div>
-        <div class="bg-blob"></div>
-        <div class="sparkle sparkle-1">✦</div>
-        <div class="sparkle sparkle-2">✦</div>
+        {% if error %}
+          <div class="error-message">
+            {{ error }}
+          </div>
+        {% endif %}
 
-        <img src="{{ url_for('static', filename='images/signup2.gif') }}" class="image-placeholder">
-      </section>
-    </main>
-  </div>
-  <script src="{{ url_for('static', filename='js/register.js') }}"></script>
-</body>
-</html>
+        <div class="input-group">
+          <img src="{{ url_for('static', filename='images/emailiconblue.svg') }}" class="input-icon">
+          <input type="email" placeholder="Email address" name="email" id="email" required/>
+        </div>
+
+        <div class="input-group">
+          <img src="{{ url_for('static', filename='images/profile.svg') }}" class="input-icon">
+          <input type="text" placeholder="Parent Name (Full Name)" name="parent_name" id="parent_name" required/>
+        </div>
+
+        <div class="input-group">
+          <img src="{{ url_for('static', filename='images/lockiconblue.svg') }}" class="input-icon">
+          <input type="password" id="password" name="password" placeholder="Password" required>
+        </div>
+
+        <div class="input-group">
+          <img src="{{ url_for('static', filename='images/lockiconblue.svg') }}" class="input-icon">
+          <input type="password" id="confirm_password" name="confirm_password" placeholder="Confirm Password" required>
+        </div>
+
+        <label class="terms-checked">
+          <input type="checkbox" name="terms_check" required>
+          <span>
+            I agree to the
+            <a href="/terms" target="_blank">Terms of Use</a>
+            and
+            <a href="/privacy" target="_blank">Privacy Policy</a>
+          </span>
+        </label>
+
+        <div class="login-buttons">
+          <button type="submit" class="login-btn">SIGN UP ⌯⌲</button>
+        </div>
+      </form>
+
+      <div class="signup-row">
+        <span>Already have an account?</span>
+        <a href="/login">Login →</a>
+      </div>
+    </section>
+
+    <section class="illustration-area">
+      <div class="bg-circle big"></div>
+      <div class="bg-circle small"></div>
+      <div class="bg-blob"></div>
+      <div class="sparkle sparkle-1">✦</div>
+      <div class="sparkle sparkle-2">✦</div>
+
+      <img src="{{ url_for('static', filename='images/signup2.gif') }}" class="image-placeholder">
+    </section>
+  </main>
+</div>
+
+<script src="{{ url_for('static', filename='js/register.js') }}"></script>
+{% endblock %}
