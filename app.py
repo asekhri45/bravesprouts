@@ -10,8 +10,30 @@ import secrets
 from functools import wraps
 import re
 
+from flask_session import Session
+from flask_wtf import CSRFProtect
+
+import os
+
 app = Flask(__name__)
+
+debug_mode = os.environ.get("FLASK_DEBUG") == "1"
+app.config["DEBUG"] = debug_mode
+
 app.secret_key = secrets.token_hex(32)
+csrf = CSRFProtect(app)
+
+# Secure Flask Session Configuration
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True, # JS cannot access cookies
+    SESSION_COOKIE_SECURE=False, # only sends cookies over https
+    SESSION_COOKIE_SAMESITE="Lax",
+    PERMANENT_SESSION_LIFETIME=1800
+)
+
+app.config["SESSION_TYPE"] = "filesystem" # Store sessions on server side
+app.config["SESIION_PERMANENT"] = True
+Session(app) #Initialize server side sessions
 
 # HTTP Security Policies
 csp = {
@@ -56,9 +78,12 @@ def login():
         stored_hash = user[1]
 
         if check_password_hash(stored_hash, password):
+            session.clear() # Resets old session
             session["user_id"] = user[0]
             session["parent_name"] = user[2]
             session["child_name"] = user[3]
+            session.permanent = True
+
             return redirect("/dashboard")
         else:
             return render_template("login.html", error="* Incorrect email or password")
