@@ -32,7 +32,7 @@ app.config.update(
 )
 
 app.config["SESSION_TYPE"] = "filesystem" # Store sessions on server side
-app.config["SESIION_PERMANENT"] = True
+app.config["SESSION_PERMANENT"] = True
 Session(app) #Initialize server side sessions
 
 # HTTP Security Policies
@@ -51,6 +51,48 @@ limiter = Limiter(
     default_limits=["200 per day", "50 per hour"]
 )
 
+def get_db_connection():
+    conn = sqlite3.connect("app.db")
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+def initialize_user_progress(cursor, user_id):
+    cursor.execute("""
+        SELECT activity_id, scene_id, activity_order
+        FROM activity
+        WHERE is_active = 1
+        ORDER BY scene_id, activity_order
+    """)
+    activities = cursor.fetchall()
+
+    first_activity_id = None
+    first_seen_per_scene = set()
+
+    for activity in activities:
+        activity_id = activity["activity_id"]
+        scene_id = activity["scene_id"]
+        activity_order = activity["activity_order"]
+
+        is_unlocked = 1 if activity_order == 1 else 0
+
+        if first_activity_id is None and is_unlocked == 1:
+            first_activity_id = activity_id
+
+        cursor.execute("""
+            INSERT INTO progress (
+                user_id,
+                activity_id,
+                is_unlocked,
+                is_completed,
+                words_spoken,
+                minutes_spoken,
+                active_minutes
+            )
+            VALUES (?, ?, ?, 0, 0, 0, 0)
+        """, (user_id, activity_id, is_unlocked))
+
+    return first_activity_id
 
 # ROUTES 
 @app.route("/")
@@ -67,7 +109,7 @@ def login():
         conn = sqlite3.connect("app.db")
         cursor = conn.cursor() # tells it what to add to the database
 
-        cursor.execute("SELECT user_id, password, parent_name, child_name FROM users WHERE email = ?", (email,))
+        cursor.execute("SELECT user_id, password, parent_name, child_name, profile_icon FROM users WHERE email = ?",(email,))
         user = cursor.fetchone()
 
         conn.close()
@@ -82,6 +124,7 @@ def login():
             session["user_id"] = user[0]
             session["parent_name"] = user[2]
             session["child_name"] = user[3]
+            session["profile_icon"] = user[4] if len(user) > 4 and user[4] else "profileicon.png"
             session.permanent = True
 
             return redirect("/dashboard")
@@ -92,9 +135,8 @@ def login():
     return render_template("login.html")
 
 @app.route("/signup", methods=["GET", "POST"])
+@csrf.exempt
 def signup():
-        
-    # If a post method, get data from form
     if request.method == "POST":
         email = request.form["email"]
         parent_name = request.form["parent_name"]
@@ -102,36 +144,46 @@ def signup():
         child_dob = request.form["child_dob"]
         password = request.form["password"]
         terms_check = 1 if request.form.get("terms_check") else 0
+
         error = validate_password(password)
         if error:
             return render_template("signup.html", error=error)
 
         hashed_password = generate_password_hash(password)
 
-        # Connect to the database
-        conn = sqlite3.connect("app.db")
-        cursor = conn.cursor() # tells it what to add to the database
+        conn = get_db_connection()
+        cursor = conn.cursor()
 
-        # Check if the email exists already
-        cursor.execute("SELECT email FROM users WHERE email = ?", (email,))
+        cursor.execute("SELECT user_id FROM users WHERE email = ?", (email,))
         existing_user = cursor.fetchone()
 
         if existing_user:
             conn.close()
             return render_template("signup.html", error="* Email already registered")
-        
-        conn = sqlite3.connect("app.db")
-        cursor = conn.cursor() # tells it what to add to the database
 
-        # Sqlite Injections/Execute database code
-        cursor.execute(
-            """
-            INSERT INTO users (email, password, parent_name, child_name, child_dob, terms_check) VALUES (?, ?, ?, ?, ?, ?)
-            """, 
-            (email, hashed_password, parent_name, child_name, child_dob, terms_check)
-        ) 
+        cursor.execute("""
+            INSERT INTO users (
+                email,
+                password,
+                parent_name,
+                child_name,
+                child_dob,
+                terms_check
+            )
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (email, hashed_password, parent_name, child_name, child_dob, terms_check))
 
-        # Commit the changes to db and close
+        user_id = cursor.lastrowid
+
+        first_activity_id = initialize_user_progress(cursor, user_id)
+
+        if first_activity_id is not None:
+            cursor.execute("""
+                UPDATE users
+                SET current_activity_id = ?
+                WHERE user_id = ?
+            """, (first_activity_id, user_id))
+
         conn.commit()
         conn.close()
 
@@ -158,13 +210,6 @@ def validate_password(password):
         return "Must have a special character"
     
 
-@app.route("/dashboard")
-@login_required
-def dashboard():
-    return render_template("dashboard.html",
-                           parent=session["parent_name"],
-                           child=session["child_name"])
-
 @app.route("/logout")
 def logout():
     session.clear()
@@ -184,6 +229,132 @@ def welcomeActivity():
     return render_template("activity1.html",
                            parent=session["parent_name"],
                            child=session["child_name"])
+
+@app.route("/dashboard")
+@login_required
+def dashboard():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT
+            COALESCE(SUM(words_spoken), 0) AS total_words,
+            COALESCE(SUM(minutes_spoken), 0) AS total_minutes,
+            COALESCE(SUM(active_minutes), 0) AS total_active_minutes,
+            COUNT(*) AS total_activities
+        FROM progress
+        WHERE user_id = ?
+    """, (session["user_id"],))
+    stats = cursor.fetchone()
+
+    cursor.execute("""
+        SELECT a.activity_name
+        FROM users u
+        LEFT JOIN activity a
+            ON u.current_activity_id = a.activity_id
+        WHERE u.user_id = ?
+    """, (session["user_id"],))
+    current_activity = cursor.fetchone()
+
+    conn.close()
+
+    return render_template(
+        "dashboard.html",
+        parent=session["parent_name"],
+        child=session["child_name"],
+        active_page="dashboard",
+        profile_icon=session.get("profile_icon", "profileicon.png"),
+        total_words=stats["total_words"],
+        total_minutes=stats["total_minutes"],
+        total_active_minutes=stats["total_active_minutes"],
+        total_activities=stats["total_activities"],
+        current_activity=current_activity["activity_name"] if current_activity else "No activity yet"
+    )
+
+@app.route("/lessons")
+@login_required
+def lessons():
+    return render_template(
+        "lessons.html",
+        active_page="lessons",
+        parent=session["parent_name"],
+        child=session["child_name"],
+        profile_icon=session.get("profile_icon", "profileicon.png")
+    )
+
+@app.route("/characters")
+@login_required
+def characters():
+    return render_template(
+        "characters.html",
+        active_page="characters",
+        parent=session["parent_name"],
+        child=session["child_name"],
+        profile_icon=session.get("profile_icon", "profileicon.png")
+    )
+
+@app.route("/settings")
+@login_required
+def settings():
+    return render_template(
+        "settings.html",
+        active_page="settings",
+        parent=session["parent_name"],
+        child=session["child_name"],
+        profile_icon=session.get("profile_icon", "profileicon.png")
+    )
+
+@app.route("/update-profile-icon", methods=["POST"])
+@csrf.exempt
+@login_required
+def update_profile_icon():
+    icon = request.form.get("icon")
+
+    allowed_icons = {
+        "profileicon.png",
+        "profileicon1.png",
+        "profileicon2.png",
+        "profileicon3.png"
+    }
+
+    if icon not in allowed_icons:
+        return {"success": False, "error": "Invalid icon"}, 400
+
+    conn = sqlite3.connect("app.db")
+    cursor = conn.cursor()
+
+    cursor.execute(
+        "UPDATE users SET profile_icon = ? WHERE user_id = ?",
+        (icon, session["user_id"])
+    )
+
+    conn.commit()
+    conn.close()
+
+    session["profile_icon"] = icon
+
+    return {"success": True}
+
+@app.route("/delete-account", methods=["POST"])
+@login_required
+def delete_account():
+    user_id = session["user_id"]
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("DELETE FROM progress WHERE user_id = ?", (user_id,))
+        cursor.execute("DELETE FROM users WHERE user_id = ?", (user_id,))
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        conn.close()
+        return f"Error deleting account: {e}", 500
+
+    conn.close()
+    session.clear()
+    return redirect("/login")
 
 if __name__ == "__main__":
     app.run(debug=True)

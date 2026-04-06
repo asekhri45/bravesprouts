@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block title %}BraveSprouts{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}?v=2">
+<script src="{{ url_for('static', filename='js/dashboard.js') }}" defer></script>
+{% endblock %}
+
+{% block content %}
+<div class="navbar">
+    <div class="nav-left-box">
+        <img src="{{ url_for('static', filename='images/logo_v2.png') }}" class="logo" alt="BraveSprouts logo">
+    </div>
+
+    <div class="nav-right-box">
+        <div class="nav-buttons">
+            <a href="/welcome-activity" class="enter-button">Open Current Activity</a>
+        </div>
+
+        <div class="profile-dropdown">
+            <button class="profile-trigger" id="profileTrigger" type="button">
+                <img src="{{ url_for('static', filename='images/' + profile_icon) }}" class="profile-icon" id="currentProfileIcon" alt="Profile icon">
+                <span class="profile-name">{{ parent.split()[0] ~ " (Parent)" }}</span>            
+            </button>
+
+            <div class="dropdown-menu" id="dropdownMenu">
+                <div class="dropdown-section">
+                    <p class="dropdown-title">Choose Profile Icon</p>
+
+                    <div class="icon-options">
+                        <button class="icon-option" type="button" data-icon="profileicon.png">
+                            <img src="{{ url_for('static', filename='images/profileicon.png') }}" alt="Profile option 1">
+                        </button>
+
+                        <button class="icon-option" type="button" data-icon="profileicon1.png">
+                            <img src="{{ url_for('static', filename='images/profileicon1.png') }}" alt="Profile option 2">
+                        </button>
+
+                        <button class="icon-option" type="button" data-icon="profileicon2.png">
+                            <img src="{{ url_for('static', filename='images/profileicon2.png') }}" alt="Profile option 3">
+                        </button>
+
+                        <button class="icon-option" type="button" data-icon="profileicon3.png">
+                            <img src="{{ url_for('static', filename='images/profileicon3.png') }}" alt="Profile option 4">
+                        </button>
+                    </div>
+                </div>
+
+                <div class="dropdown-divider"></div>
+                
+                <div class="dropdown-links">
+                    <a href="{{ url_for('dashboard') }}" class="dropdown-link">View Dashboard</a>
+                    <a href="{{ url_for('home') }}" class="dropdown-link">Return to Home Page</a>
+                    <a href="{{ url_for('settings') }}" class="dropdown-link">Manage Profile</a>
+                    <a href="{{ url_for('terms') }}" class="dropdown-link">View Terms of Use</a>
+                    <a href="{{ url_for('privacy') }}" class="dropdown-link">View Privacy Policy</a>
+                </div>
+
+                <div class="dropdown-divider"></div>
+                <a href="/logout" class="dropdown-logout">Log Out</a>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="dashboard-layout">
+    <aside class="sidebar">
+        <nav class="sidebar-nav">
+            <a href="{{ url_for('dashboard') }}" class="sidebar-item {% if active_page == 'dashboard' %}active{% endif %}">
+                <img src="{{ url_for('static', filename='images/' + ('dashboard_selected.png' if active_page == 'dashboard' else 'dashboard_unselected.png')) }}" class="sidebar-icon">
+                <span>Dashboard</span>
+            </a>
+
+            <a href="{{ url_for('lessons') }}" class="sidebar-item {% if active_page == 'lessons' %}active{% endif %}">
+                <img src="{{ url_for('static', filename='images/' + ('progression_selected.png' if active_page == 'lessons' else 'progression_unselected.png')) }}" class="sidebar-icon">
+                <span>Progression</span>
+            </a>
+
+            <a href="{{ url_for('characters') }}" class="sidebar-item {% if active_page == 'characters' %}active{% endif %}">
+                <img src="{{ url_for('static', filename='images/' + ('characters_selected.png' if active_page == 'characters' else 'characters_unselected.png')) }}" class="sidebar-icon">
+                <span>Characters</span>
+            </a>
+
+            <a href="{{ url_for('settings') }}" class="sidebar-item {% if active_page == 'settings' %}active{% endif %}">
+                <img src="{{ url_for('static', filename='images/' + ('settings_selected.png' if active_page == 'settings' else 'settings_unselected.png')) }}" class="sidebar-icon">
+                <span>Settings</span>
+            </a>
+        </nav>
+    </aside>
+
+    <main class="dashboard-main">
+        {% block dashboard_content %}{% endblock %}
+    </main>
+</div>
+{% endblock %}

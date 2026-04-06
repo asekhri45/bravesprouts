@@ -1,20 +1,10 @@
-{% extends "base.html" %}
+{% extends "dashboard_layout.html" %}
 
-{% block title %}BraveSprouts Dashboard{% endblock %}
+{% block title %}Dashboard{% endblock %}
 
-{% block head %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}?v=2">
-{% endblock %}
-
-{% block content %}
+{% block dashboard_content %}
+<div class="welcome-section">
     <h1>Hello {{ parent }}!</h1>
     <p>Welcome back. {{ child }} is ready to practice today.</p>
-
-    <div class="nav-buttons">
-        <a href="/welcome-activity" class="hero-btn primary">
-            Start Activity
-        </a>
-
-        <a href="/logout" class="logout-button">Log Out</a>
-    </div>
+</div>
 {% endblock %}
