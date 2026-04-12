@@ -25,19 +25,19 @@ csrf = CSRFProtect(app)
 
 # Secure Flask Session Configuration
 app.config.update(
-    SESSION_COOKIE_HTTPONLY=True, # JS cannot access cookies
-    SESSION_COOKIE_SECURE=False, # only sends cookies over https
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SECURE=False,
     SESSION_COOKIE_SAMESITE="Lax",
     PERMANENT_SESSION_LIFETIME=1800
 )
 
-app.config["SESSION_TYPE"] = "filesystem" # Store sessions on server side
+app.config["SESSION_TYPE"] = "filesystem"
 app.config["SESSION_PERMANENT"] = True
-Session(app) #Initialize server side sessions
+Session(app)
 
 # HTTP Security Policies
 csp = {
-    "default-src": "'self'", 
+    "default-src": "'self'",
     "script-src": "'self'",
     "style-src": "'self'"
 }
@@ -47,7 +47,7 @@ Talisman(app, content_security_policy=csp)
 # RATE Limiting
 limiter = Limiter(
     get_remote_address,
-    app = app,
+    app=app,
     default_limits=["200 per day", "50 per hour"]
 )
 
@@ -67,11 +67,9 @@ def initialize_user_progress(cursor, user_id):
     activities = cursor.fetchall()
 
     first_activity_id = None
-    first_seen_per_scene = set()
 
     for activity in activities:
         activity_id = activity["activity_id"]
-        scene_id = activity["scene_id"]
         activity_order = activity["activity_order"]
 
         is_unlocked = 1 if activity_order == 1 else 0
@@ -94,10 +92,12 @@ def initialize_user_progress(cursor, user_id):
 
     return first_activity_id
 
-# ROUTES 
+
+# ROUTES
 @app.route("/")
 def home():
     return render_template("home.html")
+
 
 @app.route("/login", methods=["GET", "POST"])
 @limiter.limit("10 per minute")
@@ -107,20 +107,23 @@ def login():
         password = request.form["password"]
 
         conn = sqlite3.connect("app.db")
-        cursor = conn.cursor() # tells it what to add to the database
+        cursor = conn.cursor()
 
-        cursor.execute("SELECT user_id, password, parent_name, child_name, profile_icon FROM users WHERE email = ?",(email,))
+        cursor.execute(
+            "SELECT user_id, password, parent_name, child_name, profile_icon FROM users WHERE email = ?",
+            (email,)
+        )
         user = cursor.fetchone()
 
         conn.close()
 
         if not user:
             return render_template("login.html", error="* Incorrect email or password")
-        
+
         stored_hash = user[1]
 
         if check_password_hash(stored_hash, password):
-            session.clear() # Resets old session
+            session.clear()
             session["user_id"] = user[0]
             session["parent_name"] = user[2]
             session["child_name"] = user[3]
@@ -130,9 +133,9 @@ def login():
             return redirect("/dashboard")
         else:
             return render_template("login.html", error="* Incorrect email or password")
-    
 
     return render_template("login.html")
+
 
 @app.route("/signup", methods=["GET", "POST"])
 @csrf.exempt
@@ -191,6 +194,7 @@ def signup():
 
     return render_template("signup.html")
 
+
 def login_required(f):
     @wraps(f)
     def wrapper(*args, **kwargs):
@@ -198,6 +202,7 @@ def login_required(f):
             return redirect("/login")
         return f(*args, **kwargs)
     return wrapper
+
 
 def validate_password(password):
     if len(password) < 8:
@@ -208,27 +213,34 @@ def validate_password(password):
         return "Must have a lowercase letter"
     if not re.search(r"[!@#$%^&*(),.?/<>|=+\-_^~`]", password):
         return "Must have a special character"
-    
+    return None
+
 
 @app.route("/logout")
 def logout():
     session.clear()
     return redirect("/login")
 
+
 @app.route("/terms-of-use")
 def terms():
     return render_template("terms.html")
+
 
 @app.route("/privacy-policy")
 def privacy():
     return render_template("privacy.html")
 
+
 @app.route("/welcome-activity")
 @login_required
 def welcomeActivity():
-    return render_template("activity1.html",
-                           parent=session["parent_name"],
-                           child=session["child_name"])
+    return render_template(
+        "activity1.html",
+        parent=session["parent_name"],
+        child=session["child_name"]
+    )
+
 
 @app.route("/dashboard")
 @login_required
@@ -248,13 +260,84 @@ def dashboard():
     stats = cursor.fetchone()
 
     cursor.execute("""
-        SELECT a.activity_name
-        FROM users u
-        LEFT JOIN activity a
-            ON u.current_activity_id = a.activity_id
-        WHERE u.user_id = ?
+        SELECT current_activity_id
+        FROM users
+        WHERE user_id = ?
     """, (session["user_id"],))
-    current_activity = cursor.fetchone()
+    user_row = cursor.fetchone()
+    current_activity_id = user_row["current_activity_id"] if user_row else None
+
+    cursor.execute("""
+    SELECT
+        a.activity_id,
+        a.scene_id,
+        a.activity_name,
+        a.description,
+        a.activity_order,
+        a.level_of_realism,
+        a.total_levels_of_realism,
+        a.time_recommended,
+        a.character_active,
+        COALESCE(p.is_unlocked, 0) AS is_unlocked,
+        COALESCE(p.words_spoken, 0) AS words_spoken,
+        COALESCE(p.time_spent_on_activity, 0) AS time_spent_on_activity,
+        COALESCE(p.active_minutes, 0) AS active_minutes
+    FROM activity a
+    LEFT JOIN progress p
+        ON a.activity_id = p.activity_id
+        AND p.user_id = ?
+    WHERE a.is_active = 1
+    ORDER BY a.scene_id, a.activity_order
+    """, (session["user_id"],))
+
+    activities = cursor.fetchall()
+
+    cursor.execute("""
+        SELECT
+            session_id,
+            activity_id,
+            words_spoken,
+            minutes_spoken,
+            active_minutes,
+            completed_at
+        FROM session_log
+        WHERE user_id = ?
+        ORDER BY completed_at ASC, session_id ASC
+    """, (session["user_id"],))
+
+    session_rows = cursor.fetchall()
+
+    session_chart_data = [
+        {
+            "session_number": i + 1,
+            "words_spoken": row["words_spoken"],
+            "minutes_spoken": float(row["minutes_spoken"] or 0),
+            "active_minutes": float(row["active_minutes"] or 0)
+        }
+        for i, row in enumerate(session_rows)
+    ]
+
+    cursor.execute("""
+    SELECT
+        sl.session_id,
+        sl.completed_at,
+        a.activity_name,
+        a.character_active
+    FROM session_log sl
+    JOIN activity a ON sl.activity_id = a.activity_id
+    WHERE sl.user_id = ?
+    ORDER BY sl.completed_at DESC, sl.session_id DESC
+    LIMIT 8
+    """, (session["user_id"],))
+
+    recent_sessions = cursor.fetchall()
+
+    default_slide_index = 0
+
+    for i, activity in enumerate(activities):
+        if activity["activity_id"] == current_activity_id:
+            default_slide_index = i
+            break
 
     conn.close()
 
@@ -268,8 +351,13 @@ def dashboard():
         total_minutes=stats["total_minutes"],
         total_active_minutes=stats["total_active_minutes"],
         total_activities=stats["total_activities"],
-        current_activity=current_activity["activity_name"] if current_activity else "No activity yet"
+        activities=activities,
+        current_activity_id=current_activity_id,
+        default_slide_index=default_slide_index,
+        session_chart_data=session_chart_data,
+        recent_sessions=recent_sessions
     )
+
 
 @app.route("/lessons")
 @login_required
@@ -282,6 +370,7 @@ def lessons():
         profile_icon=session.get("profile_icon", "profileicon.png")
     )
 
+
 @app.route("/characters")
 @login_required
 def characters():
@@ -293,6 +382,7 @@ def characters():
         profile_icon=session.get("profile_icon", "profileicon.png")
     )
 
+
 @app.route("/settings")
 @login_required
 def settings():
@@ -303,6 +393,7 @@ def settings():
         child=session["child_name"],
         profile_icon=session.get("profile_icon", "profileicon.png")
     )
+
 
 @app.route("/update-profile-icon", methods=["POST"])
 @csrf.exempt
@@ -335,6 +426,7 @@ def update_profile_icon():
 
     return {"success": True}
 
+
 @app.route("/delete-account", methods=["POST"])
 @login_required
 def delete_account():
@@ -355,6 +447,107 @@ def delete_account():
     conn.close()
     session.clear()
     return redirect("/login")
+
+
+@app.route("/set-current", methods=["POST"])
+@csrf.exempt
+@login_required
+def set_current():
+    activity_id = request.json.get("activity_id")
+
+    if not activity_id:
+        return {"success": False, "error": "Missing activity_id"}, 400
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT is_unlocked
+        FROM progress
+        WHERE user_id = ? AND activity_id = ?
+    """, (session["user_id"], activity_id))
+    progress_row = cursor.fetchone()
+
+    if not progress_row:
+        conn.close()
+        return {"success": False, "error": "Activity not found for user"}, 404
+
+    if not progress_row["is_unlocked"]:
+        conn.close()
+        return {"success": False, "error": "Activity is locked"}, 403
+
+    cursor.execute("""
+        UPDATE users
+        SET current_activity_id = ?
+        WHERE user_id = ?
+    """, (activity_id, session["user_id"]))
+
+    conn.commit()
+    conn.close()
+
+    return {"success": True}
+
+
+@app.route("/unlock-activity", methods=["POST"])
+@csrf.exempt
+@login_required
+def unlock_activity():
+    activity_id = request.json.get("activity_id")
+
+    if not activity_id:
+        return {"success": False, "error": "Missing activity_id"}, 400
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT p.is_unlocked, a.scene_id, a.activity_order
+        FROM progress p
+        JOIN activity a ON p.activity_id = a.activity_id
+        WHERE p.user_id = ? AND p.activity_id = ?
+    """, (session["user_id"], activity_id))
+    row = cursor.fetchone()
+
+    if not row:
+        conn.close()
+        return {"success": False, "error": "Activity not found for user"}, 404
+
+    if not row["is_unlocked"]:
+        scene_id = row["scene_id"]
+        activity_order = row["activity_order"]
+
+        if activity_order > 1:
+            cursor.execute("""
+                SELECT p.is_unlocked
+                FROM progress p
+                JOIN activity a ON p.activity_id = a.activity_id
+                WHERE p.user_id = ?
+                  AND a.scene_id = ?
+                  AND a.activity_order = ?
+            """, (session["user_id"], scene_id, activity_order - 1))
+            previous_row = cursor.fetchone()
+
+            if not previous_row or not previous_row["is_unlocked"]:
+                conn.close()
+                return {"success": False, "error": "Previous activity must be unlocked first"}, 403
+
+        cursor.execute("""
+            UPDATE progress
+            SET is_unlocked = 1
+            WHERE user_id = ? AND activity_id = ?
+        """, (session["user_id"], activity_id))
+
+    cursor.execute("""
+        UPDATE users
+        SET current_activity_id = ?
+        WHERE user_id = ?
+    """, (activity_id, session["user_id"]))
+
+    conn.commit()
+    conn.close()
+
+    return {"success": True}
+
 
 if __name__ == "__main__":
     app.run(debug=True)

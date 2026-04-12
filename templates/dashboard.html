@@ -1,10 +1,181 @@
 {% extends "dashboard_layout.html" %}
 
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}?v=5">
+{% endblock %}
+
 {% block title %}Dashboard{% endblock %}
 
 {% block dashboard_content %}
-<div class="welcome-section">
-    <h1>Hello {{ parent }}!</h1>
-    <p>Welcome back. {{ child }} is ready to practice today.</p>
+<p class="current-activity-indicator"> Current Activity </p>
+
+<div class="dashboard-carousel-wrapper" data-default-slide="{{ default_slide_index }}">
+    <button class="carousel-btn carousel-btn-left" id="carouselPrevBtn" type="button">
+        &#8592;
+    </button>
+
+    <div class="dashboard-carousel-viewport">
+        <div class="dashboard-carousel-track" id="dashboardCarouselTrack">
+            {% for activity in activities %}
+            <div class="dashboard-panel-slide">
+                <div class="dashboard-panel {% if not activity.is_unlocked %}dashboard-panel-locked{% elif activity.activity_id != current_activity_id %}dashboard-panel-inactive{% else %}dashboard-panel-current{% endif %}">
+
+                    <!-- LEFT PANEL -->
+                    <div class="dashboard-panel-section panel-left">
+                        <h2 class="activity-panel-title">Activity #{{ loop.index }}</h2>
+                        <h3 class="activity-panel-name">{{ activity.activity_name.replace('_', ' ').title() }}</h3>
+
+                        <p class="activity-description">
+                            {{ activity.description if activity.description else "No description yet." }}
+                        </p>
+
+                        {% if activity.activity_id == current_activity_id %}
+                            <button
+                                class="activity-btn activity-btn-primary activity-action-btn"
+                                type="button"
+                                data-action="open">
+                                Open Activity
+                            </button>
+
+                        {% elif activity.is_unlocked %}
+                            <button
+                                class="activity-btn activity-btn-secondary activity-action-btn"
+                                type="button"
+                                data-action="set-current"
+                                data-activity-id="{{ activity.activity_id }}">
+                                Set as Current
+                            </button>
+
+                        {% else %}
+                            <button
+                                class="activity-btn activity-btn-locked activity-action-btn"
+                                type="button"
+                                data-action="unlock"
+                                data-activity-id="{{ activity.activity_id }}">
+                                🔓 Unlock Now
+                            </button>
+                        {% endif %}
+                    </div>
+
+                    <div class="panel-divider"></div>
+
+                    <!-- CENTER PANEL -->
+                    <div class="dashboard-panel-section panel-center">
+                        <h2 class="activity-center-title">Overview</h2>
+
+                        <ul class="activity-overview-list">
+                        <li>
+                            <span class="overview-label">Level of Realism:</span>
+                            <span class="overview-value">
+                                {% if activity.level_of_realism is not none and activity.total_levels_of_realism is not none %}
+                                    {{ activity.level_of_realism }} out of {{ activity.total_levels_of_realism }}
+                                {% elif activity.level_of_realism is not none %}
+                                    {{ activity.level_of_realism }}
+                                {% else %}
+                                    Not set
+                                {% endif %}
+                            </span>
+                        </li>
+
+                        <li>
+                            <span class="overview-label">Time Recommended:</span>
+                            <span class="overview-value">
+                                {% if activity.time_recommended is not none %}
+                                    {{ activity.time_recommended }} min
+                                {% else %}
+                                    Not set
+                                {% endif %}
+                            </span>
+                        </li>
+
+                        <!--li>
+                            <span class="overview-label">Character Active:</span>
+                            <span class="overview-value">
+                                {{ activity.character_active if activity.character_active else "Not set" }}
+                            </span>
+                        </li-->
+                        </ul>
+
+                        {% if activity.character_active %}
+                            <img src="{{ url_for('static', filename='images/' + activity.character_active|lower + '35.png') }}" alt="{{ activity.character_active }}" class="activity-character-image">
+                        {% endif %}
+                    </div>
+
+                    <div class="panel-divider"></div>
+
+                    <!-- RIGHT PANEL (STATS) -->
+                    <div class="dashboard-panel-section panel-right">
+                        <h2 class="activity-center-title">Stats</h2>
+
+                        {% if activity.is_unlocked %}
+                            <div class="activity-stats-grid">
+                                
+                                <div class="activity-stat-card words-card">
+                                    <div class="activity-stat-icon">📖</div>
+                                    <p class="activity-stat-value">
+                                        {{ activity.words_spoken }}
+                                    </p>
+                                    <p class="activity-stat-label">Words</p>
+                                </div>
+
+                                <div class="activity-stat-card minutes-card">
+                                    <div class="activity-stat-icon">🕒</div>
+                                    <p class="activity-stat-value">
+                                        {{ activity.time_spent_on_activity|round|int }}
+                                    </p>
+                                    <p class="activity-stat-label">Minutes</p>
+                                </div>
+
+                                <div class="activity-stat-card active-card">
+                                    <div class="activity-stat-icon">⚡</div>
+                                    <p class="activity-stat-value">
+                                        {{ activity.active_minutes|round|int }}
+                                    </p>
+                                    <p class="activity-stat-label">Active Minutes</p>
+                                </div>
+
+                            </div>
+                        {% else %}
+                            <div class="activity-stats-locked-card">
+                                <div class="activity-stats-locked-icon">🔒</div>
+                                <p class="activity-stats-locked-text">Unlock this activity to view stats</p>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <button class="carousel-btn carousel-btn-right" id="carouselNextBtn" type="button">
+        &#8594;
+    </button>
 </div>
+
+<div class="dashboard-bottom-sections">
+    <div class="dashboard-bottom-card">
+        <h2 class="dashboard-bottom-title">Growth Over Time</h2>
+        <p class="dashboard-bottom-text">
+                Word progression across completed sessions.
+        </p>
+
+        <div
+            id="sessionChartData"
+            data-chart='{{ session_chart_data | tojson | safe }}'
+            hidden>
+        </div>
+
+        <div class="growth-chart-wrapper">
+            <canvas id="growthChart"></canvas>
+        </div>
+    </div>
+
+    <div class="dashboard-bottom-card">
+        <h2 class="dashboard-bottom-title">Section Two</h2>
+    </div>
+</div>
+
 {% endblock %}
