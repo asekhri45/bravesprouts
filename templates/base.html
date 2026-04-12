@@ -4,6 +4,10 @@
     {% block head %} {% endblock %}
     <title> Bravesprouts </title>
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,200..1000;1,200..1000&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href = "{{ url_for('static', filename='css/style.css')}}">
 </head>
 
 <body class="{% block body_class %}{% endblock %}">

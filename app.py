@@ -39,7 +39,8 @@ Session(app)
 csp = {
     "default-src": "'self'",
     "script-src": "'self'",
-    "style-src": "'self'"
+    "style-src": "'self'https://fonts.googleapis.com",
+    "font-src": "'self' https://fonts.gstatic.com"
 }
 
 Talisman(app, content_security_policy=csp)
