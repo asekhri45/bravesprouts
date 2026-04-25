@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, session, url_for
+from flask import Flask, render_template, request, redirect, session, url_for, abort
 import sqlite3
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -39,8 +39,9 @@ Session(app)
 csp = {
     "default-src": "'self'",
     "script-src": "'self'",
-    "style-src": "'self'https://fonts.googleapis.com",
-    "font-src": "'self' https://fonts.gstatic.com"
+    "style-src": "'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src": "'self' https://fonts.gstatic.com data:",
+    "img-src": "'self' data:"
 }
 
 Talisman(app, content_security_policy=csp)
@@ -493,7 +494,8 @@ def set_current():
 @csrf.exempt
 @login_required
 def unlock_activity():
-    activity_id = request.json.get("activity_id")
+    data = request.get_json(silent=True) or {}
+    activity_id = data.get("activity_id")
 
     if not activity_id:
         return {"success": False, "error": "Missing activity_id"}, 400
@@ -502,41 +504,57 @@ def unlock_activity():
     cursor = conn.cursor()
 
     cursor.execute("""
-        SELECT p.is_unlocked, a.scene_id, a.activity_order
-        FROM progress p
-        JOIN activity a ON p.activity_id = a.activity_id
-        WHERE p.user_id = ? AND p.activity_id = ?
-    """, (session["user_id"], activity_id))
-    row = cursor.fetchone()
+        SELECT activity_id, activity_order
+        FROM activity
+        WHERE activity_id = ? AND is_active = 1
+    """, (activity_id,))
+    activity = cursor.fetchone()
 
-    if not row:
+    if not activity:
         conn.close()
-        return {"success": False, "error": "Activity not found for user"}, 404
+        return {"success": False, "error": "Activity does not exist"}, 404
 
-    if not row["is_unlocked"]:
-        scene_id = row["scene_id"]
-        activity_order = row["activity_order"]
+    cursor.execute("""
+        INSERT OR IGNORE INTO progress (
+            user_id,
+            activity_id,
+            is_unlocked,
+            is_completed,
+            words_spoken,
+            minutes_spoken,
+            active_minutes,
+            time_spent_on_activity
+        )
+        VALUES (?, ?, 0, 0, 0, 0, 0, 0)
+    """, (session["user_id"], activity_id))
 
-        if activity_order > 1:
-            cursor.execute("""
-                SELECT p.is_unlocked
-                FROM progress p
-                JOIN activity a ON p.activity_id = a.activity_id
-                WHERE p.user_id = ?
-                  AND a.scene_id = ?
-                  AND a.activity_order = ?
-            """, (session["user_id"], scene_id, activity_order - 1))
-            previous_row = cursor.fetchone()
-
-            if not previous_row or not previous_row["is_unlocked"]:
-                conn.close()
-                return {"success": False, "error": "Previous activity must be unlocked first"}, 403
-
+    if activity["activity_order"] > 1:
         cursor.execute("""
-            UPDATE progress
-            SET is_unlocked = 1
-            WHERE user_id = ? AND activity_id = ?
-        """, (session["user_id"], activity_id))
+            SELECT p.is_unlocked
+            FROM progress p
+            JOIN activity a ON p.activity_id = a.activity_id
+            WHERE p.user_id = ?
+              AND a.activity_order = ?
+              AND a.is_active = 1
+        """, (
+            session["user_id"],
+            activity["activity_order"] - 1
+        ))
+
+        previous_row = cursor.fetchone()
+
+        if not previous_row or not previous_row["is_unlocked"]:
+            conn.close()
+            return {
+                "success": False,
+                "error": "Previous activity must be unlocked first"
+            }, 403
+
+    cursor.execute("""
+        UPDATE progress
+        SET is_unlocked = 1
+        WHERE user_id = ? AND activity_id = ?
+    """, (session["user_id"], activity_id))
 
     cursor.execute("""
         UPDATE users
@@ -549,6 +567,53 @@ def unlock_activity():
 
     return {"success": True}
 
+@app.after_request
+def add_no_chache_headers(response):
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age-0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
+
+@app.route("/activity/<int:activity_id>")
+@login_required
+def open_activity(activity_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT *
+        FROM activity
+        WHERE activity_id = ?
+          AND is_active = 1
+    """, (activity_id,))
+    activity = cursor.fetchone()
+
+    if activity is None:
+        conn.close()
+        abort(404)
+
+    cursor.execute("""
+        SELECT is_unlocked
+        FROM progress
+        WHERE user_id = ? AND activity_id = ?
+    """, (session["user_id"], activity_id))
+    progress = cursor.fetchone()
+
+    conn.close()
+
+    if not progress or not progress["is_unlocked"]:
+        return redirect(url_for("dashboard"))
+
+    template_file = activity["template_file"]
+
+    return render_template(
+        template_file,
+        activity=activity,
+        parent=session["parent_name"],
+        child=session["child_name"],
+        active_page="dashboard",
+        profile_icon=session.get("profile_icon", "profileicon.png")
+    )
 
 if __name__ == "__main__":
     app.run(debug=True)

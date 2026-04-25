@@ -362,6 +362,17 @@ input, button, textarea, select, a {
 .sparkle-1 { top: 150px; left: 140px; }
 .sparkle-2 { right: 0;   top: 410px; }
 
+.password-toggle-btn {
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin-left: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
 @keyframes float {
     0%,100% { transform: translateY(0px) translateX(0px); }
     50%      { transform: translateY(-12px) translateX(6px); }

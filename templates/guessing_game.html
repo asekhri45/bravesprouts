@@ -1,0 +1,68 @@
+{% extends "activity_layout.html" %}
+
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/guessing_game.css') }}?v=1">
+<script src="{{ url_for('static', filename='js/guessing_game.js') }}?v=1" defer></script>
+{% endblock %}
+
+{% block title %}Guessing Game{% endblock %}
+
+{% block content %}
+
+<div class="guess-page">
+
+  <a href="{{ url_for('dashboard') }}" class="back-link">
+    ← Back to Dashboard
+  </a>
+
+  <main class="guess-stage">
+
+    <section class="guess-header">
+      <h1>Let’s Guess Together!</h1>
+
+      <div class="star-line">
+        <span>I’m thinking of something...</span>
+      </div>
+    </section>
+
+    <section class="star-area">
+      <div class="floating-stars" aria-hidden="true">
+        <span class="float-star star-one">★</span>
+        <span class="float-star star-two">★</span>
+        <span class="float-star star-three">★</span>
+        <span class="float-star star-four">★</span>
+        <span class="float-star star-five">★</span>
+        <span class="float-star star-six">★</span>
+      </div>
+
+      <img
+        src="{{ url_for('static', filename='images/talking_star.png') }}"
+        alt="Star character"
+        class="main-star"
+      >
+
+      <div class="star-shadow"></div>
+    </section>
+
+    <section class="closeness-card">
+      <h2 id="closenessText">You’re getting closer!</h2>
+
+      <div class="closeness-stars" id="closenessStars" data-progress="3">
+        <span class="filled">★</span>
+        <span class="filled">★</span>
+        <span class="filled">★</span>
+        <span>★</span>
+        <span>★</span>
+      </div>
+    </section>
+
+    <p class="encouragement" id="encouragementText">
+      ✨ Keep asking great questions!
+    </p>
+
+  </main>
+
+</div>
+
+{% endblock %}

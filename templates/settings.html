@@ -5,8 +5,30 @@
 {% block dashboard_content %}
 <h1>Settings</h1>
 <p>Manage your account and preferences here.</p>
-<form action="{{ url_for('delete_account') }}" method="POST">
+
+<form id="deleteAccountForm" action="{{ url_for('delete_account') }}" method="POST">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <button type="submit" class="delete-account">DELETE ACCOUNT</button>
+    <button type="button" class="delete-account" id="openDeleteModal">
+        DELETE ACCOUNT
+    </button>
 </form>
+
+<div class="delete-modal-overlay" id="deleteModal">
+  <div class="delete-modal">
+    <h2>Are you sure you want to delete your account?</h2>
+    <p>You won’t be able to recover your account or restore your data after deletion.</p>
+
+    <div class="delete-modal-actions">
+      <button type="button" class="confirm-delete-btn" id="confirmDelete">
+        Yes, I’m Sure
+      </button>
+
+      <button type="button" class="cancel-delete-btn" id="closeDeleteModal">
+        Nevermind
+      </button>
+    </div>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/settings.js') }}"></script>
 {% endblock %}

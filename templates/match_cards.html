@@ -1,0 +1,79 @@
+{% extends "activity_layout.html" %}
+
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/match_cards.css') }}?v=1">
+<script src="{{ url_for('static', filename='js/match_cards.js') }}?v=1" defer></script>
+{% endblock %}
+
+{% block title %}Match Cards{% endblock %}
+
+{% block content %}
+
+<div class="match-page">
+
+  <a href="{{ url_for('dashboard') }}" class="back-link">
+    ← Back to Dashboard
+  </a>
+
+  <div class="match-topbar">
+  <div class="match-title">
+    <h1>Let’s Play Together!</h1>
+    <p>Take turns and have fun!</p>
+  </div>
+
+  <div class="turn-stack">
+    <div class="turn-card active" id="childTurnCard">
+      <div class="turn-avatar">🙂</div>
+      <div>
+        <h2>Your Turn!</h2>
+        <p>Pick two cards!</p>
+      </div>
+    </div>
+
+    <div class="turn-card" id="parentTurnCard">
+      <div class="turn-avatar">👨</div>
+      <div>
+        <h2>Parent’s Turn</h2>
+        <p>It’s your turn next!</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+  <div class="match-layout">
+
+    <section class="game-panel">
+
+      <div class="card-grid" id="cardGrid"></div>
+    </section>
+
+    <aside class="star-panel">
+      <div class="speech-bubble" id="starBubble">
+        <h2>It’s your turn now!</h2>
+        <p>Pick two cards!</p>
+      </div>
+
+      <img
+        src="{{ url_for('static', filename='images/matching_star.png') }}"
+        alt="Star character"
+        class="star-character"
+      >
+    </aside>
+
+  </div>
+
+  <div class="complete-modal" id="completeModal">
+    <div class="complete-card">
+      <h2>Great job!</h2>
+      <p>You found all the matching pairs.</p>
+
+      <button id="restartBtn" type="button">
+        Play Again
+      </button>
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}

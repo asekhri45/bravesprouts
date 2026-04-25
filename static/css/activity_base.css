@@ -1,0 +1,21 @@
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: "Nunito", sans-serif;
+}
+
+body,
+button,
+input,
+textarea,
+select,
+a {
+  font-family: "Nunito", sans-serif;
+}
+
+.activity-body {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f8f3ff, #efe6ff);
+}
