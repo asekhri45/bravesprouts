@@ -3,6 +3,11 @@
   --purple-dark: #6d28d9;
   --purple-soft: #f1ebff;
   --purple-light: #faf7ff;
+
+  --blue-progress: #3b99fc;
+  --blue-progress-dark: #1677d8;
+  --blue-progress-soft: #eaf4ff;
+
   --today-bg: #f5edff;
   --card: #ffffff;
   --border: #e8defc;
@@ -22,6 +27,8 @@
   max-width: 980px;
   margin: 0 auto;
 }
+
+/* ================= TODAY CARD ================= */
 
 .today-card {
   position: relative;
@@ -46,7 +53,6 @@
   content: "";
   position: absolute;
   inset: 0;
-  /* background: rgba(245, 237, 255, 0.72); */
   pointer-events: none;
 }
 
@@ -59,9 +65,7 @@
 .today-pill {
   display: inline-flex;
   padding: 8px 13px;
-  border-radius: 999px;
   background: #eadcff;
-  color: var(--purple-dark);
   font-size: 13px;
   font-weight: 800;
   margin-bottom: 14px;
@@ -94,7 +98,6 @@
   padding: 9px 13px;
   border-radius: 999px;
   background: #eadcff;
-  border: none;
   color: var(--text);
   font-size: 13px;
   font-weight: 800;
@@ -178,6 +181,54 @@
   flex-shrink: 0;
 }
 
+/* blue today card for activities 4–6 */
+
+.today-card.today-blue {
+  background:
+    linear-gradient(135deg, rgba(235, 244, 255, 0.96), rgba(220, 236, 255, 0.96)),
+    url("/static/images/today-activity-bg.png");
+  background-size: cover;
+  background-position: center;
+  box-shadow: 0 18px 40px rgba(59, 153, 252, 0.12);
+}
+
+.today-card.today-blue .today-pill {
+  background: #eaf4ff;
+  color: var(--blue-progress);
+}
+
+.today-card.today-blue .today-meta-row span {
+  background: #dce8ff;
+  color: var(--text);
+}
+
+.today-card.today-blue .today-meta-row strong {
+  color: var(--blue-progress);
+}
+
+.today-card.today-blue .start-activity-btn {
+  background: var(--blue-progress);
+  box-shadow: 0 6px 0 var(--blue-progress-dark);
+}
+
+.today-card.today-blue .start-activity-btn:hover {
+  box-shadow: 0 8px 0 var(--blue-progress-dark);
+}
+
+.today-card.today-blue .start-activity-btn:active {
+  box-shadow: 0 3px 0 var(--blue-progress-dark);
+}
+
+.today-card.today-blue .play-circle {
+  color: var(--blue-progress-dark);
+}
+
+.today-card.today-blue .today-character {
+  filter: drop-shadow(0 18px 28px rgba(59, 153, 252, 0.2));
+}
+
+/* ================= JOURNEY SECTION ================= */
+
 .journey-section {
   margin-top: 28px;
 }
@@ -213,6 +264,73 @@
   grid-template-columns: 48px minmax(0, 1fr);
   gap: 16px;
   align-items: center;
+  position: relative;
+}
+
+/* lines hidden by default */
+.journey-row::before,
+.journey-row::after {
+  content: "";
+  position: absolute;
+  left: 23px;
+  width: 4px;
+  height: calc(50% + 18px);
+  border-radius: 999px;
+  opacity: 0;
+  z-index: 0;
+  box-shadow: none;
+  background: transparent;
+}
+
+/* line above number */
+.journey-row::before {
+  bottom: 50%;
+}
+
+/* line below number */
+.journey-row::after {
+  top: 50%;
+}
+
+/* show lines only when unlocked */
+/* show lines only when unlocked */
+.journey-row.line-unlocked::before,
+.journey-row.line-unlocked::after {
+  opacity: 1;
+}
+
+/* first activity should show the line below by default */
+.journey-row:first-child::after {
+  opacity: 1;
+}
+
+/* no top line for first activity */
+.journey-row:first-child::before {
+  opacity: 0;
+}
+
+/* no top line for first activity */
+.journey-row:first-child::before {
+  opacity: 0;
+}
+
+/* no bottom line for last activity */
+.journey-row:last-child::after {
+  opacity: 0;
+}
+
+/* purple lines for activities 1–3 */
+.journey-row:nth-child(-n + 3).line-unlocked::before,
+.journey-row:nth-child(-n + 3).line-unlocked::after {
+  background: var(--purple);
+  box-shadow: 0 0 14px rgba(139, 92, 246, 0.35);
+}
+
+/* blue lines for activities 4–6 */
+.journey-row:nth-child(n + 4):nth-child(-n + 6).line-unlocked::before,
+.journey-row:nth-child(n + 4):nth-child(-n + 6).line-unlocked::after {
+  background: var(--blue-progress);
+  box-shadow: 0 0 14px rgba(59, 153, 252, 0.35);
 }
 
 .journey-step {
@@ -225,8 +343,27 @@
   align-items: center;
   justify-content: center;
   font-weight: 900;
-  border: 3px solid white;
+  border: 3px solid transparent;
   box-shadow: 0 8px 18px rgba(139, 92, 246, 0.14);
+  position: relative;
+  z-index: 2;
+}
+
+/* mask so lines never visibly overlap behind circles */
+.journey-step::before {
+  content: "";
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  background: #ffffff;
+  z-index: -2;
+}
+
+/* blue circles for activities 4–6 */
+.journey-row:nth-child(n + 4):nth-child(-n + 6) .journey-step {
+  background: var(--blue-progress-soft);
+  color: var(--blue-progress);
+  box-shadow: 0 8px 18px rgba(59, 153, 252, 0.14);
 }
 
 .journey-card {
@@ -247,6 +384,12 @@
   box-shadow: 0 16px 30px rgba(139, 92, 246, 0.16);
 }
 
+/* blue selected card for activities 4–6 */
+.journey-row:nth-child(n + 4):nth-child(-n + 6).journey-current .journey-card {
+  border: 2px solid var(--blue-progress);
+  box-shadow: 0 16px 30px rgba(59, 153, 252, 0.16);
+}
+
 .journey-locked {
   opacity: 0.72;
 }
@@ -263,6 +406,10 @@
   box-shadow: none;
 }
 
+.journey-locked .journey-step::before {
+  background: #ffffff;
+}
+
 .journey-icon {
   width: 58px;
   height: 58px;
@@ -271,6 +418,13 @@
   align-items: center;
   justify-content: center;
   font-size: 28px;
+}
+
+.journey-icon img {
+  width: 46px;
+  height: 46px;
+  object-fit: contain;
+  display: block;
 }
 
 .journey-locked .journey-icon {
@@ -295,6 +449,8 @@
 .journey-locked .journey-text p {
   color: var(--locked-text);
 }
+
+/* ================= JOURNEY BUTTONS ================= */
 
 .journey-action-btn,
 .journey-current-pill,
@@ -328,6 +484,19 @@
   box-shadow: 0 4px 0 #d8d8e0;
 }
 
+/* blue buttons for activities 4–6 */
+.journey-row:nth-child(n + 4):nth-child(-n + 6) .journey-action-btn {
+  background: var(--blue-progress-soft);
+  color: var(--blue-progress-dark);
+  box-shadow: 0 4px 0 #c9e3ff;
+}
+
+.journey-row:nth-child(n + 4):nth-child(-n + 6) .journey-current-pill {
+  background: var(--blue-progress);
+  color: white;
+  box-shadow: 0 4px 0 var(--blue-progress-dark);
+}
+
 .journey-action-btn:hover,
 .journey-current-pill:hover,
 .journey-lock-pill:hover {
@@ -340,6 +509,8 @@
   transform: translateY(2px);
   box-shadow: none;
 }
+
+/* ================= RESPONSIVE ================= */
 
 @media (max-width: 760px) {
   .today-card {
@@ -367,84 +538,27 @@
   }
 }
 
-.journey-row {
-  display: grid;
-  grid-template-columns: 48px minmax(0, 1fr);
-  gap: 16px;
-  align-items: center;
-  position: relative;
+/* ================= FINAL PATCH ================= */
+
+/* 1. Remove borders from Today card meta pills */
+
+.today-card.today-blue, .today-meta-row span {
+  border: none;
 }
 
-.journey-row:not(:last-child)::after {
-  content: "";
-  position: absolute;
-  left: 23px;
-  top: 48px;
-  width: 4px;
-  height: calc(100% + 18px);
-  border-radius: 999px;
-  background: var(--purple);
-  opacity: 0.75;
-  box-shadow: 0 0 14px rgba(139, 92, 246, 0.35);
-  z-index: 0;
-}
-
-.journey-row.journey-locked::after {
-  background: #d8d8e0;
+/* 2. First activity gets a bottom line */
+.journey-row:first-child::after {
   opacity: 1;
-  box-shadow: none;
-}
-
-.journey-step {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: var(--purple-soft);
-  color: var(--purple);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 900;
-  border: 3px solid white;
-  box-shadow: 0 8px 18px rgba(139, 92, 246, 0.14);
-  position: relative;
-  z-index: 2;
-}
-
-.journey-locked .journey-step {
-  background: var(--locked);
-  color: var(--locked-text);
-  box-shadow: none;
-}
-
-.journey-row {
-  display: grid;
-  grid-template-columns: 48px minmax(0, 1fr);
-  gap: 16px;
-  align-items: center;
-  position: relative;
-}
-
-.journey-row:not(:first-child)::before {
-  content: "";
-  position: absolute;
-  left: 23px;
-  bottom: 50%;
-  width: 4px;
-  height: calc(50% + 18px);
-  border-radius: 999px;
-  background: #d8d8e0;
-  z-index: 0;
-}
-
-.journey-row.line-unlocked:not(:first-child)::before {
   background: var(--purple);
   box-shadow: 0 0 14px rgba(139, 92, 246, 0.35);
 }
 
-.journey-icon img {
-  width: 46px;
-  height: 46px;
-  object-fit: contain;
-  display: block;
+/* 3. Unlocked number circles get matching borders */
+.journey-row:nth-child(-n + 3).line-unlocked .journey-step,
+.journey-row:first-child .journey-step {
+  border-color: var(--purple);
+}
+
+.journey-row:nth-child(n + 4):nth-child(-n + 6).line-unlocked .journey-step {
+  border-color: var(--blue-progress);
 }

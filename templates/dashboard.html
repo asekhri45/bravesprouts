@@ -25,7 +25,7 @@
   <section class="home-main-column">
 
     {% if ns.current_activity %}
-    <section class="today-card">
+    <section class="today-card {% if ns.current_activity.activity_order >= 4 %}today-blue{% endif %}">
       <div class="today-copy">
         <span class="today-pill">Today’s Activity</span>
 
