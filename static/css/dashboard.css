@@ -562,3 +562,97 @@
 .journey-row:nth-child(n + 4):nth-child(-n + 6).line-unlocked .journey-step {
   border-color: var(--blue-progress);
 }
+
+.unlock-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(31, 27, 46, 0.35);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  padding: 24px;
+}
+
+.unlock-modal-overlay.active {
+  display: flex;
+}
+
+.unlock-modal {
+  width: 100%;
+  max-width: 520px;
+  background: #ffffff;
+  border-radius: 28px;
+  padding: 28px;
+  box-shadow: 0 24px 60px rgba(31, 27, 46, 0.2);
+}
+
+.unlock-modal h2 {
+  margin: 0 0 8px 0;
+  font-size: 26px;
+  color: var(--text);
+}
+
+.unlock-modal-subtitle {
+  margin: 0 0 20px 0;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.unlock-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+}
+
+.unlock-checklist label {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  background: var(--purple-light);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 14px;
+  color: var(--text);
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.unlock-checklist input {
+  margin-top: 3px;
+  width: 18px;
+  height: 18px;
+  accent-color: var(--purple);
+}
+
+.unlock-modal-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 22px;
+}
+
+.unlock-cancel-btn,
+.unlock-confirm-btn {
+  flex: 1;
+  border: none;
+  border-radius: 16px;
+  padding: 14px 18px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.unlock-cancel-btn {
+  background: #eeeef3;
+  color: #777783;
+}
+
+.unlock-confirm-btn {
+  background: var(--purple);
+  color: white;
+}
+
+.unlock-confirm-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

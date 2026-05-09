@@ -1,0 +1,72 @@
+{% extends "activity_layout.html" %}
+
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/mystery_animal.css') }}?v=1">
+<script src="{{ url_for('static', filename='js/mystery_animal.js') }}?v=1" defer></script>
+{% endblock %}
+
+{% block title %}Mystery Animal{% endblock %}
+
+{% block content %}
+
+<div class="animal-page">
+
+  <a href="{{ url_for('dashboard') }}" class="back-link">
+    ← Back to Dashboard
+  </a>
+
+  <main class="animal-stage">
+
+    <section class="animal-header">
+      <h1>Mystery Animal</h1>
+      <p>Think of an animal. Don’t tell me yet.</p>
+    </section>
+
+    <section class="animal-world">
+
+      <div class="floating-animals" aria-hidden="true">
+        <span class="animal-float elephant">🐘</span>
+        <span class="animal-float lion">🦁</span>
+        <span class="animal-float giraffe">🦒</span>
+        <span class="animal-float dolphin">🐬</span>
+        <span class="animal-float butterfly">🦋</span>
+        <span class="animal-float paw-one">🐾</span>
+      </div>
+
+      <img
+        src="{{ url_for('static', filename='images/talking_star.png') }}"
+        alt="Star character"
+        class="main-star"
+      >
+
+      <div class="star-shadow"></div>
+    </section>
+
+    <section class="animal-message-card">
+      <h2 id="starPrompt">
+        Think of an animal...
+      </h2>
+      <p id="starSubPrompt">
+        Don’t tell me yet! I’ll ask you some questions to guess it.
+      </p>
+    </section>
+
+    <p class="animal-progress" id="animalProgress"></p>
+
+  </main>
+
+  <div class="complete-modal" id="completeModal">
+    <div class="complete-card">
+      <h2>Great talking!</h2>
+      <p>Star loved guessing your mystery animal.</p>
+
+      <button id="restartBtn" type="button">
+        Play Again
+      </button>
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}

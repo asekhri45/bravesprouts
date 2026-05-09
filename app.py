@@ -148,7 +148,11 @@ def signup():
         child_name = request.form["child_name"]
         child_dob = request.form["child_dob"]
         password = request.form["password"]
+        confirm_password = request.form["confirm_password"]
         terms_check = 1 if request.form.get("terms_check") else 0
+
+        if password != confirm_password:
+            return render_template("signup.html", error="* Passwords do not match")
 
         error = validate_password(password)
         if error:

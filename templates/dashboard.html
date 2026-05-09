@@ -114,7 +114,10 @@
                   class="journey-lock-pill activity-action-btn"
                   type="button"
                   data-action="unlock"
-                  data-activity-id="{{ activity.activity_id }}">
+                  data-activity-id="{{ activity.activity_id }}"
+                  data-activity-name="{{ activity.activity_name.replace('_', ' ').title() }}"
+                  data-character="{{ activity.character_active or 'the character' }}"
+                  data-time="{{ activity.time_recommended or 30 }}">
                   Unlock
                 </button>
               {% endif %}
@@ -126,6 +129,43 @@
     </section>
 
   </section>
+</div>
+
+<div class="unlock-modal-overlay" id="unlockModal">
+  <div class="unlock-modal">
+    <h2 id="unlockModalTitle">Ready to unlock?</h2>
+
+    <p class="unlock-modal-subtitle">
+      Before unlocking this activity, make sure your child is ready for the next step.
+    </p>
+
+    <div class="unlock-checklist">
+      <label>
+        <input type="checkbox" class="unlock-check">
+        <span id="characterCheckText"></span>
+      </label>
+
+      <label>
+        <input type="checkbox" class="unlock-check">
+        <span id="activityCheckText"></span>
+      </label>
+
+      <label>
+        <input type="checkbox" class="unlock-check">
+        <span id="timeCheckText"></span>
+      </label>
+    </div>
+
+    <div class="unlock-modal-actions">
+      <button type="button" id="cancelUnlockBtn" class="unlock-cancel-btn">
+        Cancel
+      </button>
+
+      <button type="button" id="confirmUnlockBtn" class="unlock-confirm-btn" disabled>
+        Unlock Activity
+      </button>
+    </div>
+  </div>
 </div>
 
 {% endblock %}
