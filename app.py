@@ -2,6 +2,8 @@ from flask import Flask, render_template, request, redirect, session, url_for, a
 import sqlite3
 from werkzeug.security import generate_password_hash, check_password_hash
 
+from datetime import date, datetime
+
 from flask_talisman import Talisman
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -13,9 +15,18 @@ import re
 from flask_session import Session
 from flask_wtf import CSRFProtect
 
+from flask import jsonify
+from dotenv import load_dotenv
+from openai import OpenAI
+import base64
+
 import os
 
 app = Flask(__name__)
+
+load_dotenv()
+
+client = OpenAI(api_key=os.getenv("API_KEY"))
 
 debug_mode = os.environ.get("FLASK_DEBUG") == "1"
 app.config["DEBUG"] = debug_mode
@@ -41,7 +52,8 @@ csp = {
     "script-src": "'self'",
     "style-src": "'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src": "'self' https://fonts.gstatic.com data:",
-    "img-src": "'self' data:"
+    "img-src": "'self' data:",
+    "media-src": "'self' data: blob:"
 }
 
 Talisman(app, content_security_policy=csp)
@@ -618,6 +630,213 @@ def open_activity(activity_id):
         active_page="dashboard",
         profile_icon=session.get("profile_icon", "profileicon.png")
     )
+
+def calculate_child_age(child_dob):
+    if not child_dob:
+        return None
+
+    try:
+        dob = datetime.strptime(child_dob, "%Y-%m-%d").date()
+        today = date.today()
+
+        age = today.year - dob.year
+
+        if (today.month, today.day) < (dob.month, dob.day):
+            age -= 1
+
+        return age
+    except ValueError:
+        return None
+
+@app.route("/api/matching-game/message", methods=["POST"])
+@csrf.exempt
+@login_required
+# @limiter.limit("20 per minute")
+# @limiter.limit("120 per hour")
+def matching_game_message():
+    data = request.get_json(silent=True) or {}
+
+    event_type = data.get("event_type", "general")
+    card_name = data.get("card_name", "")
+    player = data.get("player", "child")
+
+    minutes_played = float(data.get("minutes_played", 0))
+    stage = int(data.get("stage", 0))
+    should_ask_question = bool(data.get("should_ask_question", False))
+    unanswered_questions = int(data.get("unanswered_questions", 0))
+    star_messages_played = int(data.get("star_messages_played", 0))
+    star_questions_asked = int(data.get("star_questions_asked", 0))
+
+    allowed_events = {
+        "game_start",
+        "child_turn",
+        "parent_turn",
+        "match_found",
+        "card_flip",
+        "no_match",
+        "game_complete"
+    }
+
+    if event_type not in allowed_events:
+        return jsonify({"success": False, "error": "Invalid event_type"}), 400
+
+    child_name = session.get("child_name", "there")
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT child_dob
+        FROM users
+        WHERE user_id = ?
+    """, (session["user_id"],))
+
+    user_row = cursor.fetchone()
+    conn.close()
+
+    child_dob = user_row["child_dob"] if user_row else None
+    child_age = calculate_child_age(child_dob)
+
+    if stage <= 0:
+        stage_instructions = """
+Stage 0:
+Only give short encouragement, motivation, or reactions to the move.
+Do NOT describe the card in a silly way.
+Do NOT say things like "funny card", "shiny fish", or "sneaky bunny."
+Do NOT ask questions.
+Do NOT invite the child to talk.
+Do NOT mention turns too much.
+
+Good Stage 0 examples:
+"Nice move!"
+"Good try!"
+"Great flip!"
+"That was close!"
+"Good memory!"
+"Nice match!"
+"Keep going!"
+"Almost got it!"
+"Great focus!"
+"Good one!"
+"""
+    elif stage == 1:
+        stage_instructions = """
+Stage 1:
+Mostly make playful comments.
+If should_ask_question is true, ask a very tiny card-based question.
+Good question examples:
+"Cat or dog?"
+"Fish or bunny?"
+"Which one is silly?"
+Otherwise, do not ask a question.
+"""
+    else:
+        stage_instructions = """
+Stage 2:
+Use playful game comments and occasional slightly longer card-based questions.
+Good question examples:
+"Where do you think the cat is hiding?"
+"Which card should we find next?"
+"Do you think the bunny is nearby?"
+Only ask a question if should_ask_question is true.
+"""
+
+    question_rule = "You SHOULD ask one tiny game-based question." if should_ask_question else "You should NOT ask a question."
+
+    prompt = f"""
+You are Star, a cheerful cartoon mascot in a children's matching card game.
+
+Talk like a playful game buddy for young kids.
+
+IMPORTANT RULES:
+- Never sound like a therapist.
+- Never mention anxiety, bravery, comfort level, silence, mutism, progress, stages, or emotions.
+- Never pressure the child to answer.
+- Never say "you don't have to answer."
+- Never say "I'll watch you play."
+- Do not make the child feel observed.
+- Keep things light, playful, and game-focused.
+- Use only ONE short sentence.
+- Stage 1 must be 4 words or fewer.
+- Stage 0 and Stage 2 should usually be 8 words or fewer.
+- Sound like a fun cartoon game character.
+
+The parent and child are playing together.
+Treat both players naturally.
+Do not overfocus on the child.
+
+{stage_instructions}
+
+Question instruction:
+{question_rule}
+
+Context:
+Event type: {event_type}
+Card name: {card_name}
+Current player: {player}
+Effective minutes played: {minutes_played:.1f}
+Stage: {stage}
+Unanswered questions: {unanswered_questions}
+Star messages already played: {star_messages_played}
+Star questions already asked: {star_questions_asked}
+Child name: {child_name}
+Child age: {child_age if child_age is not None else "unknown"}
+
+Good comment examples:
+"Nice move!"
+"Good try!"
+"Great flip!"
+"That was close!"
+"Good memory!"
+"Nice match!"
+"Keep going!"
+"Almost got it!"
+"Great focus!"
+"Good one!"
+"That was close"
+
+Bad examples:
+"How are you feeling?"
+"Are you comfortable talking?"
+"I'll watch you play."
+"You're doing great communicating."
+"It's okay if you don't answer."
+
+Generate exactly ONE line.
+"""
+
+    try:
+        text_response = client.responses.create(
+            model="gpt-4.1-mini",
+            input=prompt
+        )
+
+        message = text_response.output_text.strip().replace('"', "")
+
+        speech_response = client.audio.speech.create(
+            model="gpt-4o-mini-tts",
+            voice="coral",
+            input=message,
+            response_format="mp3"
+        )
+
+        audio_bytes = speech_response.content
+        audio_base64 = base64.b64encode(audio_bytes).decode("utf-8")
+
+        return jsonify({
+            "success": True,
+            "message": message,
+            "audio": f"data:audio/mpeg;base64,{audio_base64}",
+            "asked_question": should_ask_question
+        })
+
+    except Exception as e:
+        print("Matching game AI error:", e)
+
+        return jsonify({
+            "success": False,
+            "error": "Could not generate message"
+        }), 500
 
 if __name__ == "__main__":
     app.run(debug=True)
