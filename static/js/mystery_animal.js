@@ -5,7 +5,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const incomingCallScreen = document.getElementById("incomingCallScreen");
   const acceptCall = document.getElementById("acceptCall");
   const declineCall = document.getElementById("declineCall");
-  const guessStage = document.getElementById("guessStage");
+  const animalStage = document.getElementById("animalStage");
 
   let starAudio = null;
   let audioContext = null;
@@ -62,7 +62,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     try {
-      const response = await fetch("/api/guessing-game/message", {
+      const response = await fetch("/api/mystery-animal/message", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -84,17 +84,10 @@ document.addEventListener("DOMContentLoaded", function () {
       }
 
       currentResponseMode = data.response_mode || "none";
-
-      if (data.game_complete) {
-        setTimeout(function () {
-          completeModal.classList.add("show");
-        }, 900);
-      }
-
-      playStarAudio(data.audio, data.expects_response !== false);
+      playStarAudio(data.audio);
 
     } catch (error) {
-      console.error("Guessing Game request error:", error);
+      console.error("Mystery Animal request error:", error);
     }
   }
 
@@ -118,6 +111,8 @@ document.addEventListener("DOMContentLoaded", function () {
       isListening = true;
 
       mediaRecorder.addEventListener("dataavailable", function (event) {
+        console.log("🎧 Data available:", event.data.size);
+
         if (event.data.size > 0) {
           audioChunks.push(event.data);
         }
@@ -131,9 +126,13 @@ document.addEventListener("DOMContentLoaded", function () {
           track.stop();
         });
 
+        console.log("📦 Audio chunks:", audioChunks.length);
+
         const audioBlob = new Blob(audioChunks, {
           type: "audio/webm"
         });
+
+        console.log("📦 Audio blob size:", audioBlob.size);
 
         if (!audioBlob.size) {
           console.warn("No audio captured.");
@@ -153,15 +152,21 @@ document.addEventListener("DOMContentLoaded", function () {
 
     } catch (error) {
       console.error("Microphone error:", error);
-      requestStarMessage("no_response", "");
     }
   }
 
   function stopListeningForChild() {
     console.log("🛑 Stopping recording...");
 
-    if (!mediaRecorder) return;
-    if (mediaRecorder.state === "inactive") return;
+    if (!mediaRecorder) {
+      console.log("No mediaRecorder exists.");
+      return;
+    }
+
+    if (mediaRecorder.state === "inactive") {
+      console.log("Recorder already inactive.");
+      return;
+    }
 
     clearTimeout(silenceTimer);
     mediaRecorder.stop();
@@ -174,7 +179,7 @@ document.addEventListener("DOMContentLoaded", function () {
       const formData = new FormData();
       formData.append("audio", audioBlob, "child-response.webm");
 
-      const response = await fetch("/api/guessing-game/transcribe", {
+      const response = await fetch("/api/mystery-animal/transcribe", {
         method: "POST",
         credentials: "same-origin",
         body: formData
@@ -199,15 +204,14 @@ document.addEventListener("DOMContentLoaded", function () {
         return;
       }
 
-      requestStarMessage("child_response", transcript);
+      requestStarMessage("child_answer", transcript);
 
     } catch (error) {
       console.error("Transcription request error:", error);
-      requestStarMessage("no_response", "");
     }
   }
 
-  function playStarAudio(audioSrc, shouldListenAfter = true) {
+  function playStarAudio(audioSrc) {
     if (!audioSrc) {
       stopMouthAnimation();
       return;
@@ -235,11 +239,9 @@ document.addEventListener("DOMContentLoaded", function () {
       console.log("🔇 Star audio ended");
       stopMouthAnimation();
 
-      if (shouldListenAfter) {
-        setTimeout(function () {
-          startListeningForChild();
-        }, 500);
-      }
+      setTimeout(function () {
+        startListeningForChild();
+      }, 500);
     });
 
     starAudio.addEventListener("error", function () {
@@ -315,6 +317,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     if (mouthAnimationFrame) {
       cancelAnimationFrame(mouthAnimationFrame);
+      clearTimeout(mouthAnimationFrame);
       mouthAnimationFrame = null;
     }
 
@@ -370,7 +373,7 @@ document.addEventListener("DOMContentLoaded", function () {
     playCallAcceptedSound();
 
     incomingCallScreen.classList.add("hide");
-    guessStage.classList.remove("call-hidden");
+    animalStage.classList.remove("call-hidden");
 
     setTimeout(function () {
       incomingCallScreen.style.display = "none";

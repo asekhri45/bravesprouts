@@ -2,15 +2,15 @@
 
 {% block head %}
 {{ super() }}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/guessing_game_2.css') }}?v=1">
-<script src="{{ url_for('static', filename='js/guessing_game_2.js') }}?v=1" defer></script>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/toy_trivia_game.css') }}?v=1">
+<script src="{{ url_for('static', filename='js/toy_trivia_game.js') }}?v=1" defer></script>
 {% endblock %}
 
-{% block title %}Guessing Game 2{% endblock %}
+{% block title %}Toy Trivia Game{% endblock %}
 
 {% block content %}
 
-<div class="guess2-page">
+<div class="toy-page">
 
   <div class="incoming-call-screen" id="incomingCallScreen">
     <div class="incoming-bg"></div>
@@ -46,7 +46,7 @@
     </div>
   </div>
 
-  <main class="guess2-stage call-hidden" id="guess2Stage">
+  <main class="toy-stage call-hidden" id="toyStage">
     <section class="character-fullscreen">
 
       <div class="character-wrap">
@@ -85,8 +85,8 @@
 
   <div class="complete-modal" id="completeModal">
     <div class="complete-card">
-      <h2>You guessed it!</h2>
-      <p>The toy store worker loved playing the animal guessing game with you.</p>
+      <h2>Great job!</h2>
+      <p>The toy store worker loved playing toy trivia with you.</p>
 
       <button id="restartBtn" type="button">
         Play Again

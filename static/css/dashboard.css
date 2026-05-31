@@ -8,7 +8,6 @@
   --blue-progress-dark: #1677d8;
   --blue-progress-soft: #eaf4ff;
 
-  --today-bg: #f5edff;
   --card: #ffffff;
   --border: #e8defc;
   --text: #1f1b2e;
@@ -18,59 +17,179 @@
   --shadow: 0 18px 40px rgba(109, 40, 217, 0.12);
 }
 
+html,
+body {
+  min-height: 100%;
+  background: #f6fbff;
+}
+
+body {
+  overflow-x: hidden;
+}
+
 .home-shell {
   width: 100%;
+  min-height: calc(100vh - 40px);
+  position: relative;
+  padding: 8px 0 60px;
+}
+
+.home-shell::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -2;
+
+  background:
+    radial-gradient(circle at 8% 14%, rgba(170, 225, 255, 0.42) 0%, transparent 24%),
+    radial-gradient(circle at 92% 10%, rgba(205, 235, 255, 0.55) 0%, transparent 20%),
+    radial-gradient(circle at 84% 44%, rgba(125, 200, 255, 0.20) 0%, transparent 24%),
+    radial-gradient(circle at 18% 78%, rgba(210, 240, 255, 0.46) 0%, transparent 26%),
+    radial-gradient(circle at 76% 88%, rgba(175, 220, 255, 0.18) 0%, transparent 20%),
+    radial-gradient(circle at 48% 24%, rgba(255, 255, 255, 0.96) 0%, rgba(255, 255, 255, 0.96) 28%, transparent 52%),
+    radial-gradient(circle at 58% 72%, rgba(255, 255, 255, 0.96) 0%, rgba(255, 255, 255, 0.96) 24%, transparent 48%),
+    linear-gradient(135deg, #ffffff 0%, #fcfeff 38%, #f4faff 100%);
+}
+
+.home-shell::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  opacity: 0.18;
+
+  background-image:
+    linear-gradient(rgba(59, 153, 252, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(59, 153, 252, 0.05) 1px, transparent 1px);
+
+  background-size: 52px 52px;
+  mask-image: radial-gradient(circle at center, black 35%, transparent 90%);
 }
 
 .home-main-column {
   width: 100%;
   max-width: 980px;
   margin: 0 auto;
+  position: relative;
+}
+
+.home-main-column::before {
+  content: "";
+  position: absolute;
+  top: -40px;
+  right: -120px;
+  width: 280px;
+  height: 280px;
+  border-radius: 50%;
+  background: rgba(137, 207, 255, 0.22);
+  filter: blur(24px);
+  z-index: -1;
+}
+
+.home-main-column::after {
+  content: "";
+  position: absolute;
+  top: 420px;
+  left: -140px;
+  width: 260px;
+  height: 260px;
+  border-radius: 60px;
+  background: rgba(59, 153, 252, 0.16);
+  transform: rotate(18deg);
+  filter: blur(22px);
+  z-index: -1;
+}
+
+/* ================= TOPBAR ================= */
+
+.dashboard-body-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 26px;
+  position: relative;
+  z-index: 5;
+}
+
+.dashboard-body-topbar .nav-greeting {
+  margin-left: 0;
+}
+
+.dashboard-body-topbar .profile-dropdown {
+  margin-right: 0;
 }
 
 /* ================= TODAY CARD ================= */
 
 .today-card {
   position: relative;
-  display: grid;
-  grid-template-columns: minmax(0, 0.62fr) minmax(260px, 0.38fr);
-  gap: 36px;
+  display: block;
+  height: 305px;
+  min-height: 305px;
+
   background:
-    linear-gradient(135deg, rgba(247, 241, 255, 0.96), rgba(243, 234, 255, 0.96)),
-    url("/static/images/today-activity-bg.png");
+    radial-gradient(
+      circle at 14% 42%,
+      rgba(255, 250, 241, 0.96) 0%,
+      rgba(255, 246, 232, 0.88) 26%,
+      transparent 48%
+    ),
+    radial-gradient(
+      circle at 38% 18%,
+      rgba(253, 246, 232, 0.72) 0%,
+      transparent 34%
+    ),
+    radial-gradient(
+      circle at 72% 52%,
+      rgba(229, 213, 255, 0.88) 0%,
+      rgba(218, 198, 255, 0.78) 42%,
+      transparent 72%
+    ),
+    linear-gradient(
+      105deg,
+      #fffaf1 0%,
+      #fef6e8 28%,
+      #f8edff 40%,
+      #eee0ff 68%,
+      #e4d2ff 100%
+    );
+
   background-size: cover;
   background-position: center;
-  border: 1px solid var(--border);
+  border: 0.5px solid rgba(109, 40, 217, 0.18);
   border-radius: 32px;
-  padding: 30px;
+  padding: 26px 0 26px 28px;
   color: var(--text);
-  box-shadow: var(--shadow);
+  box-shadow: 0 14px 34px rgba(56, 91, 155, 0.08);
   overflow: hidden;
   margin-bottom: 28px;
 }
 
-.today-card::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
 .today-copy {
   position: relative;
-  z-index: 1;
-  max-width: 640px;
+  z-index: 2;
+  max-width: 360px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .today-pill {
   display: inline-flex;
-  padding: 8px 13px;
+  align-self: flex-start;
+  width: fit-content;
+  padding: 4px 8px;
+  border-radius: 999px;
   background: #eadcff;
-  font-size: 13px;
-  font-weight: 800;
+  color: var(--purple-dark);
+  font-size: 12px;
+  font-weight: 900;
   margin-bottom: 14px;
+  border: 0.5px solid rgba(130, 130, 140, 0.18);
 }
-
 .today-copy h2 {
   margin: 0 0 10px 0;
   font-size: 34px;
@@ -81,29 +200,32 @@
 
 .today-copy p {
   margin: 0;
-  max-width: 610px;
-  color: var(--muted);
-  font-size: 15px;
-  line-height: 1.55;
+  max-width: 420px;
+  color: #383044;
+  font-size: 14px;
+  line-height: 1.45;
 }
 
 .today-meta-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 18px;
+  gap: 8px;
+  margin-top: 15px;
+  max-width: 420px;
 }
 
 .today-meta-row span {
-  padding: 9px 13px;
-  border-radius: 999px;
-  background: #eadcff;
+  padding: 8px 12px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.62);
+  backdrop-filter: blur(8px);
   color: var(--text);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 800;
   display: inline-flex;
   align-items: center;
   gap: 7px;
+  border: 0.5px solid rgba(130, 130, 140, 0.18);
 }
 
 .today-meta-row strong {
@@ -113,17 +235,25 @@
 }
 
 .today-visual {
-  position: relative;
+  position: absolute;
+  inset: 0 0 0 auto;
+  width: 68%;
   z-index: 1;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  justify-content: flex-end;
+  align-items: stretch;
+  overflow: hidden;
+  pointer-events: none;
 }
 
 .today-character {
-  max-width: 210px;
-  height: auto;
-  filter: drop-shadow(0 18px 28px rgba(109, 40, 217, 0.2));
+  height: 305px;
+  width: auto;
+  max-width: none;
+  object-fit: contain;
+  object-position: right center;
+  display: block;
+  filter: drop-shadow(0 18px 28px rgba(109, 40, 217, 0.16));
 }
 
 .today-mascot {
@@ -137,29 +267,31 @@
   justify-content: center;
   font-size: 72px;
   box-shadow: 0 18px 34px rgba(109, 40, 217, 0.12);
+  align-self: center;
+  margin-right: 30px;
 }
 
 .start-activity-btn {
-  grid-column: 1 / -1;
   width: 100%;
+  max-width: 420px;
   text-decoration: none;
   background: var(--purple);
   color: #ffffff;
+  font-size: 14px;
   font-weight: 900;
-  padding: 17px 22px;
-  border-radius: 18px;
+  padding: 14px 18px;
+  border-radius: 16px;
   box-shadow: 0 6px 0 var(--purple-dark);
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 12px;
-  margin-top: 8px;
+  margin-top: 18px;
   transition: 0.18s ease;
-  transform: translateY(-2px);
 }
 
 .start-activity-btn:hover {
-  transform: translateY(0px);
+  transform: translateY(-2px);
   box-shadow: 0 8px 0 var(--purple-dark);
 }
 
@@ -181,29 +313,48 @@
   flex-shrink: 0;
 }
 
-/* blue today card for activities 4–6 */
+/* blue today card */
 
 .today-card.today-blue {
   background:
-    linear-gradient(135deg, rgba(235, 244, 255, 0.96), rgba(220, 236, 255, 0.96)),
-    url("/static/images/today-activity-bg.png");
+    radial-gradient(
+      circle at 16% 42%,
+      rgba(245, 251, 255, 0.96) 0%,
+      rgba(234, 246, 255, 0.88) 30%,
+      transparent 52%
+    ),
+    radial-gradient(
+      circle at 72% 52%,
+      rgba(190, 222, 255, 0.62) 0%,
+      rgba(170, 210, 255, 0.48) 44%,
+      transparent 74%
+    ),
+    linear-gradient(
+      105deg,
+      #f8fcff 0%,
+      #eef8ff 30%,
+      #eaf4ff 46%,
+      #dcecff 72%,
+      #d0e6ff 100%
+    );
+
   background-size: cover;
   background-position: center;
-  box-shadow: 0 18px 40px rgba(59, 153, 252, 0.12);
+  border: 0.5px solid rgba(59, 153, 252, 0.18);
+  box-shadow: 0 14px 34px rgba(59, 153, 252, 0.08);
 }
 
 .today-card.today-blue .today-pill {
   background: #eaf4ff;
-  color: var(--blue-progress);
+  color: var(--blue-progress-dark);
 }
 
 .today-card.today-blue .today-meta-row span {
-  background: #dce8ff;
-  color: var(--text);
+  background: rgba(255, 255, 255, 0.62);
 }
 
 .today-card.today-blue .today-meta-row strong {
-  color: var(--blue-progress);
+  color: var(--blue-progress-dark);
 }
 
 .today-card.today-blue .start-activity-btn {
@@ -224,7 +375,7 @@
 }
 
 .today-card.today-blue .today-character {
-  filter: drop-shadow(0 18px 28px rgba(59, 153, 252, 0.2));
+  filter: drop-shadow(0 18px 28px rgba(59, 153, 252, 0.16));
 }
 
 /* ================= JOURNEY SECTION ================= */
@@ -267,7 +418,6 @@
   position: relative;
 }
 
-/* lines hidden by default */
 .journey-row::before,
 .journey-row::after {
   content: "";
@@ -278,55 +428,36 @@
   border-radius: 999px;
   opacity: 0;
   z-index: 0;
-  box-shadow: none;
   background: transparent;
 }
 
-/* line above number */
 .journey-row::before {
   bottom: 50%;
 }
 
-/* line below number */
 .journey-row::after {
   top: 50%;
 }
 
-/* show lines only when unlocked */
-/* show lines only when unlocked */
 .journey-row.line-unlocked::before,
 .journey-row.line-unlocked::after {
   opacity: 1;
 }
 
-/* first activity should show the line below by default */
-.journey-row:first-child::after {
-  opacity: 1;
-}
-
-/* no top line for first activity */
 .journey-row:first-child::before {
   opacity: 0;
 }
 
-/* no top line for first activity */
-.journey-row:first-child::before {
-  opacity: 0;
-}
-
-/* no bottom line for last activity */
 .journey-row:last-child::after {
   opacity: 0;
 }
 
-/* purple lines for activities 1–3 */
 .journey-row:nth-child(-n + 3).line-unlocked::before,
 .journey-row:nth-child(-n + 3).line-unlocked::after {
   background: var(--purple);
   box-shadow: 0 0 14px rgba(139, 92, 246, 0.35);
 }
 
-/* blue lines for activities 4–6 */
 .journey-row:nth-child(n + 4):nth-child(-n + 6).line-unlocked::before,
 .journey-row:nth-child(n + 4):nth-child(-n + 6).line-unlocked::after {
   background: var(--blue-progress);
@@ -349,21 +480,27 @@
   z-index: 2;
 }
 
-/* mask so lines never visibly overlap behind circles */
-.journey-step::before {
-  content: "";
-  position: absolute;
-  inset: -8px;
-  border-radius: 50%;
-  background: #ffffff;
-  z-index: -2;
+.journey-step span {
+  position: relative;
+  z-index: 3;
 }
 
-/* blue circles for activities 4–6 */
 .journey-row:nth-child(n + 4):nth-child(-n + 6) .journey-step {
   background: var(--blue-progress-soft);
   color: var(--blue-progress);
   box-shadow: 0 8px 18px rgba(59, 153, 252, 0.14);
+}
+
+.journey-row.journey-unlocked:nth-child(-n + 3) .journey-step {
+  background: var(--purple);
+  color: #ffffff;
+  border-color: var(--purple);
+}
+
+.journey-row.journey-unlocked:nth-child(n + 4):nth-child(-n + 6) .journey-step {
+  background: var(--blue-progress);
+  color: #ffffff;
+  border-color: var(--blue-progress);
 }
 
 .journey-card {
@@ -384,7 +521,6 @@
   box-shadow: 0 16px 30px rgba(139, 92, 246, 0.16);
 }
 
-/* blue selected card for activities 4–6 */
 .journey-row:nth-child(n + 4):nth-child(-n + 6).journey-current .journey-card {
   border: 2px solid var(--blue-progress);
   box-shadow: 0 16px 30px rgba(59, 153, 252, 0.16);
@@ -404,10 +540,7 @@
   background: var(--locked);
   color: var(--locked-text);
   box-shadow: none;
-}
-
-.journey-locked .journey-step::before {
-  background: #ffffff;
+  border-color: transparent;
 }
 
 .journey-icon {
@@ -484,7 +617,6 @@
   box-shadow: 0 4px 0 #d8d8e0;
 }
 
-/* blue buttons for activities 4–6 */
 .journey-row:nth-child(n + 4):nth-child(-n + 6) .journey-action-btn {
   background: var(--blue-progress-soft);
   color: var(--blue-progress-dark);
@@ -510,58 +642,7 @@
   box-shadow: none;
 }
 
-/* ================= RESPONSIVE ================= */
-
-@media (max-width: 760px) {
-  .today-card {
-    grid-template-columns: 1fr;
-  }
-
-  .today-visual {
-    justify-content: flex-start;
-  }
-
-  .journey-card {
-    grid-template-columns: 48px minmax(0, 1fr);
-  }
-
-  .journey-action {
-    grid-column: 1 / -1;
-  }
-
-  .journey-action-btn,
-  .journey-current-pill,
-  .journey-lock-pill {
-    width: 100%;
-    display: flex;
-    justify-content: center;
-  }
-}
-
-/* ================= FINAL PATCH ================= */
-
-/* 1. Remove borders from Today card meta pills */
-
-.today-card.today-blue, .today-meta-row span {
-  border: none;
-}
-
-/* 2. First activity gets a bottom line */
-.journey-row:first-child::after {
-  opacity: 1;
-  background: var(--purple);
-  box-shadow: 0 0 14px rgba(139, 92, 246, 0.35);
-}
-
-/* 3. Unlocked number circles get matching borders */
-.journey-row:nth-child(-n + 3).line-unlocked .journey-step,
-.journey-row:first-child .journey-step {
-  border-color: var(--purple);
-}
-
-.journey-row:nth-child(n + 4):nth-child(-n + 6).line-unlocked .journey-step {
-  border-color: var(--blue-progress);
-}
+/* ================= UNLOCK MODAL ================= */
 
 .unlock-modal-overlay {
   position: fixed;
@@ -655,4 +736,66 @@
 .unlock-confirm-btn:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+/* ================= RESPONSIVE ================= */
+
+@media (max-width: 760px) {
+  .today-card {
+    grid-template-columns: 1fr;
+    padding: 26px;
+    min-height: auto;
+  }
+
+  .today-copy,
+  .today-copy p,
+  .today-meta-row,
+  .start-activity-btn {
+    max-width: 100%;
+  }
+
+  .today-visual {
+    justify-content: center;
+    max-height: 240px;
+  }
+
+  .today-character {
+    height: auto;
+    max-height: 240px;
+    max-width: 100%;
+  }
+
+  .journey-card {
+    grid-template-columns: 48px minmax(0, 1fr);
+  }
+
+  .journey-action {
+    grid-column: 1 / -1;
+  }
+
+  .journey-action-btn,
+  .journey-current-pill,
+  .journey-lock-pill {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+  }
+}
+
+.today-copy p {
+  max-width: 350px;
+  font-size: 13.5px;
+  line-height: 1.42;
+}
+
+.today-meta-row {
+  max-width: 350px;
+  gap: 7px;
+  margin-top: 14px;
+}
+
+.start-activity-btn {
+  max-width: 270px;
+  padding: 8px 10px;
+  font-size: 13.5px;
 }

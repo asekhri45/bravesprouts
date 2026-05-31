@@ -5,9 +5,9 @@ document.addEventListener("DOMContentLoaded", function () {
   const incomingCallScreen = document.getElementById("incomingCallScreen");
   const acceptCall = document.getElementById("acceptCall");
   const declineCall = document.getElementById("declineCall");
-  const guessStage = document.getElementById("guessStage");
+  const toyStage = document.getElementById("toyStage");
 
-  let starAudio = null;
+  let characterAudio = null;
   let audioContext = null;
   let analyser = null;
   let sourceNode = null;
@@ -54,7 +54,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  async function requestStarMessage(eventType, childResponse = "") {
+  async function requestCharacterMessage(eventType, childResponse = "") {
     console.log("🚀 Sending to LLM:", {
       eventType,
       childResponse,
@@ -62,7 +62,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     try {
-      const response = await fetch("/api/guessing-game/message", {
+      const response = await fetch("/api/toy-trivia-game/message", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -76,10 +76,10 @@ document.addEventListener("DOMContentLoaded", function () {
       });
 
       const data = await response.json();
-      console.log("⭐ Star response:", data);
+      console.log("🧸 Toy worker response:", data);
 
       if (!data.success) {
-        console.error(data.error || "Star response failed");
+        console.error(data.error || "Toy worker response failed");
         return;
       }
 
@@ -91,10 +91,10 @@ document.addEventListener("DOMContentLoaded", function () {
         }, 900);
       }
 
-      playStarAudio(data.audio, data.expects_response !== false);
+      playCharacterAudio(data.audio, data.expects_response !== false);
 
     } catch (error) {
-      console.error("Guessing Game request error:", error);
+      console.error("Toy Trivia request error:", error);
     }
   }
 
@@ -137,7 +137,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         if (!audioBlob.size) {
           console.warn("No audio captured.");
-          requestStarMessage("no_response", "");
+          requestCharacterMessage("no_response", "");
           return;
         }
 
@@ -153,7 +153,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     } catch (error) {
       console.error("Microphone error:", error);
-      requestStarMessage("no_response", "");
+      requestCharacterMessage("no_response", "");
     }
   }
 
@@ -174,7 +174,7 @@ document.addEventListener("DOMContentLoaded", function () {
       const formData = new FormData();
       formData.append("audio", audioBlob, "child-response.webm");
 
-      const response = await fetch("/api/guessing-game/transcribe", {
+      const response = await fetch("/api/toy-trivia-game/transcribe", {
         method: "POST",
         credentials: "same-origin",
         body: formData
@@ -186,7 +186,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
       if (!data.success) {
         console.error(data.error || "Transcription failed");
-        requestStarMessage("no_response", "");
+        requestCharacterMessage("no_response", "");
         return;
       }
 
@@ -195,19 +195,19 @@ document.addEventListener("DOMContentLoaded", function () {
       console.log("📝 TRANSCRIPT:", transcript);
 
       if (!transcript) {
-        requestStarMessage("no_response", "");
+        requestCharacterMessage("no_response", "");
         return;
       }
 
-      requestStarMessage("child_response", transcript);
+      requestCharacterMessage("child_answer", transcript);
 
     } catch (error) {
       console.error("Transcription request error:", error);
-      requestStarMessage("no_response", "");
+      requestCharacterMessage("no_response", "");
     }
   }
 
-  function playStarAudio(audioSrc, shouldListenAfter = true) {
+  function playCharacterAudio(audioSrc, shouldListenAfter = true) {
     if (!audioSrc) {
       stopMouthAnimation();
       return;
@@ -217,22 +217,22 @@ document.addEventListener("DOMContentLoaded", function () {
       stopListeningForChild();
     }
 
-    if (starAudio) {
-      starAudio.pause();
-      starAudio.currentTime = 0;
+    if (characterAudio) {
+      characterAudio.pause();
+      characterAudio.currentTime = 0;
     }
 
-    starAudio = new Audio(audioSrc);
-    starAudio.volume = 1.0;
-    starAudio.playbackRate = 1.05;
+    characterAudio = new Audio(audioSrc);
+    characterAudio.volume = 1.0;
+    characterAudio.playbackRate = 1.04;
 
-    starAudio.addEventListener("play", function () {
-      console.log("🔊 Star audio playing");
+    characterAudio.addEventListener("play", function () {
+      console.log("🔊 Character audio playing");
       startMouthAnimation();
     });
 
-    starAudio.addEventListener("ended", function () {
-      console.log("🔇 Star audio ended");
+    characterAudio.addEventListener("ended", function () {
+      console.log("🔇 Character audio ended");
       stopMouthAnimation();
 
       if (shouldListenAfter) {
@@ -242,20 +242,20 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     });
 
-    starAudio.addEventListener("error", function () {
-      console.error("Star audio error");
+    characterAudio.addEventListener("error", function () {
+      console.error("Character audio error");
       stopMouthAnimation();
     });
 
-    starAudio.play().catch(function (error) {
+    characterAudio.play().catch(function (error) {
       console.error("Audio playback error:", error);
       stopMouthAnimation();
     });
   }
 
   function startMouthAnimation() {
-    const mouth = document.getElementById("starMouth");
-    if (!mouth || !starAudio) return;
+    const mouth = document.getElementById("characterMouth");
+    if (!mouth || !characterAudio) return;
 
     stopMouthAnimation();
 
@@ -263,7 +263,7 @@ document.addEventListener("DOMContentLoaded", function () {
     analyser = audioContext.createAnalyser();
     analyser.fftSize = 256;
 
-    sourceNode = audioContext.createMediaElementSource(starAudio);
+    sourceNode = audioContext.createMediaElementSource(characterAudio);
     sourceNode.connect(analyser);
     analyser.connect(audioContext.destination);
 
@@ -272,7 +272,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function setMouth(state, scaleX, scaleY) {
       if (currentMouth !== state) {
-        mouth.src = `/static/images/mouth-${state}.png`;
+        mouth.src = `/static/images/toy_worker_mouth-${state}.png`;
         currentMouth = state;
       }
 
@@ -311,7 +311,7 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function stopMouthAnimation() {
-    const mouth = document.getElementById("starMouth");
+    const mouth = document.getElementById("characterMouth");
 
     if (mouthAnimationFrame) {
       cancelAnimationFrame(mouthAnimationFrame);
@@ -338,15 +338,15 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     if (mouth) {
-      mouth.src = "/static/images/mouth-closed.png";
+      mouth.src = "/static/images/toy_worker_mouth-closed.png";
       mouth.style.transform = "translateX(-50%) scale(1)";
     }
   }
 
   function restartGame() {
-    if (starAudio) {
-      starAudio.pause();
-      starAudio.currentTime = 0;
+    if (characterAudio) {
+      characterAudio.pause();
+      characterAudio.currentTime = 0;
     }
 
     if (isListening) {
@@ -358,7 +358,7 @@ document.addEventListener("DOMContentLoaded", function () {
     currentResponseMode = "none";
 
     setTimeout(function () {
-      requestStarMessage("restart");
+      requestCharacterMessage("restart");
     }, 500);
   }
 
@@ -370,14 +370,14 @@ document.addEventListener("DOMContentLoaded", function () {
     playCallAcceptedSound();
 
     incomingCallScreen.classList.add("hide");
-    guessStage.classList.remove("call-hidden");
+    toyStage.classList.remove("call-hidden");
 
     setTimeout(function () {
       incomingCallScreen.style.display = "none";
     }, 450);
 
     setTimeout(function () {
-      requestStarMessage("intro");
+      requestCharacterMessage("intro");
     }, 700);
   }
 

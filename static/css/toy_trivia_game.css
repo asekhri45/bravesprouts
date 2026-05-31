@@ -13,32 +13,32 @@ body {
   font-family: "Nunito", sans-serif;
 }
 
-.guess2-page {
+.toy-page {
   width: 100vw;
   height: 100vh;
   position: relative;
   overflow: hidden;
 }
 
-.guess2-page::before {
+.toy-page::before {
   content: "";
   position: absolute;
   inset: 0;
   background:
     linear-gradient(
-      rgba(8, 18, 38, 0.30),
-      rgba(8, 18, 38, 0.30)
+      rgba(8, 18, 38, 0.20),
+      rgba(8, 18, 38, 0.20)
     ),
     url("/static/images/toy_store_bg.png");
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  filter: blur(3px) saturate(0.85) brightness(0.92);
+  filter: blur(3px) saturate(0.75) brightness(0.82);
   transform: scale(1.03);
   z-index: 0;
 }
 
-.guess2-page::after {
+.toy-page::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -52,7 +52,7 @@ body {
   z-index: 3;
 }
 
-.guess2-stage {
+.toy-stage {
   width: 100%;
   height: calc(100vh - 86px);
   position: relative;
@@ -234,13 +234,13 @@ body {
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(rgba(8, 18, 38, 0.36), rgba(8, 18, 38, 0.36)),
+    linear-gradient(rgba(8, 18, 38, 0.62), rgba(8, 18, 38, 0.62)),
     url("/static/images/toy_store_bg.png");
   background-size: cover;
   background-position: center;
-  filter: blur(3px) saturate(0.85) brightness(0.9);
+  filter: blur(3px) saturate(0.7) brightness(0.75);
   transform: scale(1.04);
-  opacity: 0.78;
+  opacity: 0.8;
 }
 
 .incoming-content {
@@ -392,7 +392,7 @@ body {
 @media (max-height: 760px) {
   .character-wrap {
     width: min(40vw, 520px);
-    bottom: -170px;
+    bottom: -80px;
   }
 }
 

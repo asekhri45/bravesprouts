@@ -2,7 +2,7 @@
 
 {% block head %}
 {{ super() }}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}?v=7">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}?v=9">
 {% endblock %}
 
 {% block title %}Home{% endblock %}
@@ -24,10 +24,73 @@
 <div class="home-shell">
   <section class="home-main-column">
 
+    <section class="dashboard-body-topbar">
+      <div class="nav-greeting">
+        <h2>Good morning, {{ parent.split()[0] }}!</h2>
+        <p>Let’s build {{ child }}'s confidence, one conversation at a time.</p>
+      </div>
+
+      <div class="profile-dropdown">
+  <button class="profile-trigger" id="profileTrigger" type="button">
+    <img
+      src="{{ url_for('static', filename='images/' + profile_icon) }}"
+      class="profile-icon"
+      id="currentProfileIcon"
+      alt="Profile icon"
+    >
+
+    <span class="profile-name">
+      {{ parent.split()[0] ~ " (Parent)" }}
+    </span>
+
+    <span class="profile-arrow">▾</span>
+    
+  </button>
+
+  <div class="dropdown-menu" id="dropdownMenu">
+          <div class="dropdown-section">
+            <p class="dropdown-title">Choose Profile Icon</p>
+
+            <div class="icon-options">
+              <button class="icon-option" type="button" data-icon="profileicon.png">
+                <img src="{{ url_for('static', filename='images/profileicon.png') }}" alt="Profile option 1">
+              </button>
+
+              <button class="icon-option" type="button" data-icon="profileicon1.png">
+                <img src="{{ url_for('static', filename='images/profileicon1.png') }}" alt="Profile option 2">
+              </button>
+
+              <button class="icon-option" type="button" data-icon="profileicon2.png">
+                <img src="{{ url_for('static', filename='images/profileicon2.png') }}" alt="Profile option 3">
+              </button>
+
+              <button class="icon-option" type="button" data-icon="profileicon3.png">
+                <img src="{{ url_for('static', filename='images/profileicon3.png') }}" alt="Profile option 4">
+              </button>
+            </div>
+          </div>
+
+          <div class="dropdown-divider"></div>
+
+          <div class="dropdown-links">
+            <a href="{{ url_for('dashboard') }}" class="dropdown-link">View Dashboard</a>
+            <a href="{{ url_for('home') }}" class="dropdown-link">Return to Home Page</a>
+            <a href="{{ url_for('settings') }}" class="dropdown-link">Manage Profile</a>
+            <a href="{{ url_for('terms') }}" class="dropdown-link">View Terms of Use</a>
+            <a href="{{ url_for('privacy') }}" class="dropdown-link">View Privacy Policy</a>
+          </div>
+
+          <div class="dropdown-divider"></div>
+
+          <a href="/logout" class="dropdown-logout">Log Out</a>
+        </div>
+      </div>
+    </section>
+
     {% if ns.current_activity %}
     <section class="today-card {% if ns.current_activity.activity_order >= 4 %}today-blue{% endif %}">
       <div class="today-copy">
-        <span class="today-pill">Today’s Activity</span>
+        <span class="today-pill">CURRENT ACTIVITY</span>
 
         <h2>{{ ns.current_activity.activity_name.replace('_', ' ').title() }}</h2>
 
@@ -36,10 +99,17 @@
         </p>
 
         <div class="today-meta-row">
-            <span><strong>📊</strong> Level {{ ns.current_activity.level_of_realism or 1 }} of {{ ns.current_activity.total_levels_of_realism or 1 }}</span>
-            <span><strong>🕒</strong> {{ ns.current_activity.time_recommended or 30 }} min</span>
-            <span><strong>👥</strong> With Parent</span>
+          <span><strong>📊</strong> Level {{ ns.current_activity.level_of_realism or 1 }} of {{ ns.current_activity.total_levels_of_realism or 1 }}</span>
+          <span><strong>🕒</strong> {{ ns.current_activity.time_recommended or 30 }} min</span>
+          <span><strong>👥</strong> With Parent</span>
         </div>
+
+        <a
+          href="{{ url_for('open_activity', activity_id=ns.current_activity.activity_id) }}"
+          class="start-activity-btn">
+          <span class="play-circle">▶</span>
+          Start Activity
+        </a>
       </div>
 
       <div class="today-visual">
@@ -52,13 +122,6 @@
           <div class="today-mascot">★</div>
         {% endif %}
       </div>
-
-      <a
-        href="{{ url_for('open_activity', activity_id=ns.current_activity.activity_id) }}"
-        class="start-activity-btn">
-        <span class="play-circle">▶</span>
-        Start Activity
-      </a>
     </section>
     {% endif %}
 
@@ -71,10 +134,9 @@
       <div class="journey-list">
         {% for activity in activities %}
         <div class="journey-row 
-          {% if not activity.is_unlocked %}journey-locked{% endif %}
+          {% if activity.is_unlocked %}journey-unlocked line-unlocked{% else %}journey-locked{% endif %}
           {% if activity.activity_id == current_activity_id %}journey-current{% endif %}
-          {% if not loop.first and activity.is_unlocked %}line-unlocked{% endif %}
-        ">          
+        ">
           <div class="journey-step">
             <span>{{ loop.index }}</span>
           </div>

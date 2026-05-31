@@ -1,5 +1,30 @@
 document.addEventListener("DOMContentLoaded", function () {
   // ---------------------
+  // PROFILE DROPDOWN
+  // ---------------------
+  const profileDropdown = document.querySelector(".profile-dropdown");
+  const profileTrigger = document.getElementById("profileTrigger");
+  const dropdownMenu = document.getElementById("dropdownMenu");
+
+  if (profileDropdown && profileTrigger && dropdownMenu) {
+    profileTrigger.addEventListener("click", function (event) {
+      event.stopPropagation();
+
+      dropdownMenu.classList.toggle("active");
+      profileDropdown.classList.toggle("open");
+    });
+
+    dropdownMenu.addEventListener("click", function (event) {
+      event.stopPropagation();
+    });
+
+    document.addEventListener("click", function () {
+      dropdownMenu.classList.remove("active");
+      profileDropdown.classList.remove("open");
+    });
+  }
+
+  // ---------------------
   // PROFILE ICON
   // ---------------------
   const currentProfileIcon = document.getElementById("currentProfileIcon");
@@ -37,138 +62,138 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 
   // ---------------------
-// ACTIVITY BUTTONS
-// ---------------------
-const activityButtons = document.querySelectorAll(".activity-action-btn");
+  // ACTIVITY BUTTONS
+  // ---------------------
+  const activityButtons = document.querySelectorAll(".activity-action-btn");
 
-const unlockModal = document.getElementById("unlockModal");
-const confirmUnlockBtn = document.getElementById("confirmUnlockBtn");
-const cancelUnlockBtn = document.getElementById("cancelUnlockBtn");
-const unlockChecks = document.querySelectorAll(".unlock-check");
+  const unlockModal = document.getElementById("unlockModal");
+  const confirmUnlockBtn = document.getElementById("confirmUnlockBtn");
+  const cancelUnlockBtn = document.getElementById("cancelUnlockBtn");
+  const unlockChecks = document.querySelectorAll(".unlock-check");
 
-const unlockModalTitle = document.getElementById("unlockModalTitle");
-const characterCheckText = document.getElementById("characterCheckText");
-const activityCheckText = document.getElementById("activityCheckText");
-const timeCheckText = document.getElementById("timeCheckText");
+  const unlockModalTitle = document.getElementById("unlockModalTitle");
+  const characterCheckText = document.getElementById("characterCheckText");
+  const activityCheckText = document.getElementById("activityCheckText");
+  const timeCheckText = document.getElementById("timeCheckText");
 
-let pendingUnlockActivityId = null;
-let pendingUnlockButton = null;
+  let pendingUnlockActivityId = null;
+  let pendingUnlockButton = null;
 
-function resetUnlockModal() {
-  unlockChecks.forEach((check) => {
-    check.checked = false;
-  });
-
-  confirmUnlockBtn.disabled = true;
-}
-
-function allUnlockChecksComplete() {
-  return [...unlockChecks].every((check) => check.checked);
-}
-
-async function sendActivityAction(endpoint, activityId, button) {
-  try {
-    if (button) {
-      button.disabled = true;
-    }
-
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      credentials: "same-origin",
-      body: JSON.stringify({
-        activity_id: activityId
-      })
+  function resetUnlockModal() {
+    unlockChecks.forEach((check) => {
+      check.checked = false;
     });
 
-    const data = await response.json();
+    confirmUnlockBtn.disabled = true;
+  }
 
-    if (data.success) {
-      location.reload();
-    } else {
-      console.error(data.error || "Action failed");
-      alert(data.error || "Something went wrong.");
+  function allUnlockChecksComplete() {
+    return [...unlockChecks].every((check) => check.checked);
+  }
+
+  async function sendActivityAction(endpoint, activityId, button) {
+    try {
+      if (button) {
+        button.disabled = true;
+      }
+
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        credentials: "same-origin",
+        body: JSON.stringify({
+          activity_id: activityId
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        location.reload();
+      } else {
+        console.error(data.error || "Action failed");
+        alert(data.error || "Something went wrong.");
+
+        if (button) {
+          button.disabled = false;
+        }
+      }
+    } catch (error) {
+      console.error("Fetch error:", error);
+      alert("Something went wrong. Check the console.");
 
       if (button) {
         button.disabled = false;
       }
     }
-  } catch (error) {
-    console.error("Fetch error:", error);
-    alert("Something went wrong. Check the console.");
-
-    if (button) {
-      button.disabled = false;
-    }
   }
-}
 
-activityButtons.forEach((button) => {
-  button.addEventListener("click", async function () {
-    const action = this.dataset.action;
-    const activityId = this.dataset.activityId;
+  activityButtons.forEach((button) => {
+    button.addEventListener("click", async function () {
+      const action = this.dataset.action;
+      const activityId = this.dataset.activityId;
 
-    if (!action || !activityId) {
-      console.error("Missing action or activity ID");
-      return;
-    }
+      if (!action || !activityId) {
+        console.error("Missing action or activity ID");
+        return;
+      }
 
-    if (action === "set-current") {
-      await sendActivityAction("/set-current", activityId, this);
-      return;
-    }
+      if (action === "set-current") {
+        await sendActivityAction("/set-current", activityId, this);
+        return;
+      }
 
-    if (action === "unlock") {
-      pendingUnlockActivityId = activityId;
-      pendingUnlockButton = this;
+      if (action === "unlock") {
+        pendingUnlockActivityId = activityId;
+        pendingUnlockButton = this;
 
-      const activityName = this.dataset.activityName || "this activity";
-      const character = this.dataset.character || "the character";
-      const time = this.dataset.time || "30";
+        const activityName = this.dataset.activityName || "this activity";
+        const character = this.dataset.character || "the character";
+        const time = this.dataset.time || "30";
 
-      unlockModalTitle.textContent = `Unlock ${activityName}?`;
+        unlockModalTitle.textContent = `Unlock ${activityName}?`;
 
-      characterCheckText.textContent =
-        `Is the child comfortable speaking to ${character}?`;
+        characterCheckText.textContent =
+          `Is the child comfortable speaking to ${character}?`;
 
-      activityCheckText.textContent =
-        `Can the child comfortably complete ${activityName}?`;
+        activityCheckText.textContent =
+          `Can the child comfortably complete ${activityName}?`;
 
-      timeCheckText.textContent =
-        `Has the child been on this activity for at least ${time} minutes?`;
+        timeCheckText.textContent =
+          `Has the child been on this activity for at least ${time} minutes?`;
 
-      resetUnlockModal();
-      unlockModal.classList.add("active");
-      return;
-    }
+        resetUnlockModal();
+        unlockModal.classList.add("active");
+        return;
+      }
 
-    console.error("Unknown action:", action);
+      console.error("Unknown action:", action);
+    });
   });
-});
 
-unlockChecks.forEach((check) => {
-  check.addEventListener("change", function () {
-    confirmUnlockBtn.disabled = !allUnlockChecksComplete();
+  unlockChecks.forEach((check) => {
+    check.addEventListener("change", function () {
+      confirmUnlockBtn.disabled = !allUnlockChecksComplete();
+    });
   });
-});
 
-cancelUnlockBtn.addEventListener("click", function () {
-  unlockModal.classList.remove("active");
-  pendingUnlockActivityId = null;
-  pendingUnlockButton = null;
-});
+  cancelUnlockBtn.addEventListener("click", function () {
+    unlockModal.classList.remove("active");
+    pendingUnlockActivityId = null;
+    pendingUnlockButton = null;
+  });
 
-confirmUnlockBtn.addEventListener("click", async function () {
-  if (!pendingUnlockActivityId) return;
+  confirmUnlockBtn.addEventListener("click", async function () {
+    if (!pendingUnlockActivityId) return;
 
-  unlockModal.classList.remove("active");
+    unlockModal.classList.remove("active");
 
-  await sendActivityAction(
-    "/unlock-activity",
-    pendingUnlockActivityId,
-    pendingUnlockButton
-  );
-});
+    await sendActivityAction(
+      "/unlock-activity",
+      pendingUnlockActivityId,
+      pendingUnlockButton
+    );
+  });
 });

@@ -1,1 +1,5 @@
 .env
+app.db
+flask_session/
+__pycache__/
+*.pyc
