@@ -26,6 +26,9 @@ import requests
 
 import os
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATABASE = os.path.join(BASE_DIR, "app.db")
+
 app = Flask(__name__)
 
 load_dotenv()
@@ -73,7 +76,7 @@ limiter = Limiter(
 )
 
 def get_db_connection():
-    conn = sqlite3.connect("app.db")
+    conn = sqlite3.connect(DATABASE)
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -127,7 +130,7 @@ def login():
         email = request.form["email"]
         password = request.form["password"]
 
-        conn = sqlite3.connect("app.db")
+        conn = sqlite3.connect(DATABASE)
         cursor = conn.cursor()
 
         cursor.execute(
@@ -436,7 +439,7 @@ def update_profile_icon():
     if icon not in allowed_icons:
         return {"success": False, "error": "Invalid icon"}, 400
 
-    conn = sqlite3.connect("app.db")
+    conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
 
     cursor.execute(
