@@ -1,0 +1,54 @@
+{% extends "dashboard_layout.html" %}
+
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/parent_academy.css') }}?v=17">
+{% endblock %}
+
+{% block title %}{{ category.title }}{% endblock %}
+
+{% block dashboard_content %}
+
+<div class="academy-category-shell">
+
+  <a href="{{ url_for('parent_academy') }}" class="article-back-btn">
+    ← Back to Parent Academy
+  </a>
+
+  <section class="category-hero">
+    <p class="category-kicker">Parent Academy Collection</p>
+    <h1>{{ category.title }}</h1>
+    <p>{{ category.subtitle }}</p>
+  </section>
+
+  <section class="category-grid">
+    {% for article in articles %}
+      <a
+        href="{{ url_for('parent_academy_article', slug=article.slug) }}"
+        class="category-article-card"
+      >
+        <div class="category-card-art {{ article.art }}">
+          <img
+            src="{{ url_for('static', filename='images/' + article.image) }}"
+            alt=""
+            loading="lazy"
+            decoding="async"
+          >
+        </div>
+
+        <div class="category-card-body">
+          <div class="category-card-meta">
+            <span>{{ article.category }}</span>
+            <span>◷ {{ article.read_time }}</span>
+          </div>
+
+          <h3>{{ article.title }}</h3>
+          <p>{{ article.summary }}</p>
+        </div>
+      </a>
+    {% endfor %}
+  </section>
+
+</div>
+
+{% endblock %}

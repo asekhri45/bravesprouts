@@ -1,8 +1,43 @@
 {% extends "dashboard_layout.html" %}
 
-{% block title %}Lessons{% endblock %}
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/progression.css') }}?v=2">
+{% endblock %}
+
+{% block title %}Progression{% endblock %}
 
 {% block dashboard_content %}
-<h1>Lessons</h1>
-<p>Here are your child’s lesson options.</p>
+
+<section class="progression-coming-page">
+
+  <img
+    src="{{ url_for('static', filename='images/progression_coming_soon.png') }}"
+    alt="Progression coming soon illustration"
+    class="progression-hero-image"
+  >
+
+  <h1 class="progression-title">
+    Progression
+  </h1>
+
+  <p class="progression-script">
+    is growing soon
+  </p>
+
+  <p class="progression-subtitle">
+    We’re creating a meaningful way to help families track milestones,
+    celebrate brave moments, and visualize growth over time.
+  </p>
+
+  <div class="progression-pill">
+    Coming Soon
+  </div>
+
+  <p class="progression-footer">
+    Small brave steps become meaningful progress.
+  </p>
+
+</section>
+
 {% endblock %}

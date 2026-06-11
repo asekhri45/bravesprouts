@@ -88,8 +88,11 @@
     </section>
 
     {% if ns.current_activity %}
-    <section class="today-card {% if ns.current_activity.activity_order >= 4 %}today-blue{% endif %}">
-      <div class="today-copy">
+      <section class="today-card 
+        {% if ns.current_activity.activity_order >= 4 and ns.current_activity.activity_order <= 6 %}today-blue{% endif %}
+        {% if ns.current_activity.activity_order >= 7 and ns.current_activity.activity_order <= 9 %}today-green{% endif %}
+        {% if ns.current_activity.activity_order >= 10 and ns.current_activity.activity_order <= 12 %}today-orange{% endif %}
+      ">      <div class="today-copy">
         <span class="today-pill">CURRENT ACTIVITY</span>
 
         <h2>{{ ns.current_activity.activity_name.replace('_', ' ').title() }}</h2>
@@ -125,70 +128,96 @@
     </section>
     {% endif %}
 
-    <section class="journey-section">
-      <div class="section-header-row">
-        <h2>Your Journey</h2>
-        <a href="{{ url_for('lessons') }}">View all activities</a>
-      </div>
+<section class="journey-section">
+  <div class="section-header-row">
+    <h2>Your Journey</h2>
+    <a href="{{ url_for('lessons') }}">View all activities</a>
+  </div>
 
-      <div class="journey-list">
-        {% for activity in activities %}
-        <div class="journey-row 
-          {% if activity.is_unlocked %}journey-unlocked line-unlocked{% else %}journey-locked{% endif %}
-          {% if activity.activity_id == current_activity_id %}journey-current{% endif %}
-        ">
-          <div class="journey-step">
-            <span>{{ loop.index }}</span>
-          </div>
+  <div class="journey-path">
+    <svg class="journey-connector-svg" aria-hidden="true">
+      <path class="journey-connector-path"></path>
+    </svg>
 
-          <div class="journey-card">
-            <div class="journey-icon">
-              <img
-                src="{{ url_for('static', filename='images/' + activity.activity_name + '.png') }}"
-                alt="{{ activity.activity_name.replace('_', ' ').title() }}"
-              >
-            </div>
+    {% for activity in activities %}
+    <div class="journey-path-item 
+      {% if activity.is_unlocked %}journey-unlocked{% else %}journey-locked{% endif %}
+      {% if activity.activity_id == current_activity_id %}journey-current{% endif %}
+    ">
+      <div class="journey-node-wrap">
+  {% if activity.activity_id == current_activity_id %}
+    <img
+      src="{{ url_for('static', filename='images/shine1.png') }}"
+      class="journey-node-shine journey-node-shine-left"
+      alt=""
+    >
 
-            <div class="journey-text">
-              <h3>{{ activity.activity_name.replace('_', ' ').title() }}</h3>
-              <p>
-                {{ activity.description if activity.description else "Practice speaking in a guided activity." }}
-              </p>
-            </div>
+    <img
+      src="{{ url_for('static', filename='images/shine2.png') }}"
+      class="journey-node-shine journey-node-shine-right"
+      alt=""
+    >
+  {% endif %}
 
-            <div class="journey-action">
-              {% if activity.activity_id == current_activity_id %}
-                <a
-                  href="{{ url_for('open_activity', activity_id=activity.activity_id) }}"
-                  class="journey-current-pill">
-                  Current
-                </a>
-              {% elif activity.is_unlocked %}
-                <button
-                  class="journey-action-btn activity-action-btn"
-                  type="button"
-                  data-action="set-current"
-                  data-activity-id="{{ activity.activity_id }}">
-                  Set Current
-                </button>
-              {% else %}
-                <button
-                  class="journey-lock-pill activity-action-btn"
-                  type="button"
-                  data-action="unlock"
-                  data-activity-id="{{ activity.activity_id }}"
-                  data-activity-name="{{ activity.activity_name.replace('_', ' ').title() }}"
-                  data-character="{{ activity.character_active or 'the character' }}"
-                  data-time="{{ activity.time_recommended or 30 }}">
-                  Unlock
-                </button>
-              {% endif %}
-            </div>
-          </div>
+  <div class="journey-node">
+    <span>{{ loop.index }}</span>
+  </div>
+</div>
+
+      <div class="journey-card">
+        <div class="journey-icon">
+          <img
+            src="{{ url_for('static', filename='images/' + activity.activity_name + '.png') }}"
+            alt="{{ activity.activity_name.replace('_', ' ').title() }}"
+          >
         </div>
-        {% endfor %}
+
+        <div class="journey-text">
+          <h3>{{ activity.activity_name.replace('_', ' ').title() }}</h3>
+          <p>
+            {{ activity.description if activity.description else "Practice speaking in a guided activity." }}
+          </p>
+        </div>
+
+        <div class="journey-action">
+          {% if activity.activity_id == current_activity_id %}
+            <a
+              href="{{ url_for('open_activity', activity_id=activity.activity_id) }}"
+              class="journey-current-pill">
+              <span>Current</span>
+
+              <img
+                src="{{ url_for('static', filename='images/shine.png') }}"
+                class="journey-current-shine"
+                alt=""
+              >
+            </a>
+          {% elif activity.is_unlocked %}
+            <button
+              class="journey-action-btn activity-action-btn"
+              type="button"
+              data-action="set-current"
+              data-activity-id="{{ activity.activity_id }}">
+              Set Current
+            </button>
+          {% else %}
+            <button
+              class="journey-lock-pill activity-action-btn"
+              type="button"
+              data-action="unlock"
+              data-activity-id="{{ activity.activity_id }}"
+              data-activity-name="{{ activity.activity_name.replace('_', ' ').title() }}"
+              data-character="{{ activity.character_active or 'the character' }}"
+              data-time="{{ activity.time_recommended or 30 }}">
+              Unlock
+            </button>
+          {% endif %}
+        </div>
       </div>
-    </section>
+    </div>
+    {% endfor %}
+  </div>
+</section>
 
   </section>
 </div>

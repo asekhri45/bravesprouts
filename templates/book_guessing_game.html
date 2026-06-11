@@ -1,0 +1,97 @@
+{% extends "activity_layout.html" %}
+
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/book_guessing_game.css') }}?v=1">
+<script src="{{ url_for('static', filename='js/book_guessing_game.js') }}?v=1" defer></script>
+{% endblock %}
+
+{% block title %}Book Guessing Game{% endblock %}
+
+{% block content %}
+
+<div class="book-page">
+
+  <div class="incoming-call-screen" id="incomingCallScreen">
+    <div class="incoming-bg"></div>
+
+    <div class="incoming-content">
+      <div class="incoming-copy">
+        <h1>Incoming Call</h1>
+        <p><span>The Librarian</span> is calling you...</p>
+      </div>
+
+      <div class="incoming-avatar-area">
+        <span class="call-ring ring-one"></span>
+        <span class="call-ring ring-two"></span>
+        <span class="call-ring ring-three"></span>
+
+        <span class="music-note note-one">♪</span>
+        <span class="music-note note-two">♫</span>
+
+        <div class="incoming-avatar">
+          <img src="{{ url_for('static', filename='images/librarian_pfp.png') }}" alt="Librarian profile picture">
+        </div>
+      </div>
+
+      <div class="incoming-actions">
+        <button class="incoming-btn decline-btn" id="declineCall" type="button">☎</button>
+        <button class="incoming-btn accept-btn" id="acceptCall" type="button">☎</button>
+      </div>
+
+      <div class="incoming-labels">
+        <span>Decline</span>
+        <span>Accept</span>
+      </div>
+    </div>
+  </div>
+
+  <main class="book-stage call-hidden" id="bookStage">
+    <section class="character-fullscreen">
+
+      <div class="character-wrap">
+        <img
+          src="{{ url_for('static', filename='images/librarian.png') }}"
+          alt="Librarian"
+          class="main-character"
+        >
+
+        <img
+          src="{{ url_for('static', filename='images/librarian_mouth-closed.png') }}"
+          alt=""
+          class="character-mouth-img"
+          id="characterMouth"
+        >
+      </div>
+
+    </section>
+  </main>
+
+  <div class="call-controls">
+    <a href="{{ url_for('dashboard') }}" class="back-link">
+      ← Back to Dashboard
+    </a>
+
+    <div class="controls-center">
+      <div class="control-button">🎙️</div>
+      <div class="control-button">🎥</div>
+      <div class="hangup-button">☎</div>
+      <div class="control-button">💬</div>
+      <div class="control-button">⋯</div>
+    </div>
+  </div>
+
+  <div class="complete-modal" id="completeModal">
+    <div class="complete-card">
+      <h2>I found the book!</h2>
+      <p>The librarian loved guessing your mystery book.</p>
+
+      <button id="restartBtn" type="button">
+        Play Again
+      </button>
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}

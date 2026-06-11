@@ -1,0 +1,41 @@
+{% extends "dashboard_layout.html" %}
+
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/parent_academy.css') }}?v=15">
+{% endblock %}
+
+{% block title %}{{ article.title }}{% endblock %}
+
+{% block dashboard_content %}
+
+<div class="academy-article-shell">
+
+  <a href="{{ url_for('parent_academy') }}" class="article-back-btn">
+    ← Back to Parent Academy
+  </a>
+
+  <p class="article-breadcrumb">
+    Parent Academy / {{ article.category }}
+  </p>
+
+  <section class="article-hero">
+    <h1>{{ article.title }}</h1>
+
+    <div class="article-meta-row">
+      <span>◷ {{ article.read_time }}</span>
+      <span>Evidence: {{ article.evidence }}</span>
+      <span>Sources reviewed: {{ article.sources_reviewed }}</span>
+    </div>
+  </section>
+
+  <section class="article-content-card">
+  <h2>Quick Answer</h2>
+  <p>{{ article.summary }}</p>
+
+  {% include article.template %}
+  </section>
+
+</div>
+
+{% endblock %}

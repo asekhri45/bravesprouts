@@ -22,21 +22,33 @@
     </div>
 
     <nav class="sidebar-nav">
-      <a href="{{ url_for('dashboard') }}" class="sidebar-item {% if active_page == 'dashboard' %}active{% endif %}">
-        <img src="{{ url_for('static', filename='images/' + ('dashboard_selected.png' if active_page == 'dashboard' else 'dashboard_unselected.png')) }}" class="sidebar-icon">
-        <span>Dashboard</span>
-      </a>
+  <a href="{{ url_for('dashboard') }}" class="sidebar-item {% if active_page == 'dashboard' %}active{% endif %}">
+    <img src="{{ url_for('static', filename='images/' + ('dashboard_selected.png' if active_page == 'dashboard' else 'dashboard_unselected.png')) }}" class="sidebar-icon">
+    <span>Dashboard</span>
+  </a>
 
-      <a href="{{ url_for('lessons') }}" class="sidebar-item {% if active_page == 'lessons' %}active{% endif %}">
-        <img src="{{ url_for('static', filename='images/' + ('progression_selected.png' if active_page == 'lessons' else 'progression_unselected.png')) }}" class="sidebar-icon">
-        <span>Progression</span>
-      </a>
+  <a href="{{ url_for('lessons') }}" class="sidebar-item {% if active_page == 'lessons' %}active{% endif %}">
+    <img src="{{ url_for('static', filename='images/' + ('progression_selected.png' if active_page == 'lessons' else 'progression_unselected.png')) }}" class="sidebar-icon">
+    <span>Progression</span>
+  </a>
 
-      <a href="{{ url_for('settings') }}" class="sidebar-item {% if active_page == 'settings' %}active{% endif %}">
-        <img src="{{ url_for('static', filename='images/' + ('settings_selected.png' if active_page == 'settings' else 'settings_unselected.png')) }}" class="sidebar-icon">
-        <span>Settings</span>
-      </a>
-    </nav>
+  <div class="sidebar-section-label">Support resources</div>
+
+  <a href="{{ url_for('parent_academy') }}" class="sidebar-item {% if active_page == 'parent_academy' %}active{% endif %}">
+    <img src="{{ url_for('static', filename='images/' + ('parent_academy_selected.png' if active_page == 'parent_academy' else 'parent_academy_unselected.png')) }}" class="sidebar-icon">
+    <span>Parent Academy</span>
+  </a>
+
+  <a href="{{ url_for('ask_bravesprouts') }}" class="sidebar-item {% if active_page == 'ask_bravesprouts' %}active{% endif %}">
+    <img src="{{ url_for('static', filename='images/' + ('ask_bravesprouts_selected.png' if active_page == 'ask_bravesprouts' else 'ask_bravesprouts_unselected.png')) }}" class="sidebar-icon">
+    <span>Ask BraveSprouts</span>
+  </a>
+
+  <a href="{{ url_for('settings') }}" class="sidebar-item sidebar-settings {% if active_page == 'settings' %}active{% endif %}">
+    <img src="{{ url_for('static', filename='images/' + ('settings_selected.png' if active_page == 'settings' else 'settings_unselected.png')) }}" class="sidebar-icon">
+    <span>Settings</span>
+  </a>
+</nav>
 
     <div class="sidebar-image-widget">
       <img
@@ -53,5 +65,7 @@
   </div>
 
 </div>
+
+{% block page_js %}{% endblock %}
 
 {% endblock %}

@@ -2,6 +2,8 @@ from flask import Flask, render_template, request, redirect, session, url_for, a
 import sqlite3
 from werkzeug.security import generate_password_hash, check_password_hash
 
+import json
+
 from datetime import date, datetime
 
 from flask_talisman import Talisman
@@ -29,11 +31,20 @@ import os
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATABASE = os.path.join(BASE_DIR, "app.db")
 
+RESEARCH_LIBRARY_PATH = os.path.join(BASE_DIR, "research_library.json")
+
+try:
+    with open(RESEARCH_LIBRARY_PATH, "r", encoding="utf-8") as f:
+        RESEARCH_LIBRARY = json.load(f)
+except Exception as e:
+    print("Could not load research_library.json:", e)
+    RESEARCH_LIBRARY = []
+
 app = Flask(__name__)
 
 load_dotenv()
 
-client = OpenAI(api_key=os.getenv("API_KEY"))
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 eleven_client = ElevenLabs(api_key=os.getenv("ELEVENLABS_API_KEY"))
 
 debug_mode = os.environ.get("FLASK_DEBUG") == "1"
@@ -2118,6 +2129,1805 @@ def guessing_game_2_transcribe():
             "success": False,
             "error": str(e)
         }), 500
+    
+@app.route("/parent-academy")
+@login_required
+def parent_academy():
+    return render_template(
+        "parent_academy.html",
+        active_page="parent_academy",
+        parent=session["parent_name"],
+        child=session["child_name"],
+        profile_icon=session.get("profile_icon", "profileicon.png")
+    )
+
+def generate_librarian_voice_elevenlabs(text):
+    voice_id = os.getenv("LIBRARIAN_VOICE_ID")
+
+    if not voice_id:
+        voice_id = os.getenv("ELEVENLABS_VOICE_ID", "piI8Kku0DcvcL6TTSeQt")
+
+    response = eleven_client.text_to_speech.convert(
+        voice_id=voice_id,
+        text=text,
+        model_id="eleven_multilingual_v2",
+        output_format="mp3_44100_128",
+        voice_settings={
+            "stability": 0.88,
+            "similarity_boost": 0.92,
+            "style": 0.08,
+            "use_speaker_boost": False
+        }
+    )
+
+    return b"".join(response)
+
+
+@app.route("/api/book-guessing-game/message", methods=["POST"])
+@csrf.exempt
+@login_required
+@limiter.limit("30 per minute")
+def book_guessing_game_message():
+    data = request.get_json(silent=True) or {}
+
+    event_type = data.get("event_type", "intro")
+    child_response = data.get("child_response", "").strip()
+    response_mode = data.get("response_mode", "none")
+
+    child_name = session.get("child_name", "there")
+
+    if event_type == "restart":
+        session.pop("book_guessing_game_history", None)
+        session.pop("book_guessing_game_state", None)
+
+    history = session.get("book_guessing_game_history", [])
+
+    game_state = session.get("book_guessing_game_state", {
+        "stage": "intro",
+        "questions_asked": 0,
+        "comfortable_answer_count": 0,
+        "unclear_or_silent_count": 0,
+        "question_history": [],
+        "known_clues": [],
+        "rejected_guesses": [],
+        "possible_guess": None,
+        "game_complete": False
+    })
+
+    system_prompt = """
+You are a warm, friendly librarian on a video call with a young child.
+
+You are playing a Book Guessing Game.
+
+The child is thinking of one specific book.
+The librarian asks gentle questions to figure out which book it is.
+
+Core goal:
+Create a natural back-and-forth conversation.
+The child should feel like they are helping the librarian solve a fun mystery.
+
+Hard rules:
+- Never mention selective mutism, anxiety, therapy, treatment, exposure, stages, progress, confidence, or bravery.
+- Never pressure the child to speak.
+- Never say "use your words."
+- Never sound disappointed.
+- Never overpraise.
+- Never make the child feel evaluated.
+- Keep attention on the book mystery and the library.
+- Ask only one question at a time.
+- Do not repeat previous questions.
+- Use the clues already given.
+- If the child gives no answer, an unclear answer, or seems stuck, make the next question easier.
+- If the child answers comfortably several times, you may gently increase verbal demand.
+- Do not make the child prove they know the book.
+- Do not shame wrong or unclear answers.
+- Keep each spoken line to 1-3 short sentences.
+
+Voice style:
+Warm, calm, curious, friendly, librarian-like.
+Not babyish. Not hyper. Not teacher-like.
+
+Good question areas:
+- cover color
+- animal or person on the cover
+- main character
+- setting
+- whether it is funny, silly, sleepy, adventurous, or magical
+- whether there are animals
+- whether it has rhymes
+- whether the child has read it at home or school
+- tiny story clues
+
+Avoid:
+- asking for the author
+- asking for exact publication details
+- asking hard literary questions
+- asking multiple questions at once
+
+Progression logic:
+1. intro:
+   Explain the game simply.
+   Ask the child to think of a book.
+   Say the librarian will ask tiny clues to guess it.
+2. yes_no:
+   Ask concrete yes/no questions.
+   Examples:
+   "Is there an animal in the book?"
+   "Is the cover mostly blue?"
+   "Is the story funny?"
+3. forced_choice:
+   Ask two-option questions.
+   Examples:
+   "Is it about an animal or a person?"
+   "Is it silly or sleepy?"
+4. one_word:
+   Ask for one simple word.
+   Examples:
+   "What color is the cover?"
+   "Who is in the book?"
+5. short_phrase:
+   Ask for a tiny clue.
+   Examples:
+   "What happens in the story?"
+   "Tell me one tiny clue."
+6. guess:
+   Guess the book when there are enough clues.
+
+Silence or stuck handling:
+If the child says nothing or gives an unclear response:
+- Do not say "I could not hear you."
+- Do not call attention to silence.
+- Offer an easier path.
+
+Examples:
+"Let's make it easy. Is there an animal in the book?"
+"Hmm, I can ask a tiny question. Is the cover bright?"
+"You can say yes or no."
+"Is it a silly book or a sleepy book?"
+
+Output JSON only:
+{
+  "message": "the librarian's spoken line",
+  "stage": "intro | yes_no | forced_choice | one_word | short_phrase | guess | support | complete",
+  "expects_response": true,
+  "response_mode": "none | yes_no | choice | one_word | short_phrase",
+  "is_question": true,
+  "question_text": "the question asked, or null",
+  "game_complete": false,
+  "state_update": {
+    "comfortable_answer_delta": 0,
+    "unclear_or_silent_delta": 0,
+    "questions_asked_increment": 0,
+    "known_clue": null,
+    "possible_guess": null,
+    "rejected_guess": null
+  }
+}
+"""
+
+    user_prompt = f"""
+Child name:
+{child_name}
+
+Current game state:
+{game_state}
+
+Recent history:
+{history[-12:]}
+
+New event:
+event_type: {event_type}
+child_response: {child_response}
+previous_response_mode: {response_mode}
+
+Interpretation help:
+- If event_type is intro or restart, start the game gently.
+- If child_response is empty, unclear, "I don't know", or silence, count it as unclear_or_silent.
+- If child_response is a clear answer to the librarian's last question, count it as comfortable.
+- If the librarian guessed and the child says no, add the guess to rejected_guesses.
+- If the librarian guessed and the child says yes, respond warmly and finish the round.
+- Update the state based on the child response before choosing the next line.
+- Ask a useful next question that narrows down the book.
+- Do not repeat any question in question_history.
+- If there are not enough clues, do not guess yet.
+- If there are enough clues, make one gentle guess.
+- Avoid guessing too early unless the book is very clear.
+- Keep it easy and friendly for young children.
+
+Generate the next librarian line now.
+"""
+
+    try:
+        text_response = client.responses.create(
+            model="gpt-4.1-mini",
+            input=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ]
+        )
+
+        raw = text_response.output_text.strip()
+
+        import json
+
+        try:
+            parsed = json.loads(raw)
+        except Exception:
+            parsed = {
+                "message": raw.replace('"', ""),
+                "stage": game_state.get("stage", "yes_no"),
+                "expects_response": True,
+                "response_mode": "yes_no",
+                "is_question": True,
+                "question_text": raw.replace('"', ""),
+                "game_complete": False,
+                "state_update": {
+                    "comfortable_answer_delta": 0,
+                    "unclear_or_silent_delta": 0,
+                    "questions_asked_increment": 1,
+                    "known_clue": None,
+                    "possible_guess": None,
+                    "rejected_guess": None
+                }
+            }
+
+        message = parsed.get("message", "").strip().replace('"', "")
+
+        if not message:
+            message = "I'm ready for the book mystery. Is there an animal in your book?"
+
+        state_update = parsed.get("state_update", {}) or {}
+
+        game_state["stage"] = parsed.get("stage", game_state.get("stage", "yes_no"))
+
+        game_state["comfortable_answer_count"] = max(
+            0,
+            int(game_state.get("comfortable_answer_count", 0))
+            + int(state_update.get("comfortable_answer_delta", 0))
+        )
+
+        game_state["unclear_or_silent_count"] = max(
+            0,
+            int(game_state.get("unclear_or_silent_count", 0))
+            + int(state_update.get("unclear_or_silent_delta", 0))
+        )
+
+        game_state["questions_asked"] = int(game_state.get("questions_asked", 0)) + int(
+            state_update.get("questions_asked_increment", 0)
+        )
+
+        if state_update.get("known_clue"):
+            game_state.setdefault("known_clues", []).append(state_update["known_clue"])
+
+        if state_update.get("possible_guess"):
+            game_state["possible_guess"] = state_update["possible_guess"]
+
+        if state_update.get("rejected_guess"):
+            game_state.setdefault("rejected_guesses", []).append(state_update["rejected_guess"])
+
+        question_text = parsed.get("question_text")
+        if parsed.get("is_question") and question_text:
+            game_state.setdefault("question_history", []).append({
+                "question": question_text,
+                "stage": parsed.get("stage"),
+                "response_mode": parsed.get("response_mode")
+            })
+
+        game_complete = bool(parsed.get("game_complete", False))
+        game_state["game_complete"] = game_complete
+
+        history.append({
+            "event_type": event_type,
+            "child_response": child_response,
+            "librarian": message,
+            "stage": parsed.get("stage"),
+            "response_mode": parsed.get("response_mode"),
+            "game_complete": game_complete
+        })
+
+        session["book_guessing_game_history"] = history[-20:]
+        session["book_guessing_game_state"] = game_state
+        session.modified = True
+
+        audio_bytes = generate_librarian_voice_elevenlabs(message)
+        audio_base64 = base64.b64encode(audio_bytes).decode("utf-8")
+
+        return jsonify({
+            "success": True,
+            "message": message,
+            "audio": f"data:audio/mpeg;base64,{audio_base64}",
+            "stage": parsed.get("stage"),
+            "expects_response": parsed.get("expects_response", True) and not game_complete,
+            "response_mode": parsed.get("response_mode", "yes_no"),
+            "game_complete": game_complete,
+            "game_state": game_state
+        })
+
+    except Exception as e:
+        print("Book Guessing Game AI error:", e)
+        return jsonify({
+            "success": False,
+            "error": "Could not generate librarian response"
+        }), 500
+
+
+@app.route("/api/book-guessing-game/transcribe", methods=["POST"])
+@csrf.exempt
+@login_required
+@limiter.limit("20 per minute")
+def book_guessing_game_transcribe():
+    if "audio" not in request.files:
+        return jsonify({
+            "success": False,
+            "error": "Missing audio"
+        }), 400
+
+    audio_file = request.files["audio"]
+
+    try:
+        import io
+
+        audio_bytes = audio_file.read()
+
+        if not audio_bytes:
+            return jsonify({
+                "success": False,
+                "error": "Empty audio file"
+            }), 400
+
+        file_obj = io.BytesIO(audio_bytes)
+        file_obj.name = "child-response.webm"
+
+        transcript = client.audio.transcriptions.create(
+            model="gpt-4o-mini-transcribe",
+            file=file_obj
+        )
+
+        text = transcript.text.strip()
+
+        print("BOOK GUESSING GAME TRANSCRIPT:", text)
+
+        return jsonify({
+            "success": True,
+            "text": text
+        })
+
+    except Exception as e:
+        print("Book Guessing Game transcription error:", repr(e))
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+def generate_gym_teacher_voice_elevenlabs(text):
+    voice_id = os.getenv("GYM_TEACHER_VOICE_ID")
+
+    if not voice_id:
+        voice_id = os.getenv("ELEVENLABS_VOICE_ID", "piI8Kku0DcvcL6TTSeQt")
+
+    response = eleven_client.text_to_speech.convert(
+        voice_id=voice_id,
+        text=text,
+        model_id="eleven_multilingual_v2",
+        output_format="mp3_44100_128",
+        voice_settings={
+            "stability": 0.84,
+            "similarity_boost": 0.92,
+            "style": 0.16,
+            "use_speaker_boost": False
+        }
+    )
+
+    return b"".join(response)
+
+
+@app.route("/api/exercise-detective/message", methods=["POST"])
+@csrf.exempt
+@login_required
+@limiter.limit("30 per minute")
+def exercise_detective_message():
+    data = request.get_json(silent=True) or {}
+
+    event_type = data.get("event_type", "intro")
+    child_response = data.get("child_response", "").strip()
+    response_mode = data.get("response_mode", "none")
+
+    child_name = session.get("child_name", "there")
+
+    if event_type == "restart":
+        session.pop("exercise_detective_history", None)
+        session.pop("exercise_detective_state", None)
+
+    history = session.get("exercise_detective_history", [])
+
+    game_state = session.get("exercise_detective_state", {
+        "stage": "intro",
+        "questions_asked": 0,
+        "comfortable_answer_count": 0,
+        "unclear_or_silent_count": 0,
+        "question_history": [],
+        "known_clues": [],
+        "rejected_guesses": [],
+        "possible_guess": None,
+        "game_complete": False
+    })
+
+    system_prompt = """
+You are a warm, friendly gym teacher on a video call with a young child.
+
+You are playing Exercise Detective.
+
+The child silently chooses or acts out one simple exercise or movement.
+The gym teacher pretends to close his eyes, then asks gentle questions and uses clues to guess the exercise.
+
+Core game:
+The child thinks of or does an exercise.
+The gym teacher asks questions.
+The child answers or gives hints.
+The gym teacher guesses the exercise when there are enough clues.
+
+Exercise examples:
+jumping jacks, running in place, hopping, stretching, toe touches, squats, arm circles, marching, balancing on one foot, dancing, push-ups, sit-ups, jumping, skipping, yoga pose.
+
+Core goal:
+Create a natural back-and-forth conversation around movement.
+The child should feel like they are helping the gym teacher solve a fun mystery.
+
+Hard rules:
+- Never mention selective mutism, anxiety, therapy, treatment, exposure, stages, progress, confidence, or bravery.
+- Never pressure the child to speak.
+- Never say "use your words."
+- Never sound disappointed.
+- Never overpraise.
+- Never make the child feel evaluated.
+- Keep attention on the exercise detective game.
+- Ask only one question at a time.
+- Do not repeat previous questions.
+- Use the clues already given.
+- If the child gives no answer, an unclear answer, or seems stuck, make the next question easier.
+- If the child answers comfortably several times, you may gently increase verbal demand.
+- Do not ask the child to do unsafe or intense exercise.
+- Keep each spoken line to 1-3 short sentences.
+
+Voice style:
+Warm, playful, energetic but not hyper.
+Friendly gym teacher.
+Not babyish. Not too loud. Not teacher-scolding.
+
+Intro:
+For intro or restart, say something like:
+"Okay, I'll close my eyes while you pick an exercise. You can do the move, answer my questions, or give me hints, and I'll try to guess it. Ready?"
+
+Good question areas:
+- Does it use your arms?
+- Does it use your legs?
+- Are you jumping?
+- Are you standing still?
+- Are you moving fast or slow?
+- Does it happen on the floor?
+- Is it a stretch?
+- Is it something from gym class?
+- Does it make your heart beat faster?
+- Is it like running, jumping, or stretching?
+
+Progression logic:
+1. intro:
+   Explain the premise simply.
+2. yes_no:
+   Ask concrete yes/no questions.
+   Examples:
+   "Do you use your arms?"
+   "Are your feet leaving the floor?"
+3. forced_choice:
+   Ask two-option questions.
+   Examples:
+   "Is it more like jumping or stretching?"
+   "Are you moving fast or slow?"
+4. one_word:
+   Ask for one simple word.
+   Examples:
+   "What body part moves most?"
+   "What is one clue?"
+5. short_phrase:
+   Ask for a tiny hint.
+   Examples:
+   "Tell me one tiny clue."
+   "What does the exercise look like?"
+6. guess:
+   Guess the exercise when there are enough clues.
+
+Silence or stuck handling:
+If the child says nothing or gives an unclear response:
+- Do not say "I could not hear you."
+- Do not call attention to silence.
+- Offer an easier path.
+
+Examples:
+"Let's make it easy. Are you using your arms?"
+"I'll ask a tiny question. Are you jumping?"
+"You can say yes or no."
+"Is it more like running or stretching?"
+
+Output JSON only:
+{
+  "message": "the gym teacher's spoken line",
+  "stage": "intro | yes_no | forced_choice | one_word | short_phrase | guess | support | complete",
+  "expects_response": true,
+  "response_mode": "none | yes_no | choice | one_word | short_phrase",
+  "is_question": true,
+  "question_text": "the question asked, or null",
+  "game_complete": false,
+  "state_update": {
+    "comfortable_answer_delta": 0,
+    "unclear_or_silent_delta": 0,
+    "questions_asked_increment": 0,
+    "known_clue": null,
+    "possible_guess": null,
+    "rejected_guess": null
+  }
+}
+"""
+
+    user_prompt = f"""
+Child name:
+{child_name}
+
+Current game state:
+{game_state}
+
+Recent history:
+{history[-12:]}
+
+New event:
+event_type: {event_type}
+child_response: {child_response}
+previous_response_mode: {response_mode}
+
+Interpretation help:
+- If event_type is intro or restart, start the game gently.
+- If child_response is empty, unclear, "I don't know", or silence, count it as unclear_or_silent.
+- If child_response is a clear answer to the gym teacher's last question, count it as comfortable.
+- If the gym teacher guessed and the child says no, add the guess to rejected_guesses.
+- If the gym teacher guessed and the child says yes, respond warmly and finish the round.
+- Update the state based on the child response before choosing the next line.
+- Ask a useful next question that narrows down the exercise.
+- Do not repeat any question in question_history.
+- If there are not enough clues, do not guess yet.
+- If there are enough clues, make one playful guess.
+- Keep exercises familiar and safe for young children.
+
+Generate the next gym teacher line now.
+"""
+
+    try:
+        text_response = client.responses.create(
+            model="gpt-4.1-mini",
+            input=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ]
+        )
+
+        raw = text_response.output_text.strip()
+
+        import json
+
+        try:
+            parsed = json.loads(raw)
+        except Exception:
+            parsed = {
+                "message": raw.replace('"', ""),
+                "stage": game_state.get("stage", "yes_no"),
+                "expects_response": True,
+                "response_mode": "yes_no",
+                "is_question": True,
+                "question_text": raw.replace('"', ""),
+                "game_complete": False,
+                "state_update": {
+                    "comfortable_answer_delta": 0,
+                    "unclear_or_silent_delta": 0,
+                    "questions_asked_increment": 1,
+                    "known_clue": None,
+                    "possible_guess": None,
+                    "rejected_guess": None
+                }
+            }
+
+        message = parsed.get("message", "").strip().replace('"', "")
+
+        if not message:
+            message = "I'm ready, exercise detective mode is on. Are you using your arms?"
+
+        state_update = parsed.get("state_update", {}) or {}
+
+        game_state["stage"] = parsed.get("stage", game_state.get("stage", "yes_no"))
+
+        game_state["comfortable_answer_count"] = max(
+            0,
+            int(game_state.get("comfortable_answer_count", 0))
+            + int(state_update.get("comfortable_answer_delta", 0))
+        )
+
+        game_state["unclear_or_silent_count"] = max(
+            0,
+            int(game_state.get("unclear_or_silent_count", 0))
+            + int(state_update.get("unclear_or_silent_delta", 0))
+        )
+
+        game_state["questions_asked"] = int(game_state.get("questions_asked", 0)) + int(
+            state_update.get("questions_asked_increment", 0)
+        )
+
+        if state_update.get("known_clue"):
+            game_state.setdefault("known_clues", []).append(state_update["known_clue"])
+
+        if state_update.get("possible_guess"):
+            game_state["possible_guess"] = state_update["possible_guess"]
+
+        if state_update.get("rejected_guess"):
+            game_state.setdefault("rejected_guesses", []).append(state_update["rejected_guess"])
+
+        question_text = parsed.get("question_text")
+        if parsed.get("is_question") and question_text:
+            game_state.setdefault("question_history", []).append({
+                "question": question_text,
+                "stage": parsed.get("stage"),
+                "response_mode": parsed.get("response_mode")
+            })
+
+        game_complete = bool(parsed.get("game_complete", False))
+        game_state["game_complete"] = game_complete
+
+        history.append({
+            "event_type": event_type,
+            "child_response": child_response,
+            "gym_teacher": message,
+            "stage": parsed.get("stage"),
+            "response_mode": parsed.get("response_mode"),
+            "game_complete": game_complete
+        })
+
+        session["exercise_detective_history"] = history[-20:]
+        session["exercise_detective_state"] = game_state
+        session.modified = True
+
+        audio_bytes = generate_gym_teacher_voice_elevenlabs(message)
+        audio_base64 = base64.b64encode(audio_bytes).decode("utf-8")
+
+        return jsonify({
+            "success": True,
+            "message": message,
+            "audio": f"data:audio/mpeg;base64,{audio_base64}",
+            "stage": parsed.get("stage"),
+            "expects_response": parsed.get("expects_response", True) and not game_complete,
+            "response_mode": parsed.get("response_mode", "yes_no"),
+            "game_complete": game_complete,
+            "game_state": game_state
+        })
+
+    except Exception as e:
+        print("Exercise Detective AI error:", e)
+        return jsonify({
+            "success": False,
+            "error": "Could not generate gym teacher response"
+        }), 500
+
+
+@app.route("/api/exercise-detective/transcribe", methods=["POST"])
+@csrf.exempt
+@login_required
+@limiter.limit("20 per minute")
+def exercise_detective_transcribe():
+    if "audio" not in request.files:
+        return jsonify({
+            "success": False,
+            "error": "Missing audio"
+        }), 400
+
+    audio_file = request.files["audio"]
+
+    try:
+        import io
+
+        audio_bytes = audio_file.read()
+
+        if not audio_bytes:
+            return jsonify({
+                "success": False,
+                "error": "Empty audio file"
+            }), 400
+
+        file_obj = io.BytesIO(audio_bytes)
+        file_obj.name = "child-response.webm"
+
+        transcript = client.audio.transcriptions.create(
+            model="gpt-4o-mini-transcribe",
+            file=file_obj
+        )
+
+        text = transcript.text.strip()
+
+        print("EXERCISE DETECTIVE TRANSCRIPT:", text)
+
+        return jsonify({
+            "success": True,
+            "text": text
+        })
+
+    except Exception as e:
+        print("Exercise Detective transcription error:", repr(e))
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+    
+PARENT_ACADEMY_ARTICLES = {
+    "what-is-selective-mutism": {
+        "title": "What Is Selective Mutism?",
+        "category": "Understanding Selective Mutism",
+        "read_time": "7 min read",
+        "evidence": "High",
+        "sources_reviewed": "7",
+        "summary": "Selective mutism is a childhood anxiety disorder where a child can speak comfortably in some situations but consistently cannot speak in others, usually because anxiety blocks access to speech in specific social settings.",
+        "template": "parent_academy_articles/what_is_selective_mutism.html"
+    },
+    "is-selective-mutism-just-shyness": {
+        "title": "Is Selective Mutism Just Shyness?",
+        "category": "Understanding Selective Mutism",
+        "read_time": "6 min read",
+        "evidence": "High",
+        "sources_reviewed": "4",
+        "summary": "Selective mutism is not simply extreme shyness. Shyness is a temperament trait, while selective mutism is an anxiety disorder that can interfere with a child’s ability to speak in specific situations.",
+        "template": "parent_academy_articles/is_selective_mutism_just_shyness.html"
+    },
+    "the-science-of-anxiety": {
+        "title": "The Science of Anxiety",
+        "category": "Understanding Selective Mutism",
+        "read_time": "6 min read",
+        "evidence": "High",
+        "sources_reviewed": "5",
+        "summary": "When speaking feels threatening, a child’s nervous system may activate a stress response. For some children, this leads to freezing, making speech feel temporarily inaccessible even when they know what they want to say.",
+        "template": "parent_academy_articles/the_science_of_anxiety.html"
+    },
+    "what-causes-selective-mutism": {
+        "title": "What Causes Selective Mutism?",
+        "category": "Understanding Selective Mutism",
+        "read_time": "6 min read",
+        "evidence": "High",
+        "sources_reviewed": "4",
+        "summary": "Selective mutism is usually understood as an anxiety-related condition influenced by several factors, including temperament, genetics, environment, and learned avoidance patterns.",
+        "template": "parent_academy_articles/what_causes_selective_mutism.html"
+    },
+
+    "why-does-my-child-freeze": {
+        "title": "Why Does My Child Freeze?",
+        "category": "Understanding Selective Mutism",
+        "read_time": "6 min read",
+        "evidence": "High",
+        "sources_reviewed": "5",
+        "summary": "Many children with selective mutism experience a freeze response where anxiety temporarily overwhelms their ability to communicate, even when they know exactly what they want to say.",
+        "template": "parent_academy_articles/why_does_my_child_freeze.html"
+    },
+
+    "why-home-but-not-school": {
+        "title": "Why Home but Not School?",
+        "category": "Understanding Selective Mutism",
+        "read_time": "6 min read",
+        "evidence": "High",
+        "sources_reviewed": "5",
+        "summary": "Many children with selective mutism speak comfortably at home but become silent at school because different environments create very different levels of anxiety and perceived social pressure.",
+        "template": "parent_academy_articles/why_home_but_not_school.html"
+    },
+    "why-does-my-child-whisper": {
+        "title": "Why Does My Child Whisper?",
+        "category": "Understanding Your Child",
+        "read_time": "4 min read",
+        "evidence": "Moderate",
+        "sources_reviewed": "3",
+        "summary": "Whispering can sometimes be a bridge between silence and full speech. It may show that communication is possible, but still feels safer at a lower intensity.",
+        "template": "parent_academy_articles/why_does_my_child_whisper.html"
+    },
+    "should-i-answer-for-my-child": {
+        "title": "Should I Answer For My Child?",
+        "category": "Popular Questions",
+        "read_time": "5 min read",
+        "evidence": "Moderate",
+        "sources_reviewed": "4",
+        "summary": "Answering for your child can sometimes reduce immediate stress, but doing it automatically may also prevent small speaking opportunities. The goal is to support without taking over.",
+        "template": "parent_academy_articles/should_i_answer_for_my_child.html"
+    },
+    "why-only-certain-people": {
+    "title": "Why Only Certain People?",
+    "category": "Understanding Your Child",
+    "read_time": "6 min read",
+    "evidence": "High",
+    "sources_reviewed": "5",
+    "summary": "Some children with selective mutism can speak to certain people but not others because speech becomes linked to safety, familiarity, predictability, and past speaking experiences.",
+    "template": "parent_academy_articles/why_only_certain_people.html"
+},
+
+"why-one-teacher-but-not-another": {
+    "title": "Why One Teacher But Not Another?",
+    "category": "Understanding Your Child",
+    "read_time": "6 min read",
+    "evidence": "High",
+    "sources_reviewed": "5",
+    "summary": "A child may speak to one teacher but not another because subtle differences in predictability, pressure, relationship history, and classroom context can strongly affect anxiety.",
+    "template": "parent_academy_articles/why_one_teacher_but_not_another.html"
+},
+
+"why-is-it-harder-around-other-children": {
+    "title": "Why Is It Harder Around Other Children?",
+    "category": "Understanding Your Child",
+    "read_time": "6 min read",
+    "evidence": "High",
+    "sources_reviewed": "5",
+    "summary": "Speaking around other children can be harder because peers add social attention, unpredictability, comparison, and fear of being judged or noticed.",
+    "template": "parent_academy_articles/why_is_it_harder_around_other_children.html"
+},
+
+"why-avoid-eye-contact": {
+    "title": "Why Avoid Eye Contact?",
+    "category": "Understanding Your Child",
+    "read_time": "5 min read",
+    "evidence": "Moderate",
+    "sources_reviewed": "5",
+    "summary": "Avoiding eye contact can be a coping strategy that lowers the intensity of social interaction. For some children, looking away helps them listen, regulate anxiety, and communicate with less pressure.",
+    "template": "parent_academy_articles/why_avoid_eye_contact.html"
+},
+
+"why-do-they-seem-comfortable-but-not-speak": {
+    "title": "Why Do They Seem Comfortable But Not Speak?",
+    "category": "Understanding Your Child",
+    "read_time": "6 min read",
+    "evidence": "High",
+    "sources_reviewed": "5",
+    "summary": "Some children with selective mutism look calm on the outside while still experiencing internal anxiety. The silence itself may be the symptom, even when distress is not obvious.",
+    "template": "parent_academy_articles/why_do_they_seem_comfortable_but_not_speak.html"
+},
+
+"why-did-my-child-stop-speaking-again": {
+    "title": "Why Did My Child Stop Speaking Again?",
+    "category": "Understanding Your Child",
+    "read_time": "6 min read",
+    "evidence": "High",
+    "sources_reviewed": "5",
+    "summary": "Setbacks are common in selective mutism and do not necessarily mean progress is lost. Often, anxiety has increased and the child temporarily needs easier communication steps to regain access to speech.",
+    "template": "parent_academy_articles/why_did_my_child_stop_speaking_again.html"
+}, 
+
+"why-speak-less-in-new-places": {
+    "title": "Why Speak Less In New Places?",
+    "category": "Understanding Your Child",
+    "read_time": "6 min read",
+    "evidence": "High",
+    "sources_reviewed": "5",
+    "summary": "Unfamiliar environments can make communication harder because new places increase uncertainty, reduce safety cues, and make speech feel less predictable.",
+    "template": "parent_academy_articles/why_speak_less_in_new_places.html"
+},
+
+"why-use-gestures-instead-of-words": {
+    "title": "Why Use Gestures Instead of Words?",
+    "category": "Understanding Your Child",
+    "read_time": "6 min read",
+    "evidence": "High",
+    "sources_reviewed": "5",
+    "summary": "Gestures can be meaningful communication when speech feels too difficult. They often function as lower-pressure steps that can be shaped gradually toward speech.",
+    "template": "parent_academy_articles/why_use_gestures_instead_of_words.html"
+},
+
+"why-do-they-speak-through-me": {
+    "title": "Why Do They Speak Through Me?",
+    "category": "Understanding Your Child",
+    "read_time": "6 min read",
+    "evidence": "High",
+    "sources_reviewed": "5",
+    "summary": "Some children rely on parents as a safe communication bridge. The goal is to support communication while gradually transferring small pieces back to the child.",
+    "template": "parent_academy_articles/why_do_they_speak_through_me.html"
+},
+
+"why-do-they-shut-down-or-get-upset": {
+    "title": "Why Do They Shut Down or Get Upset?",
+    "category": "Understanding Your Child",
+    "read_time": "6 min read",
+    "evidence": "High",
+    "sources_reviewed": "5",
+    "summary": "Overwhelm can show up as silence, frustration, refusal, avoidance, tears, or shutdown when communication demands exceed what a child can manage in the moment.",
+    "template": "parent_academy_articles/why_do_they_shut_down_or_get_upset.html"
+},
+
+"why-are-mornings-before-school-so-hard": {
+    "title": "Why Are Mornings Before School So Hard?",
+    "category": "Understanding Your Child",
+    "read_time": "6 min read",
+    "evidence": "High",
+    "sources_reviewed": "5",
+    "summary": "Mornings can be difficult because anticipatory anxiety may build before the child even reaches school, especially when they expect social or speaking demands.",
+    "template": "parent_academy_articles/why_are_mornings_before_school_so_hard.html"
+},
+"how-can-i-help-my-child-at-school": {
+    "title": "How Can I Help My Child at School?",
+    "category": "Popular Questions",
+    "read_time": "7 min read",
+    "evidence": "High",
+    "sources_reviewed": "5",
+    "summary": "School support works best when parents and staff create a coordinated plan that lowers pressure while gradually building successful communication steps.",
+    "template": "parent_academy_articles/how_can_i_help_my_child_at_school.html"
+},
+
+"is-it-okay-to-reward-my-child-for-speaking": {
+    "title": "Is It Okay to Reward My Child for Speaking?",
+    "category": "Popular Questions",
+    "read_time": "6 min read",
+    "evidence": "High",
+    "sources_reviewed": "5",
+    "summary": "Rewards can help when they reinforce small planned communication steps, but they can backfire when they feel like pressure, bribery, or performance.",
+    "template": "parent_academy_articles/is_it_okay_to_reward_my_child_for_speaking.html"
+},
+
+"should-i-answer-for-my-child": {
+    "title": "Should I Answer For My Child?",
+    "category": "Popular Questions",
+    "read_time": "6 min read",
+    "evidence": "High",
+    "sources_reviewed": "5",
+    "summary": "Answering for your child can protect them when they are overwhelmed, but automatic answering can also reduce opportunities for small communication steps.",
+    "template": "parent_academy_articles/should_i_answer_for_my_child.html"
+},
+
+"what-if-my-child-refuses-therapy": {
+    "title": "What If My Child Refuses Therapy?",
+    "category": "Popular Questions",
+    "read_time": "7 min read",
+    "evidence": "High",
+    "sources_reviewed": "5",
+    "summary": "Therapy refusal often means therapy feels like another speaking demand. Support can begin with parent coaching, school planning, and low-pressure participation.",
+    "template": "parent_academy_articles/what_if_my_child_refuses_therapy.html"
+},
+"can-my-child-grow-out-of-selective-mutism": {
+    "title": "Can My Child Grow Out of Selective Mutism?",
+    "category": "Popular Questions",
+    "read_time": "6 min read",
+    "evidence": "High",
+    "sources_reviewed": "5",
+    "summary": "Some children improve over time, but selective mutism should not be treated as something a child will definitely outgrow without support.",
+    "template": "parent_academy_articles/can_my_child_grow_out_of_selective_mutism.html"
+},
+
+"should-i-force-my-child-to-speak": {
+    "title": "Should I Force My Child to Speak?",
+    "category": "Popular Questions",
+    "read_time": "6 min read",
+    "evidence": "High",
+    "sources_reviewed": "5",
+    "summary": "Forcing speech usually increases anxiety. A better approach is using small, planned, low-pressure communication steps that help the child experience success.",
+    "template": "parent_academy_articles/should_i_force_my_child_to_speak.html"
+},
+
+"is-whispering-a-good-sign": {
+    "title": "Is Whispering a Good Sign?",
+    "category": "Popular Questions",
+    "read_time": "5 min read",
+    "evidence": "Moderate",
+    "sources_reviewed": "5",
+    "summary": "Whispering can be a meaningful bridge between silence and full speech, but it should be gently shaped over time toward more flexible communication.",
+    "template": "parent_academy_articles/is_whispering_a_good_sign.html"
+},
+
+"what-should-i-tell-relatives-about-sm": {
+    "title": "What Should I Tell Relatives About SM?",
+    "category": "Popular Questions",
+    "read_time": "6 min read",
+    "evidence": "High",
+    "sources_reviewed": "5",
+    "summary": "Relatives can support a child with selective mutism by understanding that silence is anxiety-based, not rude or defiant, and by reducing pressure while connection builds.",
+    "template": "parent_academy_articles/what_should_i_tell_relatives_about_sm.html"
+}, "how-to-reduce-speaking-pressure": {
+    "title": "How to Reduce Speaking Pressure",
+    "category": "Parent Strategies",
+    "read_time": "6 min read",
+    "evidence": "High",
+    "sources_reviewed": "5",
+    "summary": "Reducing speaking pressure means making communication feel safer, smaller, and less like a performance while still building toward gradual progress.",
+    "template": "parent_academy_articles/how_to_reduce_speaking_pressure.html"
+},
+
+"what-parents-should-avoid": {
+    "title": "What Parents Should Avoid",
+    "category": "Parent Strategies",
+    "read_time": "6 min read",
+    "evidence": "High",
+    "sources_reviewed": "5",
+    "summary": "Certain well-meaning responses, like forcing speech, repeated prompting, over-rescuing, or public praise, can accidentally increase anxiety and maintain avoidance.",
+    "template": "parent_academy_articles/what_parents_should_avoid.html"
+},
+
+"praise-vs-pressure": {
+    "title": "Praise vs Pressure",
+    "category": "Parent Strategies",
+    "read_time": "6 min read",
+    "evidence": "High",
+    "sources_reviewed": "5",
+    "summary": "Praise can support progress when it is calm and effort-focused, but it can become pressure when it puts a spotlight on the child’s speech.",
+    "template": "parent_academy_articles/praise_vs_pressure.html"
+}, 
+
+"creating-speaking-opportunities": {
+    "title": "Creating Speaking Opportunities",
+    "category": "Parent Strategies",
+    "read_time": "6 min read",
+    "evidence": "High",
+    "sources_reviewed": "5",
+    "summary": "Low-pressure routines, games, and daily moments that support communication practice.",
+    "template": "parent_academy_articles/creating_speaking_opportunities.html"
+},
+
+"handling-setbacks": {
+    "title": "Handling Setbacks",
+    "category": "Parent Strategies",
+    "read_time": "5 min read",
+    "evidence": "High",
+    "sources_reviewed": "5",
+    "summary": "How to respond when progress slows, stops, or temporarily reverses.",
+    "template": "parent_academy_articles/handling_setbacks.html"
+},
+
+}
+
+PARENT_ACADEMY_CATEGORIES = {
+    "understanding-selective-mutism": {
+        "title": "Understanding Selective Mutism",
+        "subtitle": "Foundational guides to help parents understand what selective mutism is, why it happens, and why it changes across settings.",
+        "articles": [
+            {"slug": "what-is-selective-mutism", "image": "sm_brain_question.png", "art": "art-pink"},
+            {"slug": "is-selective-mutism-just-shyness", "image": "sm_shyness.png", "art": "art-green"},
+            {"slug": "what-causes-selective-mutism", "image": "sm_causes.png", "art": "art-peach"},
+            {"slug": "the-science-of-anxiety", "image": "sm_anxiety.png", "art": "art-blue"},
+            {"slug": "why-home-but-not-school", "image": "sm_home_school.png", "art": "art-rose"},
+            {"slug": "why-does-my-child-freeze", "image": "sm_freeze.png", "art": "art-yellow"},
+        ]
+    },
+
+    "understanding-your-child": {
+        "title": "Understanding Your Child",
+        "subtitle": "Answers to the confusing behaviors parents often notice: whispering, freezing, gestures, setbacks, and situation-specific speech.",
+        "articles": [
+            {"slug": "why-does-my-child-whisper", "image": "sm_whisper.png", "art": "art-lavender"},
+            {"slug": "why-only-certain-people", "image": "sm_certain_people.png", "art": "art-mint"},
+            {"slug": "why-one-teacher-but-not-another", "image": "sm_one_teacher.png", "art": "art-warm"},
+            {"slug": "why-is-it-harder-around-other-children", "image": "sm_other_children.png", "art": "art-soft-blue"},
+            {"slug": "why-avoid-eye-contact", "image": "sm_eye_contact.png", "art": "art-soft-purple"},
+            {"slug": "why-do-they-seem-comfortable-but-not-speak", "image": "sm_seems_comfortable.png", "art": "art-pink"},
+            {"slug": "why-did-my-child-stop-speaking-again", "image": "sm_regression.png", "art": "art-yellow"},
+            {"slug": "why-speak-less-in-new-places", "image": "sm_new_places.png", "art": "art-green"},
+            {"slug": "why-use-gestures-instead-of-words", "image": "sm_gestures.png", "art": "art-blue"},
+            {"slug": "why-do-they-speak-through-me", "image": "sm_speaks_through_parent.png", "art": "art-peach"},
+            {"slug": "why-do-they-shut-down-or-get-upset", "image": "sm_anger_shutdown.png", "art": "art-warm"},
+            {"slug": "why-are-mornings-before-school-so-hard", "image": "sm_morning_school.png", "art": "art-soft-blue"},
+        ]
+    },
+
+    "parent-strategies": {
+        "title": "Parent Strategies",
+        "subtitle": "Practical, evidence-aligned strategies for reducing pressure, creating speaking opportunities, and responding to setbacks.",
+        "articles": [
+            {"slug": "how-to-reduce-speaking-pressure", "image": "sm_reduce_pressure.png", "art": "art-green"},
+            {"slug": "what-parents-should-avoid", "image": "sm_parent_avoid.png", "art": "art-blue"},
+            {"slug": "praise-vs-pressure", "image": "sm_praise.png", "art": "art-yellow"},
+            {"slug": "should-i-answer-for-my-child", "image": "sm_answering_for_child.png", "art": "art-peach"},
+            {"slug": "creating-speaking-opportunities", "image": "sm_speaking_opportunities.png", "art": "art-lavender"},
+            {"slug": "handling-setbacks", "image": "sm_setbacks.png", "art": "art-mint"},
+        ]
+    }
+}
+
+@app.route("/parent-academy/category/<category_slug>")
+@login_required
+def parent_academy_category(category_slug):
+    category = PARENT_ACADEMY_CATEGORIES.get(category_slug)
+
+    if not category:
+        abort(404)
+
+    articles = []
+
+    for item in category["articles"]:
+        article = PARENT_ACADEMY_ARTICLES.get(item["slug"])
+
+        if article:
+            articles.append({
+                **article,
+                "slug": item["slug"],
+                "image": item["image"],
+                "art": item["art"]
+            })
+
+    return render_template(
+        "parent_academy_category.html",
+        active_page="parent_academy",
+        parent=session["parent_name"],
+        child=session["child_name"],
+        profile_icon=session.get("profile_icon", "profileicon.png"),
+        category=category,
+        articles=articles
+    )
+
+@app.route("/parent-academy/article/<slug>")
+@login_required
+def parent_academy_article(slug):
+    article = PARENT_ACADEMY_ARTICLES.get(slug)
+
+    if not article:
+        abort(404)
+
+    return render_template(
+        "parent_academy_article.html",
+        active_page="parent_academy",
+        parent=session["parent_name"],
+        child=session["child_name"],
+        profile_icon=session.get("profile_icon", "profileicon.png"),
+        article=article
+    )
+
+@app.route("/ask-bravesprouts")
+@login_required
+def ask_bravesprouts():
+    return render_template(
+        "ask_bravesprouts.html",
+        active_page="ask_bravesprouts",
+        parent=session["parent_name"],
+        child=session["child_name"],
+        profile_icon=session.get("profile_icon", "profileicon.png")
+    )
+
+
+@app.route("/api/ask-bravesprouts/conversations", methods=["GET"])
+@login_required
+def get_chat_conversations():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT conversation_id, title, updated_at
+        FROM chat_conversations
+        WHERE user_id = ?
+        ORDER BY updated_at DESC
+        LIMIT 20
+    """, (session["user_id"],))
+
+    rows = cursor.fetchall()
+    conn.close()
+
+    return jsonify({
+        "success": True,
+        "conversations": [dict(row) for row in rows]
+    })
+
+
+@app.route("/api/ask-bravesprouts/conversations", methods=["POST"])
+@csrf.exempt
+@login_required
+def create_chat_conversation():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        INSERT INTO chat_conversations (user_id, title)
+        VALUES (?, ?)
+    """, (session["user_id"], "New conversation"))
+
+    conversation_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+
+    return jsonify({
+        "success": True,
+        "conversation_id": conversation_id,
+        "title": "New conversation"
+    })
+
+
+@app.route("/api/ask-bravesprouts/conversations/<int:conversation_id>", methods=["GET"])
+@login_required
+def get_chat_messages(conversation_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT conversation_id
+        FROM chat_conversations
+        WHERE conversation_id = ? AND user_id = ?
+    """, (conversation_id, session["user_id"]))
+
+    conversation = cursor.fetchone()
+
+    if not conversation:
+        conn.close()
+        return jsonify({"success": False, "error": "Conversation not found"}), 404
+
+    cursor.execute("""
+        SELECT role, content, layout_type, created_at
+        FROM chat_messages
+        WHERE conversation_id = ? AND user_id = ?
+        ORDER BY created_at ASC, message_id ASC
+    """, (conversation_id, session["user_id"]))
+
+    messages = cursor.fetchall()
+    conn.close()
+
+    return jsonify({
+        "success": True,
+        "messages": [dict(row) for row in messages]
+    })
+
+
+@app.route("/api/ask-bravesprouts/conversations/<int:conversation_id>", methods=["DELETE"])
+@csrf.exempt
+@login_required
+def delete_chat_conversation(conversation_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        DELETE FROM chat_messages
+        WHERE conversation_id = ? AND user_id = ?
+    """, (conversation_id, session["user_id"]))
+
+    cursor.execute("""
+        DELETE FROM chat_conversations
+        WHERE conversation_id = ? AND user_id = ?
+    """, (conversation_id, session["user_id"]))
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({"success": True})
+
+
+def classify_ask_bravesprouts_message(user_message):
+    message = user_message.lower().strip()
+
+    courtesy_phrases = [
+        "hi", "hello", "hey", "good morning", "good afternoon", "good evening",
+        "thanks", "thank you", "thank you so much", "thx", "appreciate it",
+        "ok", "okay", "got it", "that helps", "makes sense", "cool",
+        "yes", "no", "yeah", "yep", "nope", "sure"
+    ]
+
+    if message in courtesy_phrases:
+        return "courtesy"
+
+    if len(message.split()) <= 4 and any(phrase in message for phrase in courtesy_phrases):
+        return "courtesy"
+
+    allowed_keywords = [
+        "selective mutism", "mutism", "sm",
+        "speak", "speaking", "talk", "talking", "voice",
+        "whisper", "freeze", "frozen", "silent", "silence",
+        "anxiety", "anxious", "nervous", "shy", "shyness",
+        "school", "teacher", "classroom", "student",
+        "parent", "child", "kid", "daughter", "son",
+        "therapy", "therapist", "doctor", "psychologist",
+        "speech", "slp", "counselor",
+        "reward", "pressure", "prompt", "avoid", "avoidance",
+        "eye contact", "gestures", "setback", "progress",
+        "relatives", "family", "friends",
+        "communication", "bravesprouts", "practice", "support"
+    ]
+
+    blocked_keywords = [
+        "html", "css", "javascript", "python", "code",
+        "website", "essay", "homework", "math",
+        "business plan", "marketing plan",
+        "recipe", "travel", "movie", "song",
+        "write me", "make me", "build me", "create me",
+        "generate", "solve", "debug"
+    ]
+
+    has_allowed = any(keyword in message for keyword in allowed_keywords)
+    has_blocked = any(keyword in message for keyword in blocked_keywords)
+
+    if has_allowed and has_blocked:
+        return "needs_context"
+
+    if has_allowed:
+        return "allowed"
+
+    if has_blocked:
+        return "blocked"
+
+    if len(message.split()) <= 6:
+        return "courtesy"
+
+    return "blocked"
+
+
+def save_simple_chat_response(cursor, conversation_id, user_id, user_message, bot_message):
+    import json
+
+    cursor.execute("""
+        INSERT INTO chat_messages (conversation_id, user_id, role, content)
+        VALUES (?, ?, 'user', ?)
+    """, (conversation_id, user_id, user_message))
+
+    cursor.execute("""
+        INSERT INTO chat_messages (
+            conversation_id,
+            user_id,
+            role,
+            content,
+            layout_type
+        )
+        VALUES (?, ?, 'assistant', ?, ?)
+    """, (
+        conversation_id,
+        user_id,
+        json.dumps(bot_message),
+        bot_message.get("layout_type", "quick")
+    ))
+
+    cursor.execute("""
+        UPDATE chat_conversations
+        SET title = CASE
+            WHEN title = 'New conversation' THEN ?
+            ELSE title
+        END,
+        updated_at = CURRENT_TIMESTAMP
+        WHERE conversation_id = ? AND user_id = ?
+    """, (
+        user_message[:42].strip(),
+        conversation_id,
+        user_id
+    ))
+
+
+@app.route("/api/ask-bravesprouts/message", methods=["POST"])
+@csrf.exempt
+@login_required
+@limiter.limit("20 per minute")
+def ask_bravesprouts_message():
+    data = request.get_json(silent=True) or {}
+
+    conversation_id = data.get("conversation_id")
+    user_message = (data.get("message") or "").strip()
+
+    if not user_message:
+        return jsonify({"success": False, "error": "Message is required"}), 400
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    if not conversation_id:
+        cursor.execute("""
+            INSERT INTO chat_conversations (user_id, title)
+            VALUES (?, ?)
+        """, (session["user_id"], "New conversation"))
+        conversation_id = cursor.lastrowid
+        conn.commit()
+
+    cursor.execute("""
+        SELECT conversation_id
+        FROM chat_conversations
+        WHERE conversation_id = ? AND user_id = ?
+    """, (conversation_id, session["user_id"]))
+
+    if not cursor.fetchone():
+        conn.close()
+        return jsonify({"success": False, "error": "Conversation not found"}), 404
+
+    message_type = classify_ask_bravesprouts_message(user_message)
+
+    if message_type == "courtesy":
+        courtesy_message = {
+            "layout_type": "quick",
+            "title": "Hi, I’m here with you",
+            "sections": [
+                {
+                    "heading": "How I can help",
+                    "content": "You can ask me about selective mutism, speaking anxiety, school support, parent strategies, or communication practice.",
+                    "items": [
+                        "Why does my child freeze?",
+                        "How can I reduce speaking pressure?",
+                        "What should I tell my child’s teacher?"
+                    ]
+                }
+            ],
+            "gentle_reminder": ""
+        }
+
+        save_simple_chat_response(
+            cursor,
+            conversation_id,
+            session["user_id"],
+            user_message,
+            courtesy_message
+        )
+
+        conn.commit()
+        conn.close()
+
+        return jsonify({
+            "success": True,
+            "conversation_id": conversation_id,
+            "message": courtesy_message
+        })
+
+    if message_type == "blocked":
+        refusal_message = {
+            "layout_type": "quick",
+            "title": "I can only help with BraveSprouts-related questions",
+            "sections": [
+                {
+                    "heading": "Try asking about communication support",
+                    "content": "Ask BraveSprouts is designed to help with selective mutism, speaking anxiety, parent strategies, school support, and communication practice.",
+                    "items": [
+                        "Why does my child freeze when someone talks to them?",
+                        "How can I reduce speaking pressure?",
+                        "How should I talk to my child’s teacher?"
+                    ]
+                }
+            ],
+            "gentle_reminder": "For medical or treatment decisions, please work with a qualified professional."
+        }
+
+        save_simple_chat_response(
+            cursor,
+            conversation_id,
+            session["user_id"],
+            user_message,
+            refusal_message
+        )
+
+        conn.commit()
+        conn.close()
+
+        return jsonify({
+            "success": True,
+            "conversation_id": conversation_id,
+            "message": refusal_message
+        })
+    
+    if message_type == "needs_context":
+        context_message = {
+            "layout_type": "quick",
+            "title": "That depends on what’s happening",
+            "sections": [
+                {
+                    "heading": "A little more context would help",
+                    "content": "I can help if this connects to speaking pressure, anxiety, avoidance, shutdowns, school communication, or parent support. I just don’t want to assume what is happening for your child.",
+                    "items": [
+                        "Is the challenge mainly about the homework itself?",
+                        "Is your child getting overwhelmed or shutting down?",
+                        "Is speaking, answering aloud, or pressure part of the situation?"
+                    ]
+                }
+            ],
+            "gentle_reminder": ""
+        }
+
+        save_simple_chat_response(
+            cursor,
+            conversation_id,
+            session["user_id"],
+            user_message,
+            context_message
+        )
+
+        conn.commit()
+        conn.close()
+
+        return jsonify({
+            "success": True,
+            "conversation_id": conversation_id,
+            "message": context_message
+        })
+
+    cursor.execute("""
+        INSERT INTO chat_messages (conversation_id, user_id, role, content)
+        VALUES (?, ?, 'user', ?)
+    """, (conversation_id, session["user_id"], user_message))
+
+    cursor.execute("""
+        SELECT role, content
+        FROM chat_messages
+        WHERE conversation_id = ? AND user_id = ?
+        ORDER BY created_at DESC, message_id DESC
+        LIMIT 12
+    """, (conversation_id, session["user_id"]))
+
+    recent_messages = list(reversed(cursor.fetchall()))
+
+    message_history = [
+        {
+            "role": row["role"],
+            "content": row["content"]
+        }
+        for row in recent_messages
+    ]
+
+    knowledge_context = get_relevant_parent_academy_context(user_message)
+    research_context = get_relevant_research_context(user_message)
+
+    system_prompt = f"""
+You are Ask BraveSprouts, a warm educational AI guide for parents of children with selective mutism, speaking anxiety, or communication difficulties.
+
+Core identity:
+- You are not generic ChatGPT.
+- You are a BraveSprouts parent-support guide.
+- Your job is to give careful, honest, practical, research-informed support.
+- You must never pretend to know more about the child than the parent has said.
+
+Important safety rules:
+- You are not a therapist, doctor, psychologist, speech-language pathologist, or legal advisor.
+- Never diagnose a child.
+- Never replace professional care.
+- Encourage qualified professional support for treatment, diagnosis, school plans, severe anxiety, safety concerns, or major decisions.
+- If the parent describes crisis, harm, abuse, or immediate danger, tell them to contact emergency services or a qualified crisis resource.
+
+Scope rules:
+- Only answer questions about selective mutism, child communication, parent strategies, school support, speaking anxiety, BraveSprouts activities, or closely related family support.
+- If the user asks for unrelated help such as coding, homework answers, business advice, recipes, entertainment, travel, or unrelated schoolwork, politely redirect.
+- If the message may be related but lacks context, ask for context instead of assuming.
+
+No-assumption rules:
+- You may assume the conversation is generally about selective mutism or speaking anxiety.
+- Do not assume the child’s age, severity, comfort people, triggers, school situation, home behavior, speaking ability, treatment history, or progress level unless provided.
+- Never assume the child cannot speak to a parent unless explicitly stated.
+- Never assume the child struggles in a situation unless the parent describes that struggle.
+- Never invent facts about the child or family.
+- If several explanations are possible, present them as possibilities, not facts.
+
+Clarifying-question rules:
+- Ask clarifying questions only when missing context would significantly change the advice.
+- Do not ask clarifying questions for every response.
+- For broad plan requests, school plans, treatment-like questions, or questions where severity/context matters, ask 2-4 concise questions before giving a full plan.
+- For simpler questions, give helpful general guidance immediately.
+- Ask at most 4 questions at once.
+- Do not make the parent feel interrogated.
+
+Honesty and evidence rules:
+- Be extremely honest about evidence strength.
+- Do not say something is proven if evidence is limited.
+- If research is strong, explain why.
+- If research is limited, say so clearly.
+- If a claim is based more on clinical consensus than direct trials, say that.
+- When mentioning research, name the researcher/study when possible and briefly explain what the study showed.
+- Do not invent citations.
+- If you are unsure about a study, do not cite it.
+- Prefer phrases like:
+  - "One possibility is..."
+  - "This can vary from child to child."
+  - "The evidence is stronger for..."
+  - "This is commonly recommended clinically, but direct research is limited."
+
+Approach-comparison rules:
+- When there are multiple reasonable approaches, present more than one.
+- Explain pros, cons, and what to watch out for.
+- Do not present one strategy as universally correct.
+- Include risks of common advice, especially praise, rewards, prompting, answering for the child, and exposure practice.
+
+Response design:
+Return JSON only.
+
+Use this JSON structure:
+{{
+  "layout_type": "comfort | quick | strategy | explainer | plan | professional | clarifying | comparison | research",
+  "theme": "purple | green | blue | orange | pink | yellow",
+  "confidence": "high | moderate | limited | unclear",
+  "hero": {{
+    "eyebrow": "Short label",
+    "title": "Main response title",
+    "summary": "Short 1-2 sentence summary"
+  }},
+  "sections": [
+    {{
+      "type": "why | do | avoid | research | approach | plan | question | note",
+      "icon": "brain | check | x | flask | compass | calendar | question | heart",
+      "heading": "Section heading",
+      "content": "Short paragraph",
+      "items": [
+        {{
+          "label": "Optional bold label",
+          "text": "Item text"
+        }}
+      ],
+      "pros": ["optional pro"],
+      "cons": ["optional con"],
+      "watch_out": ["optional caution"]
+    }}
+  ],
+  "follow_up_questions": ["Only include when genuinely needed"],
+  "gentle_reminder": "Short professional-support reminder when appropriate."
+}}
+
+BraveSprouts knowledge base:
+{knowledge_context if knowledge_context else "No specific Parent Academy article matched. Answer using general educational guidance."}
+
+When the knowledge base is relevant, use it.
+
+Research context:
+{research_context if research_context else "No specific research study matched this question. If research is discussed, speak generally and do not invent citations."}
+
+Research use rules:
+- When the user asks for strategies, plans, school support, treatment-like guidance, praise, rewards, pressure, avoidance, parent accommodation, or why selective mutism happens, include a research section when relevant.
+- Mention specific studies from the research context when they directly support the answer.
+- Explain what the study showed, what it implies, and what its limitations are.
+- Be honest if evidence is limited, emerging, indirect, or based more on clinical consensus than direct trials.
+- Never invent studies, author names, exact citations, or findings.
+- If no specific research context is available, say the guidance is general or clinically informed rather than pretending it is backed by a named study.
+- If you include a research section, end that section by telling the parent they can ask for a deeper explanation of any specific study, finding, limitation, or implication.
+
+Parent name: {session.get("parent_name", "the parent")}
+Child name: {session.get("child_name", "your child")}
+"""
+
+
+    try:
+        response = client.responses.create(
+            model="gpt-4.1-mini",
+            input=[
+                {"role": "system", "content": system_prompt},
+                *message_history,
+                {"role": "user", "content": user_message}
+            ]
+        )
+
+        raw = response.output_text.strip()
+
+        import json
+
+        try:
+            parsed = json.loads(raw)
+        except Exception:
+            parsed = {
+                "layout_type": "quick",
+                "theme": "purple",
+                "confidence": "unclear",
+                "hero": {
+                    "eyebrow": "BraveSprouts Guide",
+                    "title": "A gentle response",
+                    "summary": raw
+                },
+                "sections": [],
+                "follow_up_questions": [],
+                "gentle_reminder": "This is educational support and does not replace guidance from a qualified professional."
+            }
+
+        assistant_content = json.dumps(parsed)
+
+        cursor.execute("""
+            INSERT INTO chat_messages (
+                conversation_id,
+                user_id,
+                role,
+                content,
+                layout_type
+            )
+            VALUES (?, ?, 'assistant', ?, ?)
+        """, (
+            conversation_id,
+            session["user_id"],
+            assistant_content,
+            parsed.get("layout_type", "quick")
+        ))
+
+        title = user_message[:42].strip()
+
+        cursor.execute("""
+            UPDATE chat_conversations
+            SET title = CASE
+                WHEN title = 'New conversation' THEN ?
+                ELSE title
+            END,
+            updated_at = CURRENT_TIMESTAMP
+            WHERE conversation_id = ? AND user_id = ?
+        """, (title, conversation_id, session["user_id"]))
+
+        conn.commit()
+        conn.close()
+
+        return jsonify({
+            "success": True,
+            "conversation_id": conversation_id,
+            "message": parsed
+        })
+
+    except Exception as e:
+        print("Ask BraveSprouts error:", e)
+        conn.rollback()
+        conn.close()
+
+        return jsonify({
+            "success": False,
+            "error": "Could not generate response"
+        }), 500
+
+def get_relevant_parent_academy_context(user_message):
+    query = user_message.lower()
+    matches = []
+
+    for slug, article in PARENT_ACADEMY_ARTICLES.items():
+        searchable = f"""
+        {article.get("title", "")}
+        {article.get("category", "")}
+        {article.get("summary", "")}
+        """.lower()
+
+        score = 0
+        for word in query.split():
+            if len(word) > 3 and word in searchable:
+                score += 1
+
+        if score > 0:
+            matches.append((score, slug, article))
+
+    matches.sort(reverse=True, key=lambda x: x[0])
+    matches = matches[:3]
+
+    if not matches:
+        return ""
+
+    context = "Relevant BraveSprouts Parent Academy articles:\n\n"
+
+    for score, slug, article in matches:
+        context += f"""
+Title: {article["title"]}
+Category: {article["category"]}
+Evidence level: {article["evidence"]}
+Summary: {article["summary"]}
+Article slug: {slug}
+"""
+
+    return context
+
+def get_relevant_research_context(user_message, max_studies=6):
+    query = user_message.lower()
+
+    query_words = [
+        word.strip(".,!?;:()[]{}").lower()
+        for word in query.split()
+        if len(word.strip(".,!?;:()[]{}")) > 3
+    ]
+
+    matches = []
+
+    for study in RESEARCH_LIBRARY:
+        searchable = " ".join([
+            study.get("category", ""),
+            " ".join(study.get("topics", [])),
+            study.get("citation", ""),
+            study.get("finding", ""),
+            study.get("implication", "")
+        ]).lower()
+
+        score = 0
+
+        for word in query_words:
+            if word in searchable:
+                score += 1
+
+        if score > 0:
+            matches.append((score, study))
+
+    matches.sort(reverse=True, key=lambda x: x[0])
+    matches = matches[:max_studies]
+
+    if not matches:
+        return ""
+
+    context = "Relevant research context:\n\n"
+
+    for score, study in matches:
+        context += f"""
+Study: {study.get("citation", "Unknown study")}
+Category: {study.get("category", "uncategorized")}
+Evidence level: {study.get("evidence_level", "unclear")}
+Finding: {study.get("finding", "")}
+Implication: {study.get("implication", "")}
+Limitations: {study.get("limitations", "")}
+"""
+
+    return context
 
 if __name__ == "__main__":
     app.run(debug=app.config["DEBUG"])

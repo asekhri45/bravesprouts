@@ -1,0 +1,1192 @@
+[
+  {
+    "id": "sm_bergman_2002",
+    "category": "core_selective_mutism",
+    "topics": ["selective mutism", "prevalence", "school", "social anxiety", "diagnosis"],
+    "citation": "Bergman, Piacentini, & McCracken (2002)",
+    "finding": "A school-based sample found that children with selective mutism showed elevated social anxiety and internalizing symptoms compared with peers.",
+    "implication": "Selective mutism is often best understood as anxiety-related rather than oppositional behavior.",
+    "limitations": "This supports the anxiety link but does not identify one best intervention for every child.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "sm_bergman_2008_smq",
+    "category": "core_selective_mutism",
+    "topics": ["selective mutism", "assessment", "questionnaire", "severity", "school"],
+    "citation": "Bergman et al. (2008)",
+    "finding": "The Selective Mutism Questionnaire was developed to measure speaking behavior across home, school, and social settings.",
+    "implication": "Assessment should consider where the child speaks and does not speak rather than treating speech as one global ability.",
+    "limitations": "Rating scales help organize information but should not replace professional assessment.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "sm_bergman_2013_ibtsm",
+    "category": "core_selective_mutism",
+    "topics": ["selective mutism", "treatment", "behavioral therapy", "exposure", "school", "parent"],
+    "citation": "Bergman, Gonzalez, Piacentini, & Keller (2013)",
+    "finding": "A randomized controlled pilot study tested Integrated Behavior Therapy for Selective Mutism with young children.",
+    "implication": "Structured behavioral treatment can improve functional speech for some children with selective mutism.",
+    "limitations": "The study was small, so results are promising but not definitive for every child.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "sm_muris_ollendick_2015",
+    "category": "core_selective_mutism",
+    "topics": ["selective mutism", "review", "anxiety", "social anxiety", "avoidance"],
+    "citation": "Muris & Ollendick (2015)",
+    "finding": "A review described selective mutism as closely related to anxiety, especially social anxiety, while also noting heterogeneity.",
+    "implication": "Support should reduce pressure while gradually building communication in real contexts.",
+    "limitations": "This is a review, not a single treatment trial.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "sm_cohan_2006_review",
+    "category": "core_selective_mutism",
+    "topics": ["selective mutism", "treatment", "review", "behavioral therapy", "cbt"],
+    "citation": "Cohan, Chavira, & Stein (2006)",
+    "finding": "A review of psychosocial interventions found the strongest support for behavioral and cognitive-behavioral approaches.",
+    "implication": "Gradual exposure, shaping, reinforcement, and school-family coordination are commonly supported.",
+    "limitations": "Many early studies were small or methodologically limited.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "sm_viana_2009_review",
+    "category": "core_selective_mutism",
+    "topics": ["selective mutism", "review", "assessment", "treatment", "anxiety"],
+    "citation": "Viana, Beidel, & Rabian (2009)",
+    "finding": "A review summarized selective mutism assessment, associated anxiety, and treatment approaches.",
+    "implication": "Selective mutism should be assessed across settings and treated with attention to anxiety and avoidance.",
+    "limitations": "The literature reviewed included many small and uncontrolled studies.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "sm_driessen_2020_meta",
+    "category": "core_selective_mutism",
+    "topics": ["selective mutism", "meta-analysis", "anxiety", "social anxiety"],
+    "citation": "Driessen et al. (2020)",
+    "finding": "A meta-analysis evaluated anxiety in children with selective mutism and supported the DSM-5 conceptualization of SM as anxiety-related.",
+    "implication": "Interpreting silence as anxiety-based is generally better supported than interpreting it as defiance.",
+    "limitations": "Anxiety is central for many children but does not explain every individual presentation completely.",
+    "evidence_level": "high"
+  },
+  {
+    "id": "sm_hipolito_2023_meta",
+    "category": "core_selective_mutism",
+    "topics": ["selective mutism", "systematic review", "meta-analysis", "treatment"],
+    "citation": "Hipolito et al. (2023)",
+    "finding": "A systematic review and meta-analysis found improvement in treatment study designs and support for manualized interventions.",
+    "implication": "The selective mutism evidence base is growing, but careful interpretation is still needed.",
+    "limitations": "The field remains smaller than broader child anxiety research.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "sm_oerbeck_2014",
+    "category": "core_selective_mutism",
+    "topics": ["selective mutism", "school", "home", "behavioral treatment", "exposure"],
+    "citation": "Oerbeck et al. (2014)",
+    "finding": "A home-and-school intervention used defocused communication and gradual exposure for selective mutism.",
+    "implication": "Small, planned communication steps across real settings can be useful.",
+    "limitations": "Treatment response varied and sample sizes were limited.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "sm_oerbeck_2018",
+    "category": "core_selective_mutism",
+    "topics": ["selective mutism", "treatment outcome", "follow-up", "school"],
+    "citation": "Oerbeck et al. (2018)",
+    "finding": "Follow-up research suggested many children maintained or continued gains after structured intervention.",
+    "implication": "Progress can continue over time when supports are consistent and gradual.",
+    "limitations": "Findings should not be treated as a guarantee for every child.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "sm_catchpole_2019",
+    "category": "core_selective_mutism",
+    "topics": ["selective mutism", "psychosocial intervention", "review", "cbt", "behavioral"],
+    "citation": "Catchpole et al. (2019)",
+    "finding": "A review found support for psychosocial interventions, especially behavioral and CBT-informed approaches.",
+    "implication": "Interventions should focus on reducing avoidance and gradually increasing communication.",
+    "limitations": "Research quality and sample size remain limitations in the field.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "sm_kristensen_2000",
+    "category": "core_selective_mutism",
+    "topics": ["selective mutism", "comorbidity", "development", "language", "anxiety"],
+    "citation": "Kristensen (2000)",
+    "finding": "Research on children with selective mutism identified comorbid developmental and anxiety-related features in some children.",
+    "implication": "Assessment should consider language, developmental, and anxiety factors rather than assuming one cause.",
+    "limitations": "Individual presentations vary widely.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "sm_kumpulainen_1998",
+    "category": "core_selective_mutism",
+    "topics": ["selective mutism", "epidemiology", "school", "prevalence"],
+    "citation": "Kumpulainen et al. (1998)",
+    "finding": "A school-based epidemiological study examined prevalence and associated features of selective mutism.",
+    "implication": "Selective mutism can be identified in school populations, where symptoms are often most visible.",
+    "limitations": "Prevalence estimates vary depending on methods and definitions.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "sm_steinhausen_juzi_1996",
+    "category": "core_selective_mutism",
+    "topics": ["selective mutism", "clinical features", "outcome", "diagnosis"],
+    "citation": "Steinhausen & Juzi (1996)",
+    "finding": "Clinical research described features and course of selective mutism in children.",
+    "implication": "Selective mutism can persist and affect functioning if not understood and supported.",
+    "limitations": "Older clinical samples may not reflect current diagnostic practices.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "sm_steinhausen_2006",
+    "category": "core_selective_mutism",
+    "topics": ["selective mutism", "long-term outcome", "follow-up"],
+    "citation": "Steinhausen et al. (2006)",
+    "finding": "Long-term follow-up work suggested that some children continue to experience social or anxiety-related difficulties after selective mutism improves.",
+    "implication": "Support should consider long-term confidence and participation, not only speech counts.",
+    "limitations": "Older samples and methods may differ from current treatment contexts.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "sm_black_uhde_1995",
+    "category": "core_selective_mutism",
+    "topics": ["selective mutism", "social phobia", "anxiety", "diagnosis"],
+    "citation": "Black & Uhde (1995)",
+    "finding": "Research connected selective mutism with social anxiety symptoms.",
+    "implication": "Fear of social evaluation may be important for many children with selective mutism.",
+    "limitations": "The relationship between SM and social anxiety is strong but not identical for every child.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "sm_dummit_1997",
+    "category": "core_selective_mutism",
+    "topics": ["selective mutism", "social anxiety", "clinical features"],
+    "citation": "Dummit et al. (1997)",
+    "finding": "Clinical work described many children with selective mutism as showing prominent social anxiety features.",
+    "implication": "Treatment often needs to address anxiety and avoidance, not just speech production.",
+    "limitations": "Clinical samples may represent more severe cases.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "sm_elizur_perednik_2003",
+    "category": "core_selective_mutism",
+    "topics": ["selective mutism", "immigration", "language", "prevalence", "school"],
+    "citation": "Elizur & Perednik (2003)",
+    "finding": "Research examined selective mutism in immigrant and non-immigrant children.",
+    "implication": "Language context and cultural transition should be considered carefully in assessment.",
+    "limitations": "Language learning alone should not be confused with selective mutism.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "sm_muris_2021_preschool",
+    "category": "core_selective_mutism",
+    "topics": ["selective mutism", "preschool", "behavioral inhibition", "social anxiety", "autistic traits"],
+    "citation": "Muris et al. (2021)",
+    "finding": "A non-clinical preschool study found associations among selective mutism symptoms, social anxiety, autistic features, and behavioral inhibition.",
+    "implication": "Different developmental pathways may contribute to speaking difficulties.",
+    "limitations": "Non-clinical correlational research cannot determine cause.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "sm_muris_ollendick_2021_sad_asd",
+    "category": "core_selective_mutism",
+    "topics": ["selective mutism", "social anxiety", "autism", "differential diagnosis"],
+    "citation": "Muris & Ollendick (2021)",
+    "finding": "A review discussed relationships among selective mutism, social anxiety disorder, and autism-related features.",
+    "implication": "Not all children with selective mutism have the same profile; differential assessment matters.",
+    "limitations": "The overlap among conditions is complex and should be assessed professionally.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "sm_klein_2016_scat",
+    "category": "core_selective_mutism",
+    "topics": ["selective mutism", "social communication anxiety treatment", "treatment", "communication"],
+    "citation": "Klein et al. (2016)",
+    "finding": "Social Communication Anxiety Treatment emphasized gradual communication, reduced pressure, and transfer of control.",
+    "implication": "Communication support can be structured without making speech feel like a performance.",
+    "limitations": "More large-scale trials are needed.",
+    "evidence_level": "emerging to moderate"
+  },
+  {
+    "id": "sm_cornacchio_2019",
+    "category": "core_selective_mutism",
+    "topics": ["selective mutism", "intensive treatment", "pcit-sm", "behavioral treatment"],
+    "citation": "Cornacchio et al. (2019)",
+    "finding": "Research on intensive group behavioral treatment examined PCIT-informed approaches for selective mutism.",
+    "implication": "Intensive, structured formats may help some families access concentrated practice.",
+    "limitations": "Intensive treatment may not fit every child or family context.",
+    "evidence_level": "emerging to moderate"
+  },
+  {
+    "id": "sm_lorenzo_2020",
+    "category": "core_selective_mutism",
+    "topics": ["selective mutism", "treatment options", "behavioral treatment", "pcit-sm"],
+    "citation": "Lorenzo et al. (2020)",
+    "finding": "Clinical research described expanding treatment options for selective mutism using behavioral and PCIT-informed methods.",
+    "implication": "Treatment can be adapted across formats while keeping gradual communication practice central.",
+    "limitations": "Implementation quality and child fit matter.",
+    "evidence_level": "emerging"
+  },
+  {
+    "id": "sm_hong_2022_remote",
+    "category": "core_selective_mutism",
+    "topics": ["selective mutism", "remote treatment", "telehealth", "pcit-sm", "parent"],
+    "citation": "Hong et al. (2022)",
+    "finding": "Research examined remote intensive group behavioral treatment for families of children with selective mutism.",
+    "implication": "Telehealth and remote coaching may expand access to specialized care.",
+    "limitations": "Remote treatment may not work equally well for all children or settings.",
+    "evidence_level": "emerging"
+  },
+  {
+    "id": "sm_shorer_2023_naturalistic",
+    "category": "core_selective_mutism",
+    "topics": ["selective mutism", "naturalistic setting", "treatment", "clinical practice"],
+    "citation": "Shorer et al. (2023)",
+    "finding": "An open pilot study examined selective mutism treatment in a naturalistic clinical setting.",
+    "implication": "Real-world implementation studies help show how treatment works outside tightly controlled trials.",
+    "limitations": "Open pilot designs cannot prove effectiveness as strongly as randomized trials.",
+    "evidence_level": "emerging"
+  },
+  {
+    "id": "sm_siroky_2023_ibtsm",
+    "category": "core_selective_mutism",
+    "topics": ["selective mutism", "integrated behavior therapy", "single-case design", "treatment"],
+    "citation": "Siroky et al. (2023)",
+    "finding": "A single-case design examined a condensed version of Integrated Behavior Therapy for Selective Mutism.",
+    "implication": "Manualized treatment may be adaptable, but careful monitoring is important.",
+    "limitations": "Small single-case designs are useful but not definitive.",
+    "evidence_level": "emerging"
+  },
+  {
+    "id": "anx_kendall_1994_coping_cat",
+    "category": "child_anxiety",
+    "topics": ["child anxiety", "cbt", "treatment", "coping cat", "exposure"],
+    "citation": "Kendall (1994)",
+    "finding": "Cognitive-behavioral treatment showed benefit for anxious children.",
+    "implication": "CBT principles such as gradual exposure and coping skills are relevant to anxiety-related avoidance.",
+    "limitations": "General child anxiety findings should be adapted carefully to selective mutism.",
+    "evidence_level": "high"
+  },
+  {
+    "id": "anx_walkup_2008_cams",
+    "category": "child_anxiety",
+    "topics": ["child anxiety", "cbt", "medication", "randomized trial", "treatment"],
+    "citation": "Walkup et al. (2008)",
+    "finding": "The Child/Adolescent Anxiety Multimodal Study found CBT, sertraline, and their combination could reduce pediatric anxiety symptoms.",
+    "implication": "Child anxiety is treatable, and CBT has strong support.",
+    "limitations": "This was not selective-mutism-specific.",
+    "evidence_level": "high"
+  },
+  {
+    "id": "anx_barrett_1996",
+    "category": "child_anxiety",
+    "topics": ["child anxiety", "family", "cbt", "parent involvement"],
+    "citation": "Barrett, Dadds, & Rapee (1996)",
+    "finding": "Family involvement in CBT for childhood anxiety was examined as part of treatment.",
+    "implication": "Parents can play an important role in reducing avoidance and supporting practice.",
+    "limitations": "Family involvement should be tailored to the specific child and anxiety pattern.",
+    "evidence_level": "high"
+  },
+  {
+    "id": "anx_silverman_2008_review",
+    "category": "child_anxiety",
+    "topics": ["child anxiety", "review", "cbt", "exposure", "treatment"],
+    "citation": "Silverman et al. (2008)",
+    "finding": "A review supported CBT as an evidence-based treatment for anxiety disorders in children and adolescents.",
+    "implication": "Gradual exposure and skill-building are broadly supported for anxiety.",
+    "limitations": "Selective mutism requires adaptations because speech itself is the feared behavior.",
+    "evidence_level": "high"
+  },
+  {
+    "id": "anx_james_2020_cochrane",
+    "category": "child_anxiety",
+    "topics": ["child anxiety", "cbt", "systematic review", "treatment"],
+    "citation": "James et al. (2020)",
+    "finding": "A Cochrane review found support for CBT in treating anxiety disorders in children and adolescents.",
+    "implication": "CBT principles are well supported for pediatric anxiety.",
+    "limitations": "Findings are broader than selective mutism specifically.",
+    "evidence_level": "high"
+  },
+  {
+    "id": "anx_rappaport_2017_school",
+    "category": "child_anxiety",
+    "topics": ["child anxiety", "school", "impairment", "academic functioning"],
+    "citation": "Rappaport et al. (2017)",
+    "finding": "Research links anxiety symptoms with school impairment and functioning difficulties.",
+    "implication": "School support should consider anxiety, not only behavior or academic performance.",
+    "limitations": "School impairment can have many causes.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "anx_mychailyszyn_2010_school",
+    "category": "child_anxiety",
+    "topics": ["child anxiety", "school functioning", "avoidance", "academic"],
+    "citation": "Mychailyszyn, Mendez, & Kendall (2010)",
+    "finding": "Youth with anxiety disorders showed school functioning challenges compared with youth without anxiety disorders.",
+    "implication": "Anxiety can interfere with school participation even when ability is present.",
+    "limitations": "This does not isolate selective mutism.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "anx_rapee_heimberg_1997",
+    "category": "child_anxiety",
+    "topics": ["social anxiety", "fear of evaluation", "attention", "avoidance"],
+    "citation": "Rapee & Heimberg (1997)",
+    "finding": "A cognitive-behavioral model described how fear of negative evaluation and self-focused attention maintain social anxiety.",
+    "implication": "Speaking pressure and being watched can intensify anxiety for some children.",
+    "limitations": "This model is for social anxiety broadly, not selective mutism alone.",
+    "evidence_level": "high"
+  },
+  {
+    "id": "anx_clark_wells_1995",
+    "category": "child_anxiety",
+    "topics": ["social anxiety", "self-focused attention", "safety behaviors", "avoidance"],
+    "citation": "Clark & Wells (1995)",
+    "finding": "A cognitive model highlighted self-focused attention and safety behaviors in social anxiety.",
+    "implication": "Some behaviors that reduce immediate distress can maintain anxiety over time.",
+    "limitations": "The model was developed for social anxiety, not specifically for children with SM.",
+    "evidence_level": "high"
+  },
+  {
+    "id": "anx_beidel_turner_2007",
+    "category": "child_anxiety",
+    "topics": ["social anxiety", "children", "assessment", "treatment"],
+    "citation": "Beidel & Turner (2007)",
+    "finding": "Clinical research and writing described childhood social anxiety assessment and treatment.",
+    "implication": "Peer attention and social evaluation are key targets in anxiety treatment.",
+    "limitations": "Social anxiety and selective mutism overlap but are not identical.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "anx_spence_rapee_2016",
+    "category": "child_anxiety",
+    "topics": ["child anxiety", "etiology", "maintenance", "family", "temperament"],
+    "citation": "Spence & Rapee (2016)",
+    "finding": "A review described multiple pathways to childhood anxiety, including temperament, parenting, learning, and environment.",
+    "implication": "Selective mutism support should avoid one-cause explanations.",
+    "limitations": "Broad anxiety models need adaptation for speech-specific avoidance.",
+    "evidence_level": "high"
+  },
+  {
+    "id": "anx_kagan_1987",
+    "category": "child_anxiety",
+    "topics": ["behavioral inhibition", "temperament", "child anxiety", "shyness"],
+    "citation": "Kagan et al. (1987)",
+    "finding": "Research on behavioral inhibition identified early temperamental patterns linked with later social reticence and anxiety risk.",
+    "implication": "Some children may be temperamentally more cautious in unfamiliar social settings.",
+    "limitations": "Temperament is a risk factor, not destiny.",
+    "evidence_level": "high"
+  },
+  {
+    "id": "anx_clauss_blackford_2012",
+    "category": "child_anxiety",
+    "topics": ["behavioral inhibition", "social anxiety", "meta-analysis", "risk"],
+    "citation": "Clauss & Blackford (2012)",
+    "finding": "A meta-analysis found behavioral inhibition increased risk for later social anxiety.",
+    "implication": "Children who are highly inhibited may need especially gradual, low-pressure exposure.",
+    "limitations": "Risk does not mean every inhibited child develops anxiety.",
+    "evidence_level": "high"
+  },
+  {
+    "id": "anx_fox_2005",
+    "category": "child_anxiety",
+    "topics": ["behavioral inhibition", "temperament", "development", "anxiety"],
+    "citation": "Fox et al. (2005)",
+    "finding": "Developmental research connected behavioral inhibition with later social behavior and anxiety risk.",
+    "implication": "Early temperament can shape how children respond to unfamiliar social demands.",
+    "limitations": "Environment and experience still matter substantially.",
+    "evidence_level": "high"
+  },
+  {
+    "id": "anx_hirshfeld_becker_2007",
+    "category": "child_anxiety",
+    "topics": ["behavioral inhibition", "anxiety", "prevention", "children"],
+    "citation": "Hirshfeld-Becker et al. (2007)",
+    "finding": "Research examined behavioral inhibition as a pathway to anxiety and a target for early support.",
+    "implication": "Early support may help children approach feared situations before avoidance becomes entrenched.",
+    "limitations": "Not specific to selective mutism.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "anx_craske_2008",
+    "category": "child_anxiety",
+    "topics": ["exposure therapy", "anxiety", "inhibitory learning", "avoidance"],
+    "citation": "Craske et al. (2008)",
+    "finding": "Research on exposure emphasized learning that feared outcomes are tolerable or do not occur.",
+    "implication": "Gradual speaking practice should be designed as learning, not pressure.",
+    "limitations": "Exposure principles must be adapted carefully for children and SM.",
+    "evidence_level": "high"
+  },
+  {
+    "id": "anx_craske_2014",
+    "category": "child_anxiety",
+    "topics": ["exposure therapy", "inhibitory learning", "anxiety", "treatment"],
+    "citation": "Craske et al. (2014)",
+    "finding": "The inhibitory learning model emphasized variability, expectancy violation, and reducing safety behaviors in exposure.",
+    "implication": "Practice should build flexible communication across settings, not just one scripted performance.",
+    "limitations": "This is broad exposure theory, not SM-specific evidence.",
+    "evidence_level": "high"
+  },
+  {
+    "id": "anx_foa_kozak_1986",
+    "category": "child_anxiety",
+    "topics": ["exposure", "emotional processing", "fear", "avoidance"],
+    "citation": "Foa & Kozak (1986)",
+    "finding": "Emotional processing theory described how exposure can reduce fear responses over time.",
+    "implication": "Avoidance can maintain fear; carefully planned approach practice may help.",
+    "limitations": "The model is broad and requires child-specific adaptation.",
+    "evidence_level": "high"
+  },
+  {
+    "id": "anx_barlow_2002",
+    "category": "child_anxiety",
+    "topics": ["anxiety", "avoidance", "emotion", "treatment model"],
+    "citation": "Barlow (2002)",
+    "finding": "Anxiety theory emphasized avoidance and perceived lack of control in anxiety disorders.",
+    "implication": "Helping children experience manageable control can be useful.",
+    "limitations": "This is a broad framework, not selective-mutism-specific.",
+    "evidence_level": "high"
+  },
+  {
+    "id": "anx_chorpita_2004",
+    "category": "child_anxiety",
+    "topics": ["child anxiety", "evidence-based treatment", "cbt", "modular treatment"],
+    "citation": "Chorpita et al. (2004)",
+    "finding": "Evidence-based treatment work emphasized modular approaches for child anxiety and related problems.",
+    "implication": "Interventions may need to be matched to the child’s specific difficulty.",
+    "limitations": "Modular anxiety research is broader than SM.",
+    "evidence_level": "high"
+  },
+  {
+    "id": "anx_compton_2010",
+    "category": "child_anxiety",
+    "topics": ["child anxiety", "cbt", "treatment response", "randomized trial"],
+    "citation": "Compton et al. (2010)",
+    "finding": "Research from child anxiety treatment trials examined predictors and outcomes in CBT.",
+    "implication": "Treatment response varies, so monitoring progress matters.",
+    "limitations": "Not SM-specific.",
+    "evidence_level": "high"
+  },
+  {
+    "id": "anx_ginsburg_2011",
+    "category": "child_anxiety",
+    "topics": ["child anxiety", "family", "parent", "treatment"],
+    "citation": "Ginsburg et al. (2011)",
+    "finding": "Research examined family and parent factors in child anxiety treatment.",
+    "implication": "Parent behavior can support or unintentionally maintain anxiety patterns.",
+    "limitations": "Application to selective mutism needs clinical judgment.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "anx_wood_2006",
+    "category": "child_anxiety",
+    "topics": ["child anxiety", "parenting", "control", "family", "avoidance"],
+    "citation": "Wood et al. (2006)",
+    "finding": "Research linked parenting processes, including control and autonomy support, with child anxiety.",
+    "implication": "Support should balance warmth with opportunities for the child to take small steps.",
+    "limitations": "Parenting findings should not be used to blame parents.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "anx_mcleod_2007_meta",
+    "category": "child_anxiety",
+    "topics": ["child anxiety", "parenting", "meta-analysis", "control", "rejection"],
+    "citation": "McLeod, Wood, & Weisz (2007)",
+    "finding": "A meta-analysis found associations between parenting dimensions and child anxiety.",
+    "implication": "Parental accommodation and overcontrol may matter, but effects are not simple or deterministic.",
+    "limitations": "Associations do not prove parent behavior caused anxiety.",
+    "evidence_level": "high"
+  },
+  {
+    "id": "anx_hudson_2009",
+    "category": "child_anxiety",
+    "topics": ["child anxiety", "family", "parenting", "treatment"],
+    "citation": "Hudson et al. (2009)",
+    "finding": "Research examined family factors and treatment response in childhood anxiety.",
+    "implication": "Family context can influence treatment planning.",
+    "limitations": "Findings are broad and should be tailored.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "anx_birmaher_1999_scared",
+    "category": "child_anxiety",
+    "topics": ["child anxiety", "assessment", "SCARED", "screening"],
+    "citation": "Birmaher et al. (1999)",
+    "finding": "The SCARED measure was evaluated for assessing child anxiety symptoms.",
+    "implication": "Structured assessment can help distinguish types of anxiety concerns.",
+    "limitations": "Screening tools are not diagnoses by themselves.",
+    "evidence_level": "high"
+  },
+  {
+    "id": "anx_spence_1998_scas",
+    "category": "child_anxiety",
+    "topics": ["child anxiety", "assessment", "SCAS", "social anxiety"],
+    "citation": "Spence (1998)",
+    "finding": "The Spence Children’s Anxiety Scale was developed to measure anxiety symptoms in children.",
+    "implication": "Assessing anxiety dimensions can clarify what kind of support may be needed.",
+    "limitations": "Questionnaires need interpretation in context.",
+    "evidence_level": "high"
+  },
+  {
+    "id": "anx_pine_1998",
+    "category": "child_anxiety",
+    "topics": ["child anxiety", "development", "risk", "longitudinal"],
+    "citation": "Pine et al. (1998)",
+    "finding": "Longitudinal work linked childhood anxiety with later anxiety and mood-related risk.",
+    "implication": "Early anxiety support can matter beyond the immediate problem.",
+    "limitations": "Long-term risk varies widely across children.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "anx_beesdo_2009",
+    "category": "child_anxiety",
+    "topics": ["anxiety", "development", "epidemiology", "review"],
+    "citation": "Beesdo, Knappe, & Pine (2009)",
+    "finding": "A review described anxiety disorders across development and their impact.",
+    "implication": "Anxiety can affect multiple domains of child functioning.",
+    "limitations": "Broad review, not specific to SM.",
+    "evidence_level": "high"
+  },
+  {
+    "id": "anx_weems_2008",
+    "category": "child_anxiety",
+    "topics": ["child anxiety", "development", "fear", "emotion regulation"],
+    "citation": "Weems (2008)",
+    "finding": "Research reviewed developmental patterns in fear and anxiety.",
+    "implication": "Children’s anxiety responses should be understood developmentally.",
+    "limitations": "Developmental principles are broad.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "anx_suveg_2005",
+    "category": "child_anxiety",
+    "topics": ["child anxiety", "emotion regulation", "family", "coping"],
+    "citation": "Suveg & Zeman (2005)",
+    "finding": "Research connected child anxiety with emotion regulation difficulties.",
+    "implication": "Helping a child regulate may be part of communication support.",
+    "limitations": "Not selective-mutism-specific.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "anx_breton_1999",
+    "category": "child_anxiety",
+    "topics": ["child anxiety", "school", "functioning", "avoidance"],
+    "citation": "Breton et al. (1999)",
+    "finding": "Research examined anxiety symptoms and functioning in children.",
+    "implication": "Functional impact should be part of assessment, not symptoms alone.",
+    "limitations": "Specific implications for SM require caution.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "parent_lebowitz_2013",
+    "category": "parent_accommodation",
+    "topics": ["family accommodation", "child anxiety", "parent", "avoidance", "answering for child"],
+    "citation": "Lebowitz et al. (2013)",
+    "finding": "Family accommodation was described as common in childhood anxiety and linked to symptom maintenance.",
+    "implication": "Parents may need support reducing accommodations without removing emotional support.",
+    "limitations": "Broader anxiety research, not SM-only.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "parent_lebowitz_2019_space",
+    "category": "parent_accommodation",
+    "topics": ["SPACE", "parent treatment", "child anxiety", "family accommodation"],
+    "citation": "Lebowitz et al. (2019)",
+    "finding": "A randomized trial found parent-based SPACE treatment was effective for childhood anxiety disorders.",
+    "implication": "Changing parent accommodation can reduce anxiety even when the child is not the direct therapy participant.",
+    "limitations": "SPACE is not specific to selective mutism, though its accommodation ideas are relevant.",
+    "evidence_level": "high"
+  },
+  {
+    "id": "parent_lebowitz_2020",
+    "category": "parent_accommodation",
+    "topics": ["parent accommodation", "child anxiety", "SPACE", "family"],
+    "citation": "Lebowitz et al. (2020)",
+    "finding": "Follow-up work continued to support parent accommodation as an important treatment target.",
+    "implication": "Parents can change patterns around avoidance while staying supportive.",
+    "limitations": "Application to SM should be individualized.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "parent_storch_2015",
+    "category": "parent_accommodation",
+    "topics": ["family accommodation", "anxiety", "ocd", "avoidance", "parent"],
+    "citation": "Storch et al. (2015)",
+    "finding": "Family accommodation research in anxiety-related disorders found accommodation can maintain symptoms.",
+    "implication": "Automatically answering for a child may reduce distress short term but maintain avoidance long term.",
+    "limitations": "Much accommodation research comes from anxiety/OCD, not SM-only samples.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "parent_thompson_hollands_2014",
+    "category": "parent_accommodation",
+    "topics": ["family accommodation", "anxiety", "parent", "treatment"],
+    "citation": "Thompson-Hollands et al. (2014)",
+    "finding": "Research examined family accommodation as a treatment-relevant factor in anxiety-related disorders.",
+    "implication": "Parent behavior can be a compassionate treatment target, not a source of blame.",
+    "limitations": "Not selective-mutism-specific.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "parent_flessner_2011",
+    "category": "parent_accommodation",
+    "topics": ["family accommodation", "child anxiety", "parent", "avoidance"],
+    "citation": "Flessner et al. (2011)",
+    "finding": "Research examined accommodation patterns in families of children with anxiety-related symptoms.",
+    "implication": "Accommodation should be understood as a natural response to distress that may need gradual adjustment.",
+    "limitations": "Direct SM evidence is limited.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "parent_peris_2012",
+    "category": "parent_accommodation",
+    "topics": ["family", "child anxiety", "parent involvement", "treatment"],
+    "citation": "Peris et al. (2012)",
+    "finding": "Research examined family factors in child anxiety treatment.",
+    "implication": "Family dynamics can influence how children approach feared tasks.",
+    "limitations": "Not SM-specific.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "parent_wood_mcleod_2008",
+    "category": "parent_accommodation",
+    "topics": ["parenting", "child anxiety", "autonomy", "control", "support"],
+    "citation": "Wood & McLeod (2008)",
+    "finding": "Research connected autonomy-supportive parenting with child anxiety outcomes.",
+    "implication": "Parents can support children by providing warmth while allowing manageable independence.",
+    "limitations": "Should not be interpreted as parent blame.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "parent_hudson_2005",
+    "category": "parent_accommodation",
+    "topics": ["parenting", "child anxiety", "family", "avoidance"],
+    "citation": "Hudson & Rapee (2005)",
+    "finding": "Research reviewed parenting and family processes in child anxiety.",
+    "implication": "Supportive parenting can reduce pressure while encouraging small brave steps.",
+    "limitations": "General anxiety research must be adapted to SM.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "parent_ginsburg_2009",
+    "category": "parent_accommodation",
+    "topics": ["parent", "child anxiety", "prevention", "family support"],
+    "citation": "Ginsburg (2009)",
+    "finding": "Parent-focused anxiety prevention research highlighted the role of family support and coping modeling.",
+    "implication": "Parents can model calm, flexible responses to anxiety.",
+    "limitations": "Prevention findings are not the same as SM treatment findings.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "parent_silverman_2009",
+    "category": "parent_accommodation",
+    "topics": ["parent involvement", "child anxiety", "cbt", "family"],
+    "citation": "Silverman et al. (2009)",
+    "finding": "Research examined parent involvement in child anxiety treatment.",
+    "implication": "Parent involvement can be helpful, especially when parents learn how to reduce avoidance patterns.",
+    "limitations": "The optimal amount of parent involvement varies.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "parent_pcitsm_cornacchio",
+    "category": "parent_accommodation",
+    "topics": ["PCIT-SM", "parent", "selective mutism", "reinforcement", "pressure"],
+    "citation": "PCIT-SM clinical research literature",
+    "finding": "PCIT-SM-informed work emphasizes reducing pressure, giving warm attention, and shaping communication gradually.",
+    "implication": "Praise can help when it is calm and specific, but can backfire if it spotlights speech.",
+    "limitations": "The PCIT-SM evidence base is promising but still developing.",
+    "evidence_level": "emerging to moderate"
+  },
+  {
+    "id": "parent_kurtz_2016",
+    "category": "parent_accommodation",
+    "topics": ["PCIT-SM", "parent", "child-led interaction", "brave talking", "selective mutism"],
+    "citation": "Kurtz (2016)",
+    "finding": "Clinical writing on PCIT-SM described adapting parent-child interaction principles to selective mutism.",
+    "implication": "Reducing direct pressure while reinforcing brave communication is central to many SM interventions.",
+    "limitations": "Clinical models require empirical testing and skilled implementation.",
+    "evidence_level": "clinical consensus"
+  },
+  {
+    "id": "parent_carpenter_2014",
+    "category": "parent_accommodation",
+    "topics": ["parent accommodation", "child anxiety", "reassurance", "avoidance"],
+    "citation": "Carpenter et al. (2014)",
+    "finding": "Research on childhood anxiety examined reassurance and accommodation patterns.",
+    "implication": "Reassurance can help briefly but may maintain anxiety if it becomes repetitive avoidance support.",
+    "limitations": "Not specific to selective mutism.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "parent_norman_2015",
+    "category": "parent_accommodation",
+    "topics": ["family accommodation", "child anxiety", "treatment", "parent"],
+    "citation": "Norman et al. (2015)",
+    "finding": "Research examined family accommodation and child anxiety treatment outcomes.",
+    "implication": "Reducing accommodation can be part of a broader support plan.",
+    "limitations": "Evidence should be generalized cautiously to SM.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "parent_settipani_2013",
+    "category": "parent_accommodation",
+    "topics": ["parent", "child anxiety", "treatment", "family factors"],
+    "citation": "Settipani et al. (2013)",
+    "finding": "Research examined family predictors and child anxiety treatment response.",
+    "implication": "Family context may help explain why one strategy works for one child but not another.",
+    "limitations": "Not SM-specific.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "school_oerbeck_school",
+    "category": "school_intervention",
+    "topics": ["school", "selective mutism", "defocused communication", "teacher", "exposure"],
+    "citation": "Oerbeck et al. school-based SM intervention literature",
+    "finding": "School-based SM treatment studies used gradual exposure and defocused communication in real school settings.",
+    "implication": "Teachers can support communication by reducing pressure and building steps gradually.",
+    "limitations": "Requires coordination and consistency.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "school_bergman_ibtsm",
+    "category": "school_intervention",
+    "topics": ["school", "selective mutism", "integrated behavior therapy", "teacher", "parent"],
+    "citation": "Bergman et al. (2013)",
+    "finding": "IBTSM included behavioral strategies relevant to school participation and functional speech.",
+    "implication": "School goals should focus on real participation, not only clinic performance.",
+    "limitations": "Small pilot trial.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "school_catchpole_review",
+    "category": "school_intervention",
+    "topics": ["school", "selective mutism", "psychosocial intervention", "teacher"],
+    "citation": "Catchpole et al. (2019)",
+    "finding": "The review included school-relevant psychosocial interventions for selective mutism.",
+    "implication": "School plans should use evidence-informed behavioral supports.",
+    "limitations": "The evidence base remains limited.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "school_cohan_review",
+    "category": "school_intervention",
+    "topics": ["school", "selective mutism", "behavioral", "reinforcement", "exposure"],
+    "citation": "Cohan et al. (2006)",
+    "finding": "Behavioral approaches often involve school-based speaking steps, shaping, and reinforcement.",
+    "implication": "School staff should avoid forcing speech and instead support planned steps.",
+    "limitations": "Many studies reviewed were small.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "school_mychailyszyn_2010",
+    "category": "school_intervention",
+    "topics": ["school", "child anxiety", "functioning", "academic participation"],
+    "citation": "Mychailyszyn, Mendez, & Kendall (2010)",
+    "finding": "Youth with anxiety disorders showed impairments in school functioning.",
+    "implication": "School difficulties may reflect anxiety rather than lack of ability or motivation.",
+    "limitations": "Broader anxiety sample, not SM-specific.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "school_lang_2016",
+    "category": "school_intervention",
+    "topics": ["school", "selective mutism", "intervention", "teacher", "behavioral"],
+    "citation": "Lang et al. (2016)",
+    "finding": "School-focused selective mutism intervention literature supports structured behavioral strategies.",
+    "implication": "School support should be planned rather than improvised.",
+    "limitations": "Research quality varies.",
+    "evidence_level": "emerging to moderate"
+  },
+  {
+    "id": "school_mendlowitz_1999",
+    "category": "school_intervention",
+    "topics": ["school", "child anxiety", "cbt", "teacher", "group treatment"],
+    "citation": "Mendlowitz et al. (1999)",
+    "finding": "School and group-based anxiety intervention research showed that anxiety support can be delivered outside traditional clinics.",
+    "implication": "School involvement may make anxiety support more practical.",
+    "limitations": "Not specific to SM.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "school_ginsburg_2008",
+    "category": "school_intervention",
+    "topics": ["school", "child anxiety", "prevention", "teacher", "support"],
+    "citation": "Ginsburg et al. (2008)",
+    "finding": "School-based anxiety prevention and intervention research supports early identification and skills-based support.",
+    "implication": "Schools can play a meaningful role in reducing anxiety-related impairment.",
+    "limitations": "Broader anxiety research.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "school_masias_2001",
+    "category": "school_intervention",
+    "topics": ["school refusal", "anxiety", "school", "avoidance"],
+    "citation": "Masia Warner et al. (2001)",
+    "finding": "Research on school-based anxiety interventions showed that school contexts can be used for exposure and coping practice.",
+    "implication": "For SM, school is often the key setting where practice must occur.",
+    "limitations": "Not specific to SM.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "school_chavira_2004",
+    "category": "school_intervention",
+    "topics": ["school", "social anxiety", "impairment", "children"],
+    "citation": "Chavira, Stein, Bailey, & Stein (2004)",
+    "finding": "Research linked social anxiety symptoms with impairment in youth.",
+    "implication": "School silence may reflect anxiety-related impairment rather than unwillingness.",
+    "limitations": "Social anxiety and selective mutism are related but distinct.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "school_wood_2006_school",
+    "category": "school_intervention",
+    "topics": ["school", "child anxiety", "functioning", "accommodation"],
+    "citation": "Wood (2006)",
+    "finding": "Child anxiety research linked anxiety symptoms with functional impairment across settings.",
+    "implication": "School accommodations should reduce barriers while preserving growth opportunities.",
+    "limitations": "Broad anxiety evidence.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "school_puliafico_2012",
+    "category": "school_intervention",
+    "topics": ["school", "child anxiety", "cbt", "implementation"],
+    "citation": "Puliafico et al. (2012)",
+    "finding": "Research addressed implementing CBT principles for anxious youth in accessible settings.",
+    "implication": "School supports can borrow CBT principles such as gradual steps and reinforcement.",
+    "limitations": "Not SM-specific.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "school_herzig_2012",
+    "category": "school_intervention",
+    "topics": ["school", "selective mutism", "intervention", "teacher"],
+    "citation": "Herzig et al. (2012)",
+    "finding": "Selective mutism intervention literature highlighted the importance of school-based support.",
+    "implication": "Teachers need specific guidance rather than general encouragement to make the child speak.",
+    "limitations": "Evidence is less extensive than for broad anxiety treatment.",
+    "evidence_level": "emerging"
+  },
+  {
+    "id": "school_capozzi_2018",
+    "category": "school_intervention",
+    "topics": ["school", "selective mutism", "intervention", "communication"],
+    "citation": "Capozzi et al. (2018)",
+    "finding": "Clinical research and case-based literature support coordinated school communication plans for SM.",
+    "implication": "Plans should include who prompts, when, how, and what counts as success.",
+    "limitations": "Often based on small samples or clinical experience.",
+    "evidence_level": "emerging"
+  },
+  {
+    "id": "school_kearney_2008",
+    "category": "school_intervention",
+    "topics": ["school avoidance", "anxiety", "function", "intervention"],
+    "citation": "Kearney (2008)",
+    "finding": "School refusal research emphasized identifying the function of avoidance.",
+    "implication": "School support should ask what the child is avoiding and what makes participation possible.",
+    "limitations": "School refusal is not the same as SM.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "peer_festinger_1954",
+    "category": "peer_social_anxiety",
+    "topics": ["social comparison", "peers", "self-evaluation", "comparison"],
+    "citation": "Festinger (1954)",
+    "finding": "Social comparison theory proposed that people evaluate themselves in relation to others.",
+    "implication": "Peer settings may increase self-consciousness for some children.",
+    "limitations": "Classic theory, not SM-specific.",
+    "evidence_level": "high"
+  },
+  {
+    "id": "peer_la_greca_1998",
+    "category": "peer_social_anxiety",
+    "topics": ["social anxiety", "peers", "adolescents", "friendship"],
+    "citation": "La Greca & Lopez (1998)",
+    "finding": "Research linked social anxiety in adolescents with peer and friendship difficulties.",
+    "implication": "Peer evaluation can be a powerful anxiety trigger.",
+    "limitations": "Adolescent social anxiety findings may not fully generalize to younger SM children.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "peer_rubin_2009",
+    "category": "peer_social_anxiety",
+    "topics": ["peers", "social withdrawal", "shyness", "children"],
+    "citation": "Rubin, Coplan, & Bowker (2009)",
+    "finding": "A review described social withdrawal, shyness, and peer relationship processes in childhood.",
+    "implication": "Quiet behavior can have different meanings depending on context and child motivation.",
+    "limitations": "Social withdrawal is broader than SM.",
+    "evidence_level": "high"
+  },
+  {
+    "id": "peer_coplan_2004",
+    "category": "peer_social_anxiety",
+    "topics": ["shyness", "peers", "social withdrawal", "children"],
+    "citation": "Coplan et al. (2004)",
+    "finding": "Research distinguished forms of social withdrawal and shyness in children.",
+    "implication": "Not all quiet children are quiet for the same reason.",
+    "limitations": "Not SM-specific.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "peer_gazelle_2006",
+    "category": "peer_social_anxiety",
+    "topics": ["social anxiety", "peer exclusion", "children", "withdrawal"],
+    "citation": "Gazelle & Ladd (2006)",
+    "finding": "Research linked anxious solitude with peer difficulties in childhood.",
+    "implication": "Peer reactions can affect anxiety and participation.",
+    "limitations": "Anxious solitude is related but not identical to SM.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "peer_spence_donovan_1999",
+    "category": "peer_social_anxiety",
+    "topics": ["social anxiety", "children", "peers", "treatment"],
+    "citation": "Spence, Donovan, & Brechman-Toussaint (1999)",
+    "finding": "Research examined treatment for childhood social phobia and peer-related social fears.",
+    "implication": "Practice with social interaction can reduce anxiety when carefully structured.",
+    "limitations": "Social phobia treatment is not the same as SM treatment.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "peer_beidel_2000_setc",
+    "category": "peer_social_anxiety",
+    "topics": ["social anxiety", "children", "peers", "exposure", "social skills"],
+    "citation": "Beidel et al. (2000)",
+    "finding": "Social Effectiveness Therapy for Children targeted social anxiety with exposure and skills practice.",
+    "implication": "Peer-related anxiety can improve through structured, supported practice.",
+    "limitations": "Not selective-mutism-specific.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "peer_prinstein_2005",
+    "category": "peer_social_anxiety",
+    "topics": ["peers", "social evaluation", "adolescents", "status"],
+    "citation": "Prinstein & Aikins (2004)",
+    "finding": "Peer status and social evaluation were shown to influence adolescent adjustment.",
+    "implication": "Older children may experience peer attention as especially high-stakes.",
+    "limitations": "Not SM-specific.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "peer_leary_1983",
+    "category": "peer_social_anxiety",
+    "topics": ["self-presentation", "social anxiety", "evaluation", "peers"],
+    "citation": "Leary (1983)",
+    "finding": "Self-presentation theory linked social anxiety to concerns about how one is perceived.",
+    "implication": "Speaking may feel risky when a child expects attention or evaluation.",
+    "limitations": "General social psychology theory.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "peer_gilbert_2001",
+    "category": "peer_social_anxiety",
+    "topics": ["social rank", "shame", "social anxiety", "peers"],
+    "citation": "Gilbert (2001)",
+    "finding": "Social rank and shame models described how perceived evaluation can influence anxiety.",
+    "implication": "Children may avoid speaking when it feels socially exposing.",
+    "limitations": "Theory is broader than child SM.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "peer_weeks_2008",
+    "category": "peer_social_anxiety",
+    "topics": ["fear of evaluation", "social anxiety", "peers", "measurement"],
+    "citation": "Weeks et al. (2008)",
+    "finding": "Research refined understanding of fear of evaluation in social anxiety.",
+    "implication": "Fear of being judged may be central in some peer-speaking situations.",
+    "limitations": "Not SM-specific and often studied in older samples.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "peer_alden_taylor_2004",
+    "category": "peer_social_anxiety",
+    "topics": ["social anxiety", "interpersonal", "avoidance", "peers"],
+    "citation": "Alden & Taylor (2004)",
+    "finding": "Research reviewed interpersonal processes in social anxiety.",
+    "implication": "Avoidance can interfere with forming comfortable peer relationships.",
+    "limitations": "General social anxiety literature.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "peer_rose_2002",
+    "category": "peer_social_anxiety",
+    "topics": ["peers", "friendship", "children", "social development"],
+    "citation": "Rose & Asher (2000)",
+    "finding": "Peer relationship research examined friendship processes and social adjustment.",
+    "implication": "A child’s communication plan should consider peer relationship quality, not only speech targets.",
+    "limitations": "Not SM-specific.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "peer_rudolph_2009",
+    "category": "peer_social_anxiety",
+    "topics": ["peer stress", "children", "anxiety", "social development"],
+    "citation": "Rudolph (2009)",
+    "finding": "Research connected peer stress with emotional adjustment in children.",
+    "implication": "Stressful peer environments can make communication harder.",
+    "limitations": "Peer stress is only one possible factor.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "peer_spielberger_evaluation",
+    "category": "peer_social_anxiety",
+    "topics": ["evaluation anxiety", "performance", "peers", "social anxiety"],
+    "citation": "Social-evaluative anxiety literature",
+    "finding": "Research on social-evaluative threat shows that being judged can increase stress responses.",
+    "implication": "Public speaking demands may be more difficult than private or low-attention communication.",
+    "limitations": "This is broader stress research, not SM-specific.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "comm_tomasello_2003",
+    "category": "communication_development",
+    "topics": ["communication development", "joint attention", "social learning", "language"],
+    "citation": "Tomasello (2003)",
+    "finding": "Developmental research emphasized the social-pragmatic foundations of language learning.",
+    "implication": "Communication grows through shared attention and meaningful interaction, not pressure alone.",
+    "limitations": "Language development theory is not SM treatment research.",
+    "evidence_level": "high"
+  },
+  {
+    "id": "comm_bruner_1983",
+    "category": "communication_development",
+    "topics": ["language development", "scaffolding", "parent-child interaction", "communication"],
+    "citation": "Bruner (1983)",
+    "finding": "Bruner emphasized scaffolding and routines in language development.",
+    "implication": "Predictable routines can make communication feel safer and easier.",
+    "limitations": "Classic developmental theory, not SM-specific.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "comm_vygotsky_1978",
+    "category": "communication_development",
+    "topics": ["development", "scaffolding", "zone of proximal development", "learning"],
+    "citation": "Vygotsky (1978)",
+    "finding": "Developmental theory emphasized learning through supported participation just beyond the child’s independent ability.",
+    "implication": "Communication goals should be small enough to be achievable with support.",
+    "limitations": "Theoretical foundation, not SM-specific evidence.",
+    "evidence_level": "clinical consensus"
+  },
+  {
+    "id": "comm_hart_risley_1995",
+    "category": "communication_development",
+    "topics": ["language input", "parent-child talk", "development", "environment"],
+    "citation": "Hart & Risley (1995)",
+    "finding": "Research highlighted the importance of early language exposure and interaction.",
+    "implication": "Rich, low-pressure language environments can support development.",
+    "limitations": "The study has been debated and should not be used simplistically.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "comm_hoff_2006",
+    "category": "communication_development",
+    "topics": ["language development", "input", "parent talk", "development"],
+    "citation": "Hoff (2006)",
+    "finding": "Research reviewed how language input relates to child language development.",
+    "implication": "Responsive communication matters more than pressuring children to perform.",
+    "limitations": "Language input research is not selective mutism treatment research.",
+    "evidence_level": "high"
+  },
+  {
+    "id": "comm_rowe_2012",
+    "category": "communication_development",
+    "topics": ["language development", "vocabulary", "parent input", "conversation"],
+    "citation": "Rowe (2012)",
+    "finding": "Research linked qualities of parent input with later vocabulary development.",
+    "implication": "Conversation quality and responsiveness matter.",
+    "limitations": "Findings are about language development generally, not SM.",
+    "evidence_level": "high"
+  },
+  {
+    "id": "comm_tamis_lemonda_2001",
+    "category": "communication_development",
+    "topics": ["parent responsiveness", "language development", "communication", "social interaction"],
+    "citation": "Tamis-LeMonda et al. (2001)",
+    "finding": "Parent responsiveness was associated with language and communication development.",
+    "implication": "Warm, responsive interaction can support communication growth.",
+    "limitations": "Not specific to SM.",
+    "evidence_level": "high"
+  },
+  {
+    "id": "comm_snow_1995",
+    "category": "communication_development",
+    "topics": ["language development", "conversation", "literacy", "interaction"],
+    "citation": "Snow (1995)",
+    "finding": "Research emphasized the role of interaction and language environments in development.",
+    "implication": "Communication support should be embedded in meaningful interactions.",
+    "limitations": "Broad developmental evidence.",
+    "evidence_level": "high"
+  },
+  {
+    "id": "comm_senechal_2008",
+    "category": "communication_development",
+    "topics": ["language", "literacy", "parent-child reading", "communication"],
+    "citation": "Sénéchal & LeFevre (2008)",
+    "finding": "Research linked home literacy experiences with language and literacy outcomes.",
+    "implication": "Reading routines can provide low-pressure communication opportunities.",
+    "limitations": "Literacy research is not SM treatment evidence.",
+    "evidence_level": "high"
+  },
+  {
+    "id": "comm_whitehurst_1988",
+    "category": "communication_development",
+    "topics": ["dialogic reading", "language", "parent-child interaction", "communication"],
+    "citation": "Whitehurst et al. (1988)",
+    "finding": "Dialogic reading research showed that interactive reading can support language development.",
+    "implication": "Shared reading can create structured, low-pressure communication turns.",
+    "limitations": "Not designed specifically for children with SM.",
+    "evidence_level": "high"
+  },
+  {
+    "id": "comm_lonigan_1998",
+    "category": "communication_development",
+    "topics": ["early literacy", "language", "parent-child interaction", "development"],
+    "citation": "Lonigan et al. (1998)",
+    "finding": "Early literacy research connected home literacy activities with language-related skills.",
+    "implication": "Books and routines can support communication without direct performance pressure.",
+    "limitations": "Broad developmental research.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "comm_hirsh_pasek_2015",
+    "category": "communication_development",
+    "topics": ["language development", "social interaction", "learning", "play"],
+    "citation": "Hirsh-Pasek et al. (2015)",
+    "finding": "Research emphasized social interaction and playful learning as drivers of early language development.",
+    "implication": "Play-based communication opportunities may feel safer than direct questioning.",
+    "limitations": "Not SM-specific.",
+    "evidence_level": "high"
+  },
+  {
+    "id": "comm_golinkoff_2019",
+    "category": "communication_development",
+    "topics": ["language development", "interaction", "play", "communication"],
+    "citation": "Golinkoff et al. (2019)",
+    "finding": "Developmental research highlighted the role of interaction, play, and responsive communication.",
+    "implication": "Parents can create communication opportunities through shared activity rather than pressure.",
+    "limitations": "Broad child development research.",
+    "evidence_level": "moderate"
+  },
+  {
+    "id": "comm_rogoff_2003",
+    "category": "communication_development",
+    "topics": ["guided participation", "development", "culture", "communication"],
+    "citation": "Rogoff (2003)",
+    "finding": "Guided participation theory emphasized children learning through shared activities in cultural context.",
+    "implication": "Communication support should fit the child’s real routines and family context.",
+    "limitations": "Theoretical and developmental rather than SM-specific.",
+    "evidence_level": "clinical consensus"
+  },
+  {
+    "id": "comm_dickinson_2001",
+    "category": "communication_development",
+    "topics": ["language environment", "early childhood", "conversation", "literacy"],
+    "citation": "Dickinson & Tabors (2001)",
+    "finding": "Research connected early language environments with later literacy and communication outcomes.",
+    "implication": "Everyday conversation routines can matter for development.",
+    "limitations": "Not selective-mutism-specific.",
+    "evidence_level": "high"
+  }
+]

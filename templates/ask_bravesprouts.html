@@ -1,0 +1,118 @@
+{% extends "dashboard_layout.html" %}
+
+{% block title %}Ask BraveSprouts{% endblock %}
+
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/ask_bravesprouts.css') }}?v=5">
+{% endblock %}
+
+{% block dashboard_content %}
+
+<section class="ask-page">
+
+  <div class="ask-hero">
+    <img
+      src="{{ url_for('static', filename='images/ask_bunny.png') }}"
+      alt="Ask BraveSprouts bunny"
+      class="ask-bunny"
+    >
+
+    <h1>Ask BraveSprouts</h1>
+
+    <p>
+      A supportive space to get answers and ideas<br>
+      about your child's growth.
+    </p>
+
+    <form class="ask-search-bar" id="askForm">
+      <button type="button" class="ask-plus-btn" aria-label="Add">
+        +
+      </button>
+
+      <textarea
+        id="askInput"
+        placeholder="What would you like to know?"
+        autocomplete="off"
+        rows="1"
+        ></textarea>
+
+      <button type="submit" class="ask-send-btn" aria-label="Send">
+        ↑
+      </button>
+    </form>
+
+    <div class="ask-suggestions">
+      <button type="button" class="suggestion-pill" data-question="What should I know about selective mutism?">
+        <span>▥</span>
+        Understanding selective mutism
+      </button>
+
+      <button type="button" class="suggestion-pill" data-question="What are some tips for family life?">
+        <span>♙</span>
+        Tips for family life
+      </button>
+
+      <button type="button" class="suggestion-pill" data-question="How can I work with my child's teachers?">
+        <span>▦</span>
+        Working with teachers
+      </button>
+    </div>
+  </div>
+
+  <div class="ask-divider"></div>
+
+  <section class="support-section">
+    <div class="support-inner">
+      <h2>Here to support you</h2>
+
+      <div class="support-grid">
+
+        <article class="support-item">
+          <div class="support-icon support-purple">
+            ♡
+          </div>
+
+          <div>
+            <h3>Evidence-based</h3>
+            <p>Our answers are grounded in research and best practices.</p>
+          </div>
+        </article>
+
+        <article class="support-item">
+          <div class="support-icon support-green">
+            ♧
+          </div>
+
+          <div>
+            <h3>Private &amp; safe</h3>
+            <p>Your conversations are always confidential.</p>
+          </div>
+        </article>
+
+        <article class="support-item">
+          <div class="support-icon support-orange">
+            ♡
+          </div>
+
+          <div>
+            <h3>Made for parents</h3>
+            <p>Practical ideas you can use every day.</p>
+          </div>
+        </article>
+
+      </div>
+    </div>
+  </section>
+
+  <p class="ask-disclaimer">
+    BraveSprouts provides general information, not medical advice.
+  </p>
+
+</section>
+
+{% endblock %}
+
+{% block page_js %}
+<script src="{{ url_for('static', filename='js/ask_bravesprouts.js') }}?v=4" defer></script>
+{% endblock %}

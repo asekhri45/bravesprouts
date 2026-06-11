@@ -196,4 +196,94 @@ document.addEventListener("DOMContentLoaded", function () {
       pendingUnlockButton
     );
   });
+
+  function getJourneyColor(index, isLocked) {
+  if (isLocked) return "#d8d8e0";
+
+  if (index >= 1 && index <= 3) return "#8b5cf6";
+  if (index >= 4 && index <= 6) return "#3b99fc";
+  if (index >= 7 && index <= 9) return "#73c4a1";
+  if (index >= 10 && index <= 12) return "#f4b46a";
+
+  return "#8b5cf6";
+}
+
+function drawJourneyConnector() {
+  const pathContainer = document.querySelector(".journey-path");
+  const svg = document.querySelector(".journey-connector-svg");
+  const items = [...document.querySelectorAll(".journey-path-item")];
+  const nodes = [...document.querySelectorAll(".journey-node")];
+
+  if (!pathContainer || !svg || nodes.length < 2) return;
+
+  const containerRect = pathContainer.getBoundingClientRect();
+
+  svg.setAttribute(
+    "viewBox",
+    `0 0 ${pathContainer.offsetWidth} ${pathContainer.offsetHeight}`
+  );
+
+  svg.innerHTML = `
+    <defs id="journeyGradientDefs"></defs>
+  `;
+
+  const defs = svg.querySelector("#journeyGradientDefs");
+
+  for (let i = 0; i < nodes.length - 1; i++) {
+    const currentRect = nodes[i].getBoundingClientRect();
+    const nextRect = nodes[i + 1].getBoundingClientRect();
+
+    const startX = currentRect.left + currentRect.width / 2 - containerRect.left;
+    const startY = currentRect.bottom - containerRect.top;
+
+    const endX = nextRect.left + nextRect.width / 2 - containerRect.left;
+    const endY = nextRect.top - containerRect.top +7;
+
+    const midY = (startY + endY) / 2;
+
+    const nextItem = items[i + 1];
+    const nextIsLocked = nextItem.classList.contains("journey-locked");
+
+    const fromColor = getJourneyColor(i + 1, false);
+    const toColor = getJourneyColor(i + 2, nextIsLocked);
+
+    const gradientId = `journey-gradient-${i}`;
+
+    const gradient = document.createElementNS("http://www.w3.org/2000/svg", "linearGradient");
+    gradient.setAttribute("id", gradientId);
+    gradient.setAttribute("x1", startX);
+    gradient.setAttribute("y1", startY);
+    gradient.setAttribute("x2", endX);
+    gradient.setAttribute("y2", endY);
+    gradient.setAttribute("gradientUnits", "userSpaceOnUse");
+
+    gradient.innerHTML = `
+      <stop offset="0%" stop-color="${nextIsLocked ? "#d8d8e0" : fromColor}" />
+      <stop offset="100%" stop-color="${nextIsLocked ? "#d8d8e0" : toColor}" />
+    `;
+
+    defs.appendChild(gradient);
+
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+
+    path.setAttribute(
+      "d",
+      `
+      M ${startX} ${startY}
+      C ${startX} ${midY}, ${endX} ${midY}, ${endX} ${endY}
+      `
+    );
+
+    path.setAttribute("fill", "none");
+    path.setAttribute("stroke", `url(#${gradientId})`);
+    path.setAttribute("stroke-width", "5");
+    path.setAttribute("stroke-linecap", "round");
+    path.setAttribute("stroke-linejoin", "round");
+
+    svg.appendChild(path);
+  }
+}
+
+drawJourneyConnector();
+window.addEventListener("resize", drawJourneyConnector);
 });
