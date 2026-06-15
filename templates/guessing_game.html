@@ -2,8 +2,8 @@
 
 {% block head %}
 {{ super() }}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/guessing_game.css') }}?v=1">
-<script src="{{ url_for('static', filename='js/guessing_game.js') }}?v=1" defer></script>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/guessing_game.css') }}?v=2">
+<script src="{{ url_for('static', filename='js/guessing_game.js') }}?v=2" defer></script>
 {% endblock %}
 
 {% block title %}Guessing Game{% endblock %}
@@ -48,8 +48,10 @@
 
   <main class="guess-stage call-hidden" id="guessStage">
 
-    <section class="star-fullscreen">
+    <div class="guess-status" id="guessStatus"></div>
+    <div class="guess-response-panel hide" id="guessResponsePanel"></div>
 
+    <section class="star-fullscreen">
       <div class="star-wrap">
         <img
           src="{{ url_for('static', filename='images/matching-star.svg') }}"
@@ -64,7 +66,6 @@
           id="starMouth"
         >
       </div>
-
     </section>
 
   </main>
@@ -76,24 +77,13 @@
     </a>
 
     <div class="controls-center">
-      <div class="control-button">🎙️</div>
+      <div class="control-button mic-control">🎙️</div>
       <div class="control-button">🎥</div>
-      <div class="hangup-button">☎</div>
+      <button class="hangup-button" id="hangupBtn" type="button">☎</button>
       <div class="control-button">💬</div>
       <div class="control-button">⋯</div>
     </div>
 
-  </div>
-
-  <div class="complete-modal" id="completeModal">
-    <div class="complete-card">
-      <h2>You guessed it!</h2>
-      <p>Star loved playing the animal guessing game with you.</p>
-
-      <button id="restartBtn" type="button">
-        Play Again
-      </button>
-    </div>
   </div>
 
 </div>

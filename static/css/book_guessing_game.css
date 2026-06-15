@@ -1,8 +1,8 @@
 :root {
-  --green: #4fa77f;
-  --green-dark: #247052;
-  --text: #1f2937;
-  --muted: #6b7280;
+  --purple: #2f855a;
+  --purple-dark: #1f5f3b;
+  --text: #231f35;
+  --muted: #716981;
 }
 
 html,
@@ -13,32 +13,32 @@ body {
   font-family: "Nunito", sans-serif;
 }
 
-.book-page {
+.animal-page {
   width: 100vw;
   height: 100vh;
   position: relative;
   overflow: hidden;
 }
 
-.book-page::before {
+.animal-page::before {
   content: "";
   position: absolute;
   inset: 0;
   background:
     linear-gradient(
-      rgba(10, 28, 22, 0.30),
-      rgba(10, 28, 22, 0.30)
+      rgba(18, 14, 32, 0.18),
+      rgba(18, 14, 32, 0.18)
     ),
-    url("/static/images/library_bg.png");
+    url("/static/images/librarybg.png");
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  filter: blur(3px) saturate(0.85) brightness(0.92);
+  filter: blur(3px);
   transform: scale(1.03);
   z-index: 0;
 }
 
-.book-page::after {
+.animal-page::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -46,20 +46,21 @@ body {
     radial-gradient(
       ellipse at center,
       transparent 60%,
-      rgba(0,0,0,0.12) 100%
+      rgba(0, 0, 0, 0.12) 100%
     );
   pointer-events: none;
   z-index: 3;
 }
 
-.book-stage {
+.animal-stage {
   width: 100%;
   height: calc(100vh - 86px);
   position: relative;
   z-index: 1;
+  transition: opacity 0.35s ease;
 }
 
-.character-fullscreen {
+.star-fullscreen {
   width: 100%;
   height: 100%;
   position: relative;
@@ -68,32 +69,99 @@ body {
   justify-content: center;
 }
 
-.character-wrap {
+.star-wrap {
   position: absolute;
   left: 50%;
-  bottom: -190px;
-  width: min(46vw, 610px);
-  transform: translateX(-50%);
+  bottom: -120px;
+  width: min(68vw, 860px);
+  transform: translateX(-50%) translateY(10px);
   z-index: 2;
-  animation: characterFloat 5.5s ease-in-out infinite;
+  animation: starFloat 5.5s ease-in-out infinite;
 }
 
-.main-character {
+.main-star {
   width: 100%;
   display: block;
-  filter: drop-shadow(0 24px 34px rgba(36, 112, 82, 0.2));
+  filter: drop-shadow(0 24px 34px rgba(31, 95, 59, 0.18));
 }
 
-.character-mouth-img {
+.star-mouth-img {
   position: absolute;
-  left: 50%;
-  top: 39%;
-  width: 9%;
+  left: 52%;
+  top: 38%;
+  width: 16.5%;
   transform: translateX(-50%) scale(1);
   transform-origin: center center;
   transition: transform 0.05s linear;
   z-index: 10;
   pointer-events: none;
+}
+
+.animal-status {
+  position: absolute;
+  right: 90px;
+  bottom: 218px;
+  z-index: 12;
+  min-width: 210px;
+  max-width: 360px;
+  padding: 14px 18px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--purple-dark);
+  font-size: 16px;
+  font-weight: 900;
+  text-align: center;
+  box-shadow: 0 14px 34px rgba(35, 31, 53, 0.16);
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  pointer-events: none;
+}
+
+.animal-status.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.animal-page.is-listening .animal-status {
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.animal-response-panel {
+  position: absolute;
+  right: 90px;
+  bottom: 130px;
+  z-index: 12;
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.animal-response-panel.hide {
+  opacity: 0;
+  transform: translateY(8px);
+  pointer-events: none;
+}
+
+.animal-response-btn {
+  border: none;
+  border-radius: 999px;
+  padding: 14px 22px;
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--purple-dark);
+  font-family: "Nunito", sans-serif;
+  font-size: 17px;
+  font-weight: 1000;
+  cursor: pointer;
+  box-shadow: 0 14px 34px rgba(35, 31, 53, 0.18);
+  transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+}
+
+.animal-response-btn:hover {
+  transform: translateY(-2px);
+  background: white;
+  box-shadow: 0 18px 38px rgba(35, 31, 53, 0.2);
 }
 
 .call-controls {
@@ -128,15 +196,27 @@ body {
   font-size: 21px;
   font-weight: 900;
   user-select: none;
+  border: none;
+  font-family: "Nunito", sans-serif;
 }
 
 .control-button {
   background: rgba(255, 255, 255, 0.12);
 }
 
+.mic-control {
+  transition: background 0.18s ease, transform 0.18s ease;
+}
+
+.animal-page.is-listening .mic-control {
+  background: rgba(47, 133, 90, 0.95);
+  transform: scale(1.04);
+}
+
 .hangup-button {
   background: #ef4444;
   font-size: 25px;
+  cursor: pointer;
 }
 
 .back-link {
@@ -158,53 +238,6 @@ body {
   transform: translateY(-50%) translateX(-4px);
 }
 
-.complete-modal {
-  position: fixed;
-  inset: 0;
-  background: rgba(31, 27, 46, 0.42);
-  display: none;
-  align-items: center;
-  justify-content: center;
-  z-index: 40;
-  backdrop-filter: blur(10px);
-}
-
-.complete-modal.show {
-  display: flex;
-}
-
-.complete-card {
-  width: 420px;
-  background: white;
-  border-radius: 30px;
-  padding: 34px;
-  text-align: center;
-  box-shadow: 0 24px 60px rgba(31, 27, 46, 0.22);
-}
-
-.complete-card h2 {
-  margin: 0 0 10px;
-  font-size: 32px;
-  color: var(--green-dark);
-}
-
-.complete-card p {
-  color: var(--muted);
-  font-weight: 800;
-  font-size: 17px;
-}
-
-.complete-card button {
-  margin-top: 10px;
-  padding: 14px 22px;
-  border: none;
-  border-radius: 16px;
-  background: var(--green);
-  color: white;
-  font-weight: 900;
-  cursor: pointer;
-}
-
 .call-hidden {
   opacity: 0;
   pointer-events: none;
@@ -217,7 +250,7 @@ body {
   overflow: hidden;
   background:
     radial-gradient(circle at 50% 34%, rgba(255, 255, 255, 0.12), transparent 28%),
-    linear-gradient(135deg, #14532d 0%, #4fa77f 48%, #052e1c 100%);
+    linear-gradient(135deg, #3b2617 0%, #6b4f2a 48%, #1f3d2b 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -234,13 +267,13 @@ body {
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(rgba(10, 28, 22, 0.36), rgba(10, 28, 22, 0.36)),
-    url("/static/images/library_bg.png");
+    linear-gradient(rgba(42, 28, 18, 0.58), rgba(42, 28, 18, 0.58)),
+    url("/static/images/librarybg.png");
   background-size: cover;
   background-position: center;
-  filter: blur(3px) saturate(0.85) brightness(0.9);
+  filter: blur(3px);
   transform: scale(1.04);
-  opacity: 0.78;
+  opacity: 0.75;
 }
 
 .incoming-content {
@@ -389,14 +422,34 @@ body {
   opacity: 0.9;
 }
 
+
+/* Librarian character sizing. Keep the original class names so the JS stays identical. */
+.book-page .star-wrap {
+  width: min(43vw, 560px);
+  bottom: -400px;
+}
+
+.book-page .main-star {
+  filter: drop-shadow(0 24px 34px rgba(31, 95, 59, 0.2));
+}
+
+.book-page .star-mouth-img {
+  left: 49%;
+  top: 16%;
+  width: 9%;
+}
+
 @media (max-height: 760px) {
-  .character-wrap {
-    width: min(40vw, 520px);
-    bottom: -160px;
+  .star-wrap {
+    width: min(48vw, 560px);
+  }
+
+  .animal-status {
+    bottom: 198px;
   }
 }
 
-@keyframes characterFloat {
+@keyframes starFloat {
   0%, 100% {
     transform: translateX(-50%) translateY(10px);
   }
@@ -451,5 +504,119 @@ body {
     box-shadow:
       0 16px 34px rgba(20, 10, 40, 0.28),
       0 0 0 16px rgba(34, 197, 94, 0);
+  }
+}
+/* Final Mystery Animal polish additions. Put this at the bottom of mystery_animal.css. */
+
+/* Bigger, more centered status pill */
+#animalStatus,
+.animal-status {
+  position: fixed !important;
+  top: 30px !important;
+  left: calc(50% + 30px) !important;
+  right: auto !important;
+  bottom: auto !important;
+
+  transform: translateX(-50%) translateY(-8px) !important;
+
+  min-width: 240px;
+  max-width: min(420px, calc(100vw - 38px));
+
+  padding: 14px 22px;
+  border-radius: 999px;
+
+  text-align: center;
+  font-size: 1rem;
+  font-weight: 900;
+
+  background: rgba(255, 255, 255, 0.94);
+  color: #32224f;
+
+  border: 1px solid rgba(139, 92, 246, 0.18);
+  box-shadow:
+    0 16px 36px rgba(52, 34, 88, 0.16),
+    0 4px 12px rgba(139, 92, 246, 0.10);
+
+  z-index: 80;
+  backdrop-filter: blur(14px);
+
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease,
+    visibility 0.2s ease;
+}
+
+#animalStatus.show,
+.animal-status.show {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0) !important;
+}
+
+.animal-page.is-listening #animalStatus,
+.animal-page.is-listening .animal-status {
+  background: rgba(255, 255, 255, 0.97);
+}
+
+/* Circular fade-to-black */
+.animal-page.call-ending-transition {
+  background: #000 !important;
+}
+
+.animal-page.call-ending-transition::after {
+  content: "";
+  position: fixed;
+  top: 50%;
+  left: 50%;
+
+  width: 180vmax;
+  height: 180vmax;
+
+  z-index: 99998;
+  pointer-events: none;
+
+  border-radius: 50%;
+  background: transparent;
+
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 0 240vmax #000;
+
+  animation: mysteryAnimalIrisClose 1050ms cubic-bezier(0.22, 0.9, 0.32, 1) forwards;
+}
+
+@keyframes mysteryAnimalIrisClose {
+  0% {
+    width: 180vmax;
+    height: 180vmax;
+  }
+
+  70% {
+    width: 28vmax;
+    height: 28vmax;
+  }
+
+  92% {
+    width: 4vmax;
+    height: 4vmax;
+  }
+
+  100% {
+    width: 0vmax;
+    height: 0vmax;
+  }
+}
+
+@media (max-width: 760px) {
+  #animalStatus,
+  .animal-status {
+    top: 18px !important;
+    left: 50% !important;
+    min-width: 220px;
+    font-size: 16px;
+    padding: 14px 18px;
   }
 }

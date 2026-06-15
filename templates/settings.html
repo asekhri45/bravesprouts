@@ -2,33 +2,442 @@
 
 {% block title %}Settings{% endblock %}
 
+{% block dashboard_main_class %}settings-main{% endblock %}
+
 {% block dashboard_content %}
-<h1>Settings</h1>
-<p>Manage your account and preferences here.</p>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/settings.css') }}?v=8">
 
-<form id="deleteAccountForm" action="{{ url_for('delete_account') }}" method="POST">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <button type="button" class="delete-account" id="openDeleteModal">
-        DELETE ACCOUNT
+<section class="settings-shell">
+  <header class="settings-page-header settings-header-bar">
+  <div class="settings-header-left">
+    <h1>Settings</h1>
+    <p>Manage your child’s profile and your parent account.</p>
+  </div>
+
+  <div class="profile-dropdown settings-profile-dropdown">
+    <button class="profile-trigger" id="profileTrigger" type="button">
+      <img
+        src="{{ url_for('static', filename='images/' + profile_icon) }}"
+        class="profile-icon"
+        id="currentProfileIcon"
+        alt="Profile icon"
+        decoding="async"
+      >
     </button>
-</form>
 
-<div class="delete-modal-overlay" id="deleteModal">
-  <div class="delete-modal">
-    <h2>Are you sure you want to delete your account?</h2>
-    <p>You won’t be able to recover your account or restore your data after deletion.</p>
+    <div class="dropdown-menu" id="dropdownMenu">
+      <div class="dropdown-section">
+        <p class="dropdown-title">Choose Profile Icon</p>
+
+        <div class="icon-options">
+          <button class="icon-option" type="button" data-icon="profileicon.png">
+            <img src="{{ url_for('static', filename='images/profileicon.png') }}" alt="">
+          </button>
+          <button class="icon-option" type="button" data-icon="profileicon1.png">
+            <img src="{{ url_for('static', filename='images/profileicon1.png') }}" alt="">
+          </button>
+          <button class="icon-option" type="button" data-icon="profileicon2.png">
+            <img src="{{ url_for('static', filename='images/profileicon2.png') }}" alt="">
+          </button>
+          <button class="icon-option" type="button" data-icon="profileicon3.png">
+            <img src="{{ url_for('static', filename='images/profileicon3.png') }}" alt="">
+          </button>
+        </div>
+      </div>
+
+      <div class="dropdown-divider"></div>
+
+      <div class="dropdown-links">
+        <a href="{{ url_for('dashboard') }}" class="dropdown-link">View Dashboard</a>
+        <a href="{{ url_for('home') }}" class="dropdown-link">Return to Home Page</a>
+        <a href="{{ url_for('settings') }}" class="dropdown-link">Manage Profile</a>
+        <a href="{{ url_for('terms') }}" class="dropdown-link">View Terms of Use</a>
+        <a href="{{ url_for('privacy') }}" class="dropdown-link">View Privacy Policy</a>
+      </div>
+
+      <div class="dropdown-divider"></div>
+
+      <a href="/logout" class="dropdown-logout">Log Out</a>
+    </div>
+  </div>
+</header>
+
+  {% if settings_status %}
+    <div class="settings-toast settings-toast-{{ settings_status_type }}">
+      {{ settings_status }}
+    </div>
+  {% endif %}
+
+  <section class="settings-section">
+    <div class="settings-section-heading">
+      <span class="section-icon section-icon-purple">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 12.25c2.2 0 4-1.8 4-4s-1.8-4-4-4-4 1.8-4 4 1.8 4 4 4Z"></path>
+          <path d="M4.75 20.1c.8-3.15 3.62-5.35 7.25-5.35s6.45 2.2 7.25 5.35"></path>
+        </svg>
+      </span>
+
+      <div>
+        <h2>Child profile</h2>
+        <p>Name and age settings for your child.</p>
+      </div>
+    </div>
+
+    <form action="{{ url_for('update_child_settings') }}" method="POST" class="settings-card" data-tour-target="settings-child-profile">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div class="settings-row">
+        <div class="settings-row-copy">
+          <label for="childNameInput">Child’s Name</label>
+          <p>This is how characters will address your child.</p>
+        </div>
+
+        <div class="settings-row-control name-control">
+          <input
+            id="childNameInput"
+            type="text"
+            name="child_name"
+            value="{{ child or '' }}"
+            maxlength="40"
+            autocomplete="off"
+            required
+          >
+
+          <button type="submit" class="save-btn">
+            Save
+          </button>
+        </div>
+      </div>
+
+      <div class="settings-divider"></div>
+
+      <div class="settings-row age-settings-row">
+        <div class="settings-row-copy">
+          <label for="childAgeSlider">Child’s Age</label>
+          <p>Helps tailor activities and conversation style.</p>
+        </div>
+
+        <div class="settings-row-control age-control-wrap">
+          <div class="age-control">
+            <div class="age-badge">
+              <span id="ageValue">-</span> years old
+            </div>
+
+            <input
+              id="childAgeSlider"
+              class="age-slider"
+              type="range"
+              name="child_age"
+              min="3"
+              max="12"
+              step="1"
+              value="{{ child_age }}"
+            >
+          </div>
+
+          <button type="submit" class="save-btn">
+            Save
+          </button>
+        </div>
+      </div>
+    </form>
+  </section>
+
+  <section class="settings-section permissions-section">
+  <div class="settings-section-heading">
+    <span class="section-icon section-icon-green">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 3v18"></path>
+        <path d="M8 7h8"></path>
+        <path d="M7 12h10"></path>
+        <path d="M8 17h8"></path>
+      </svg>
+    </span>
+
+    <div>
+      <h2>Site permissions</h2>
+      <p>Allow BraveSprouts to play audio and use the microphone.</p>
+    </div>
+  </div>
+
+  <div class="settings-card" data-tour-target="settings-permissions">
+    <div class="settings-row permission-row">
+      <div class="settings-row-copy">
+        <span class="row-title">Audio</span>
+        <p>Allows characters and activities to play sound.</p>
+      </div>
+
+      <div class="settings-row-control permission-control">
+        <button
+          type="button"
+          class="settings-toggle"
+          id="audioPermissionToggle"
+          aria-pressed="false"
+        >
+          <span class="toggle-track">
+            <span class="toggle-thumb"></span>
+          </span>
+          <span class="toggle-label">Off</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="settings-divider"></div>
+
+    <div class="settings-row permission-row">
+      <div class="settings-row-copy">
+        <span class="row-title">Microphone</span>
+        <p>Allows speaking activities to listen for your child’s voice.</p>
+      </div>
+
+      <div class="settings-row-control permission-control">
+        <button
+          type="button"
+          class="settings-toggle"
+          id="microphonePermissionToggle"
+          aria-pressed="false"
+        >
+          <span class="toggle-track">
+            <span class="toggle-thumb"></span>
+          </span>
+          <span class="toggle-label">Off</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="permission-message" id="permissionMessage">
+      Browser permissions may still need to be approved in the popup.
+    </div>
+  </div>
+</section>
+
+  <section class="settings-section parent-section">
+    <div class="settings-section-heading">
+      <span class="section-icon section-icon-blue">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 12.25c2.2 0 4-1.8 4-4s-1.8-4-4-4-4 1.8-4 4 1.8 4 4 4Z"></path>
+          <path d="M4.75 20.1c.8-3.15 3.62-5.35 7.25-5.35s6.45 2.2 7.25 5.35"></path>
+        </svg>
+      </span>
+
+      <div>
+        <h2>Parent account</h2>
+        <p>Your name, email, password, PIN, and account controls.</p>
+      </div>
+    </div>
+
+    <div class="settings-card parent-card">
+      <form action="{{ url_for('update_parent_account') }}" method="POST" class="parent-account-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="settings-row">
+          <div class="settings-row-copy">
+            <label for="parentNameInput">Parent Name</label>
+            <p>This name appears on your account.</p>
+          </div>
+
+          <div class="settings-row-control name-control">
+            <input
+              id="parentNameInput"
+              type="text"
+              name="parent_name"
+              value="{{ parent }}"
+              maxlength="50"
+              autocomplete="name"
+              required
+            >
+
+            <button type="submit" class="save-btn">
+              Save
+            </button>
+          </div>
+        </div>
+
+        <div class="settings-divider"></div>
+
+        <div class="settings-row">
+          <div class="settings-row-copy">
+            <label for="parentEmailInput">Email</label>
+            <p>Used to sign in to BraveSprouts.</p>
+          </div>
+
+          <div class="settings-row-control name-control">
+            <input
+              id="parentEmailInput"
+              type="email"
+              name="email"
+              value="{{ email }}"
+              maxlength="120"
+              autocomplete="email"
+              required
+            >
+
+            <button type="submit" class="save-btn">
+              Save
+            </button>
+          </div>
+        </div>
+      </form>
+
+      <div class="settings-divider"></div>
+
+      <div class="settings-row action-row">
+        <div class="settings-row-copy">
+          <span class="row-title">Password</span>
+          <p>Change the password used to sign in.</p>
+        </div>
+
+        <div class="settings-row-control action-control">
+          <span class="masked-value">••••••••</span>
+
+          <button type="button" class="arrow-action-btn" id="openPasswordModal">
+            Change password
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M9 6l6 6-6 6"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="settings-divider"></div>
+
+      <div class="settings-row action-row">
+        <div class="settings-row-copy">
+          <span class="row-title">Parent PIN</span>
+          <p>Used to protect parent-only areas.</p>
+        </div>
+
+        <div class="settings-row-control action-control">
+          <span class="masked-value">
+            {% if parent_pin %}••••{% else %}Not set yet{% endif %}
+          </span>
+
+          <button type="button" class="arrow-action-btn" id="openPinModal">
+            View PIN
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M9 6l6 6-6 6"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="settings-divider"></div>
+
+      <form id="deleteAccountForm" action="{{ url_for('delete_account') }}" method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="settings-row delete-row">
+          <div class="settings-row-copy">
+            <span class="row-title delete-title">Delete Account</span>
+            <p>Permanently delete your account and saved progress.</p>
+          </div>
+
+          <div class="settings-row-control delete-control">
+            <button type="button" class="delete-account-btn" id="openDeleteModal">
+              Delete account
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </section>
+</section>
+
+<div class="settings-modal-overlay" id="passwordModal" aria-hidden="true">
+  <div class="settings-modal">
+    <button type="button" class="modal-close-btn" id="closePasswordModal" aria-label="Close password modal">
+      ×
+    </button>
+
+    <div class="modal-icon modal-icon-purple">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M7.5 10V7.75a4.5 4.5 0 0 1 9 0V10"></path>
+        <path d="M6.75 10h10.5c.83 0 1.5.67 1.5 1.5v6.25c0 .83-.67 1.5-1.5 1.5H6.75c-.83 0-1.5-.67-1.5-1.5V11.5c0-.83.67-1.5 1.5-1.5Z"></path>
+      </svg>
+    </div>
+
+    <h2>Change password</h2>
+    <p>Enter your current password and choose a new one.</p>
+
+    <form action="{{ url_for('update_parent_password') }}" method="POST" class="modal-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <label>
+        Current password
+        <input type="password" name="current_password" autocomplete="current-password" required>
+      </label>
+
+      <label>
+        New password
+        <input type="password" name="new_password" autocomplete="new-password" required>
+      </label>
+
+      <label>
+        Confirm new password
+        <input type="password" name="confirm_password" autocomplete="new-password" required>
+      </label>
+
+      <button type="submit" class="modal-primary-btn">
+        Update password
+      </button>
+    </form>
+  </div>
+</div>
+
+<div class="settings-modal-overlay" id="pinModal" aria-hidden="true">
+  <div class="settings-modal pin-modal">
+    <button type="button" class="modal-close-btn" id="closePinModal" aria-label="Close PIN modal">
+      ×
+    </button>
+
+    <div class="modal-icon modal-icon-blue">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M14.5 9.5a4.5 4.5 0 1 0-3.2 4.3L13 15.5h2v2h2v2h2.5V17L14.5 12V9.5Z"></path>
+        <path d="M7.5 9.5h.01"></path>
+      </svg>
+    </div>
+
+    <h2>Parent PIN</h2>
+    <p>This is the PIN currently saved for parent-only areas.</p>
+
+    <div class="pin-display">
+      {% if parent_pin %}
+        {{ parent_pin }}
+      {% else %}
+        Not set yet
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="settings-modal-overlay" id="deleteModal" aria-hidden="true">
+  <div class="settings-modal delete-modal">
+    <button type="button" class="modal-close-btn" id="closeDeleteModal" aria-label="Close delete modal">
+      ×
+    </button>
+
+    <div class="modal-icon modal-icon-red">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M4.5 6.5h15"></path>
+        <path d="M9 6.5V5.25c0-.83.67-1.5 1.5-1.5h3c.83 0 1.5.67 1.5 1.5V6.5"></path>
+        <path d="M18 6.5l-.65 11.25c-.05.84-.72 1.5-1.56 1.5H8.21c-.84 0-1.51-.66-1.56-1.5L6 6.5"></path>
+      </svg>
+    </div>
+
+    <h2>Delete account?</h2>
+    <p>You won’t be able to recover your account or restore your saved progress after deletion.</p>
 
     <div class="delete-modal-actions">
       <button type="button" class="confirm-delete-btn" id="confirmDelete">
-        Yes, I’m Sure
+        Yes, delete account
       </button>
 
-      <button type="button" class="cancel-delete-btn" id="closeDeleteModal">
+      <button type="button" class="cancel-delete-btn" id="cancelDeleteModal">
         Nevermind
       </button>
     </div>
   </div>
 </div>
 
-<script src="{{ url_for('static', filename='js/settings.js') }}"></script>
+<script src="{{ url_for('static', filename='js/settings.js') }}?v=8"></script>
 {% endblock %}

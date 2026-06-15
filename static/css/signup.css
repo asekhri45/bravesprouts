@@ -429,3 +429,10 @@ input[type="date"]:valid {
     0%, 100% { transform: translateY(0px) translateX(0px); }
     50%       { transform: translateY(-12px) translateX(6px); }
 }
+
+.pin-note {
+    margin: -5px 0 14px 20px;
+    color: var(--color-text-muted);
+    font-size: 13px;
+    font-weight: 600;
+}

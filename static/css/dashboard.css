@@ -1885,3 +1885,285 @@ body {
   right: -28px;
   left: auto;
 }
+
+/* Swap journey colors: 4–6 green, 7–9 blue */
+
+/* 4–6 green */
+.journey-path-item:nth-of-type(n + 4):nth-of-type(-n + 6).journey-unlocked .journey-node {
+  background: var(--green-progress);
+  border-color: var(--green-progress-soft);
+  box-shadow:
+    0 6px 0 var(--green-progress-dark),
+    0 13px 22px rgba(115, 196, 161, 0.17);
+}
+
+.journey-path-item:nth-of-type(n + 4):nth-of-type(-n + 6) .journey-icon {
+  background: var(--green-progress-soft);
+  border-color: rgba(115, 196, 161, 0.16);
+}
+
+.journey-path-item:nth-of-type(n + 4):nth-of-type(-n + 6) .journey-action-btn {
+  background: var(--green-progress-soft);
+  color: var(--green-progress-dark);
+  box-shadow: 0 4px 0 #d2eee0;
+}
+
+.journey-path-item:nth-of-type(n + 4):nth-of-type(-n + 6) .journey-current-pill {
+  background: var(--green-progress);
+  box-shadow: 0 4px 0 var(--green-progress-dark);
+}
+
+/* 7–9 blue */
+.journey-path-item:nth-of-type(n + 7):nth-of-type(-n + 9).journey-unlocked .journey-node {
+  background: var(--blue-progress);
+  border-color: var(--blue-progress-soft);
+  box-shadow:
+    0 6px 0 var(--blue-progress-dark),
+    0 13px 22px rgba(59, 153, 252, 0.17);
+}
+
+.journey-path-item:nth-of-type(n + 7):nth-of-type(-n + 9) .journey-icon {
+  background: var(--blue-progress-soft);
+  border-color: rgba(59, 153, 252, 0.14);
+}
+
+.journey-path-item:nth-of-type(n + 7):nth-of-type(-n + 9) .journey-action-btn {
+  background: var(--blue-progress-soft);
+  color: var(--blue-progress-dark);
+  box-shadow: 0 4px 0 #c9e3ff;
+}
+
+.journey-path-item:nth-of-type(n + 7):nth-of-type(-n + 9) .journey-current-pill {
+  background: var(--blue-progress);
+  box-shadow: 0 4px 0 var(--blue-progress-dark);
+}
+
+/* Today card: orange → green */
+.today-card.today-green {
+  background:
+    radial-gradient(circle at 16% 42%,
+      rgba(255, 250, 241, 0.96) 0%,
+      rgba(255, 245, 230, 0.82) 28%,
+      transparent 52%
+    ),
+    radial-gradient(circle at 72% 52%,
+      rgba(190, 232, 211, 0.58) 0%,
+      rgba(170, 222, 198, 0.46) 44%,
+      transparent 74%
+    ),
+    linear-gradient(
+      105deg,
+      #fffaf1 0%,
+      #fff4e6 22%,
+      #fbfffd 42%,
+      #dff3ea 70%,
+      #d2ecdf 100%
+    );
+}
+
+/* Today card: orange → blue */
+.today-card.today-blue {
+  background:
+    radial-gradient(circle at 16% 42%,
+      rgba(255, 250, 241, 0.96) 0%,
+      rgba(255, 245, 230, 0.82) 28%,
+      transparent 52%
+    ),
+    radial-gradient(circle at 72% 52%,
+      rgba(195, 225, 255, 0.60) 0%,
+      rgba(170, 210, 255, 0.46) 44%,
+      transparent 74%
+    ),
+    linear-gradient(
+      105deg,
+      #fffaf1 0%,
+      #fff4e6 22%,
+      #f8fbff 42%,
+      #e4f1ff 70%,
+      #cfe5ff 100%
+    );
+}
+
+/* FINAL COLOR ORDER:
+   1–3 purple
+   4–6 green
+   7–9 blue
+   10–12 orange
+*/
+
+/* 4–6 green nodes */
+.journey-path-item:nth-of-type(n + 4):nth-of-type(-n + 6).journey-unlocked .journey-node {
+  background: var(--green-progress);
+  border-color: var(--green-progress-soft);
+  box-shadow:
+    0 6px 0 var(--green-progress-dark),
+    0 13px 22px rgba(115, 196, 161, 0.17);
+}
+
+/* 7–9 blue nodes */
+.journey-path-item:nth-of-type(n + 7):nth-of-type(-n + 9).journey-unlocked .journey-node {
+  background: var(--blue-progress);
+  border-color: var(--blue-progress-soft);
+  box-shadow:
+    0 6px 0 var(--blue-progress-dark),
+    0 13px 22px rgba(59, 153, 252, 0.17);
+}
+
+/* 4–6 green icons */
+.journey-path-item:nth-of-type(n + 4):nth-of-type(-n + 6) .journey-icon {
+  background: var(--green-progress-soft);
+  border-color: rgba(115, 196, 161, 0.16);
+}
+
+/* 7–9 blue icons */
+.journey-path-item:nth-of-type(n + 7):nth-of-type(-n + 9) .journey-icon {
+  background: var(--blue-progress-soft);
+  border-color: rgba(59, 153, 252, 0.14);
+}
+
+/* 4–6 green buttons */
+.journey-path-item:nth-of-type(n + 4):nth-of-type(-n + 6) .journey-action-btn {
+  background: var(--green-progress-soft);
+  color: var(--green-progress-dark);
+  box-shadow: 0 4px 0 #d2eee0;
+}
+
+.journey-path-item:nth-of-type(n + 4):nth-of-type(-n + 6) .journey-current-pill {
+  background: var(--green-progress);
+  color: white;
+  box-shadow: 0 4px 0 var(--green-progress-dark);
+}
+
+/* 7–9 blue buttons */
+.journey-path-item:nth-of-type(n + 7):nth-of-type(-n + 9) .journey-action-btn {
+  background: var(--blue-progress-soft);
+  color: var(--blue-progress-dark);
+  box-shadow: 0 4px 0 #c9e3ff;
+}
+
+.journey-path-item:nth-of-type(n + 7):nth-of-type(-n + 9) .journey-current-pill {
+  background: var(--blue-progress);
+  color: white;
+  box-shadow: 0 4px 0 var(--blue-progress-dark);
+}
+
+/* Today card: 4–6 orange → green */
+.today-card.today-green {
+  background:
+    radial-gradient(circle at 16% 42%,
+      rgba(255, 250, 241, 0.96) 0%,
+      rgba(255, 245, 230, 0.82) 28%,
+      transparent 52%
+    ),
+    radial-gradient(circle at 72% 52%,
+      rgba(190, 232, 211, 0.58) 0%,
+      rgba(170, 222, 198, 0.46) 44%,
+      transparent 74%
+    ),
+    linear-gradient(
+      105deg,
+      #fffaf1 0%,
+      #fff4e6 22%,
+      #fbfffd 42%,
+      #dff3ea 70%,
+      #d2ecdf 100%
+    );
+  border-color: rgba(115, 196, 161, 0.22);
+  box-shadow: 0 14px 34px rgba(115, 196, 161, 0.08);
+}
+
+/* Today card: 7–9 orange → blue */
+.today-card.today-blue {
+  background:
+    radial-gradient(circle at 16% 42%,
+      rgba(255, 250, 241, 0.96) 0%,
+      rgba(255, 245, 230, 0.82) 28%,
+      transparent 52%
+    ),
+    radial-gradient(circle at 72% 52%,
+      rgba(195, 225, 255, 0.60) 0%,
+      rgba(170, 210, 255, 0.46) 44%,
+      transparent 74%
+    ),
+    linear-gradient(
+      105deg,
+      #fffaf1 0%,
+      #fff4e6 22%,
+      #f8fbff 42%,
+      #e4f1ff 70%,
+      #cfe5ff 100%
+    );
+  border-color: rgba(59, 153, 252, 0.18);
+  box-shadow: 0 14px 34px rgba(59, 153, 252, 0.08);
+}
+
+/* FINAL TODAY CARD BACKGROUNDS */
+
+/* 1–3: orange → purple */
+.today-card {
+  background:
+    radial-gradient(circle at 16% 42%,
+      rgba(255, 250, 241, 0.96) 0%,
+      rgba(255, 245, 230, 0.82) 28%,
+      transparent 52%
+    ),
+    radial-gradient(circle at 72% 52%,
+      rgba(229, 213, 255, 0.88) 0%,
+      rgba(218, 198, 255, 0.78) 44%,
+      transparent 74%
+    ),
+    linear-gradient(
+      105deg,
+      #fffaf1 0%,
+      #fff4e6 22%,
+      #f8edff 42%,
+      #eee0ff 70%,
+      #e4d2ff 100%
+    );
+}
+
+/* 4–6: orange → green */
+.today-card.today-green {
+  background:
+    radial-gradient(circle at 16% 42%,
+      rgba(255, 250, 241, 0.96) 0%,
+      rgba(255, 245, 230, 0.82) 28%,
+      transparent 52%
+    ),
+    radial-gradient(circle at 72% 52%,
+      rgba(190, 232, 211, 0.58) 0%,
+      rgba(170, 222, 198, 0.46) 44%,
+      transparent 74%
+    ),
+    linear-gradient(
+      105deg,
+      #fffaf1 0%,
+      #fff4e6 22%,
+      #fbfffd 42%,
+      #dff3ea 70%,
+      #d2ecdf 100%
+    );
+}
+
+/* 7–9: orange → blue */
+.today-card.today-blue {
+  background:
+    radial-gradient(circle at 16% 42%,
+      rgba(255, 250, 241, 0.96) 0%,
+      rgba(255, 245, 230, 0.82) 28%,
+      transparent 52%
+    ),
+    radial-gradient(circle at 72% 52%,
+      rgba(195, 225, 255, 0.60) 0%,
+      rgba(170, 210, 255, 0.46) 44%,
+      transparent 74%
+    ),
+    linear-gradient(
+      105deg,
+      #fffaf1 0%,
+      #fff4e6 22%,
+      #f8fbff 42%,
+      #e4f1ff 70%,
+      #cfe5ff 100%
+    );
+}

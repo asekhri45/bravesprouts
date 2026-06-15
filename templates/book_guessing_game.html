@@ -9,16 +9,14 @@
 {% block title %}Book Guessing Game{% endblock %}
 
 {% block content %}
-
-<div class="book-page">
-
+<div class="animal-page book-page">
   <div class="incoming-call-screen" id="incomingCallScreen">
     <div class="incoming-bg"></div>
 
     <div class="incoming-content">
       <div class="incoming-copy">
-        <h1>Incoming Call</h1>
-        <p><span>The Librarian</span> is calling you...</p>
+        <h1>Librarian is ready</h1>
+        <p><span>Librarian</span> wants to play Book Guessing Game.</p>
       </div>
 
       <div class="incoming-avatar-area">
@@ -30,13 +28,18 @@
         <span class="music-note note-two">♫</span>
 
         <div class="incoming-avatar">
-          <img src="{{ url_for('static', filename='images/librarian_pfp.png') }}" alt="Librarian profile picture">
+          <img src="{{ url_for('static', filename='images/librarianpfp.png') }}" alt="Librarian profile picture">
         </div>
       </div>
 
       <div class="incoming-actions">
-        <button class="incoming-btn decline-btn" id="declineCall" type="button">☎</button>
-        <button class="incoming-btn accept-btn" id="acceptCall" type="button">☎</button>
+        <button class="incoming-btn decline-btn" id="declineCall" type="button" aria-label="Decline call">
+          ☎
+        </button>
+
+        <button class="incoming-btn accept-btn" id="acceptCall" type="button" aria-label="Accept call">
+          ☎
+        </button>
       </div>
 
       <div class="incoming-labels">
@@ -46,25 +49,29 @@
     </div>
   </div>
 
-  <main class="book-stage call-hidden" id="bookStage">
-    <section class="character-fullscreen">
-
-      <div class="character-wrap">
+  <main class="animal-stage call-hidden" id="animalStage">
+    <section class="star-fullscreen">
+      <div class="star-wrap">
         <img
           src="{{ url_for('static', filename='images/librarian.png') }}"
-          alt="Librarian"
-          class="main-character"
+          alt="Librarian character"
+          class="main-star"
         >
 
         <img
-          src="{{ url_for('static', filename='images/librarian_mouth-closed.png') }}"
+          src="{{ url_for('static', filename='images/mouth-closed.png') }}"
           alt=""
-          class="character-mouth-img"
-          id="characterMouth"
+          class="star-mouth-img"
+          id="starMouth"
         >
       </div>
-
     </section>
+
+    <div class="animal-status" id="animalStatus" aria-live="polite">
+      Librarian is thinking.
+    </div>
+
+    <div class="animal-response-panel hide" id="animalResponsePanel" aria-label="Optional response buttons"></div>
   </main>
 
   <div class="call-controls">
@@ -73,25 +80,16 @@
     </a>
 
     <div class="controls-center">
-      <div class="control-button">🎙️</div>
+      <div class="control-button mic-control" id="micControl">🎙️</div>
       <div class="control-button">🎥</div>
-      <div class="hangup-button">☎</div>
+
+      <button class="hangup-button" id="hangupBtn" type="button" aria-label="End call">
+        ☎
+      </button>
+
       <div class="control-button">💬</div>
       <div class="control-button">⋯</div>
     </div>
   </div>
-
-  <div class="complete-modal" id="completeModal">
-    <div class="complete-card">
-      <h2>I found the book!</h2>
-      <p>The librarian loved guessing your mystery book.</p>
-
-      <button id="restartBtn" type="button">
-        Play Again
-      </button>
-    </div>
-  </div>
-
 </div>
-
 {% endblock %}

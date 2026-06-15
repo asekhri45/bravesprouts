@@ -1,0 +1,1679 @@
+# =========================
+# Toy Guessing Game — Toy Store Worker version of Library Guessing Game
+# Paste this block in app.py after the Library Guessing Game block, or replace an older Toy Guessing block.
+# Requires templates/toy_guessing_game.html, static/css/toy_guessing_game.css, static/js/toy_guessing_game.js.
+# =========================
+
+def generate_toy_guessing_voice_elevenlabs(text, game_complete=False, thinking=False):
+    voice_id = os.getenv("TOY_TRIVIA_VOICE_ID") or os.getenv("TOY_WORKER_VOICE_ID")
+
+    if not voice_id:
+        voice_id = os.getenv("ELEVENLABS_VOICE_ID", "piI8Kku0DcvcL6TTSeQt")
+
+    if game_complete:
+        voice_settings = {
+            "stability": 0.84,
+            "similarity_boost": 0.90,
+            "style": 0.25,
+            "use_speaker_boost": False
+        }
+    elif thinking:
+        voice_settings = {
+            "stability": 0.98,
+            "similarity_boost": 0.88,
+            "style": 0.02,
+            "use_speaker_boost": False
+        }
+    else:
+        voice_settings = {
+            "stability": 0.94,
+            "similarity_boost": 0.90,
+            "style": 0.06,
+            "use_speaker_boost": False
+        }
+
+    response = eleven_client.text_to_speech.convert(
+        voice_id=voice_id,
+        text=text,
+        model_id="eleven_multilingual_v2",
+        output_format="mp3_44100_128",
+        voice_settings=voice_settings
+    )
+
+    return b"".join(response)
+
+
+TOY_GUESSING_GAME_MAX_ROUNDS = 3
+TOY_GUESSING_GAME_NEXT_GAME_OFFER_ROUND = 999
+
+TOY_GUESSING_GAME_OBJECT_PROFILES = {
+    "teddy_bear": {
+        "display": "teddy bear",
+        "aliases": {"teddy", "teddy bear", "bear"},
+        "tags": {"toy_store", "toy", "stuffed", "soft", "fabric", "animal", "hug", "medium", "brown"},
+        "colors": {"brown", "tan", "white"},
+        "hints": [
+            "This is soft and good for hugs.",
+            "It is a stuffed animal.",
+            "It often looks like a bear."
+        ]
+    },
+    "doll": {
+        "display": "doll",
+        "aliases": {"doll", "baby doll"},
+        "tags": {"toy_store", "toy", "person", "clothes", "hair", "plastic", "fabric", "small", "pretend"},
+        "colors": {"pink", "purple", "blue", "brown"},
+        "hints": [
+            "Kids can pretend to take care of this.",
+            "It may have clothes or hair.",
+            "It looks a little like a person."
+        ]
+    },
+    "toy_car": {
+        "display": "toy car",
+        "aliases": {"toy car", "car", "race car", "vehicle"},
+        "tags": {"toy_store", "toy", "vehicle", "wheels", "plastic", "metal", "small", "roll", "fast"},
+        "colors": {"red", "blue", "black", "yellow", "green"},
+        "hints": [
+            "This can roll across the floor.",
+            "It has wheels.",
+            "It is a small vehicle toy."
+        ]
+    },
+    "train": {
+        "display": "toy train",
+        "aliases": {"train", "toy train", "train set"},
+        "tags": {"toy_store", "toy", "vehicle", "wheels", "track", "long", "plastic", "metal", "medium"},
+        "colors": {"red", "blue", "black", "green"},
+        "hints": [
+            "This might move on a track.",
+            "It can have cars connected together.",
+            "It is a vehicle toy."
+        ]
+    },
+    "ball": {
+        "display": "ball",
+        "aliases": {"ball", "toy ball", "bouncy ball"},
+        "tags": {"toy_store", "toy", "round", "bounce", "sports", "plastic", "rubber", "small", "medium"},
+        "colors": {"red", "blue", "green", "yellow", "orange"},
+        "hints": [
+            "This is round.",
+            "You can throw or roll it.",
+            "Some kinds can bounce."
+        ]
+    },
+    "blocks": {
+        "display": "blocks",
+        "aliases": {"blocks", "building blocks", "block", "legos", "lego"},
+        "tags": {"toy_store", "toy", "build", "stack", "pieces", "plastic", "wood", "small", "colorful"},
+        "colors": {"red", "blue", "green", "yellow", "purple"},
+        "hints": [
+            "You can stack these.",
+            "You can build things with them.",
+            "There is usually more than one piece."
+        ]
+    },
+    "puzzle": {
+        "display": "puzzle",
+        "aliases": {"puzzle", "jigsaw puzzle", "puzzle pieces"},
+        "tags": {"toy_store", "toy", "game", "pieces", "picture", "flat", "paper", "cardboard", "table"},
+        "colors": {"red", "blue", "green", "yellow", "purple"},
+        "hints": [
+            "This has pieces that fit together.",
+            "It can make a picture when it is finished.",
+            "You might do it on a table."
+        ]
+    },
+    "robot": {
+        "display": "robot",
+        "aliases": {"robot", "toy robot"},
+        "tags": {"toy_store", "toy", "technology", "electric", "battery", "buttons", "plastic", "metal", "move", "medium"},
+        "colors": {"silver", "gray", "blue", "red", "white"},
+        "hints": [
+            "This might have buttons.",
+            "It may look like a machine person.",
+            "Some kinds can move or make sounds."
+        ]
+    },
+    "action_figure": {
+        "display": "action figure",
+        "aliases": {"action figure", "figure", "superhero", "toy figure"},
+        "tags": {"toy_store", "toy", "person", "plastic", "small", "pretend", "move", "superhero"},
+        "colors": {"red", "blue", "black", "green", "yellow"},
+        "hints": [
+            "Kids can use this for pretend adventures.",
+            "It is a small toy person or character.",
+            "Its arms or legs might move."
+        ]
+    },
+    "board_game": {
+        "display": "board game",
+        "aliases": {"board game", "game", "box game"},
+        "tags": {"toy_store", "toy", "game", "box", "pieces", "cards", "table", "flat", "group"},
+        "colors": {"red", "blue", "green", "yellow", "black"},
+        "hints": [
+            "More than one person can play this.",
+            "It may come in a box.",
+            "It can have cards, pieces, or a board."
+        ]
+    },
+    "yo_yo": {
+        "display": "yo-yo",
+        "aliases": {"yo-yo", "yoyo", "yo yo"},
+        "tags": {"toy_store", "toy", "string", "round", "small", "plastic", "skill", "up_down"},
+        "colors": {"red", "blue", "green", "yellow", "black"},
+        "hints": [
+            "This toy has a string.",
+            "It can go down and come back up.",
+            "You hold the string with your finger."
+        ]
+    }
+}
+
+
+def normalize_toy_guessing_text(text):
+    text = re.sub(r"\s+", " ", str(text or "")).strip().lower()
+    text = text.replace("’", "'")
+    text = re.sub(r"[^a-z0-9' -]", " ", text)
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def toy_guessing_words(text):
+    return set(re.findall(r"[a-z']+", normalize_toy_guessing_text(text)))
+
+
+def get_toy_guessing_game_default_state(rounds_completed=0, used_toys=None):
+    import random
+
+    used_so_far = [
+        obj for obj in list(used_toys or [])
+        if obj in TOY_GUESSING_GAME_OBJECT_PROFILES
+    ]
+
+    toy_names = [
+        obj for obj in TOY_GUESSING_GAME_OBJECT_PROFILES.keys()
+        if obj not in set(used_so_far)
+    ]
+
+    if not toy_names:
+        toy_names = list(TOY_GUESSING_GAME_OBJECT_PROFILES.keys())
+
+    secret_toy = random.choice(toy_names)
+    used_toys_for_session = (used_so_far + [secret_toy])[-TOY_GUESSING_GAME_MAX_ROUNDS:]
+
+    return {
+        "stage": "intro",
+        "secret_toy": secret_toy,
+        "used_toys": used_toys_for_session,
+        "rounds_completed": int(rounds_completed or 0),
+        "questions_asked": 0,
+        "comfortable_question_count": 0,
+        "unclear_or_silent_count": 0,
+        "unclear_streak": 0,
+        "hint_count": 0,
+        "wrong_guess_count": 0,
+        "wrong_guesses": [],
+        "asked_questions": [],
+        "asked_topics": [],
+        "recent_hints": [],
+        "recent_round_prompts": [],
+        "recent_support_lines": [],
+        "recent_good_question_prefixes": [],
+        "last_hint_offer_question_count": 0,
+        "recent_follow_ups": [],
+        "game_complete": False,
+        "last_response_mode": "none"
+    }
+
+
+def get_toy_guessing_game_profile(game_state):
+    secret_toy = normalize_toy_guessing_text(game_state.get("secret_toy", "teddy_bear"))
+
+    if secret_toy not in TOY_GUESSING_GAME_OBJECT_PROFILES:
+        secret_toy = "teddy_bear"
+        game_state["secret_toy"] = secret_toy
+
+    return TOY_GUESSING_GAME_OBJECT_PROFILES[secret_toy]
+
+
+def is_toy_guessing_unclear_or_silent(text):
+    lowered = normalize_toy_guessing_text(text)
+
+    if not lowered:
+        return True
+
+    unclear_phrases = {
+        "i don't know", "i dont know", "i do not know", "don't know", "dont know",
+        "do not know", "idk", "not sure", "i'm not sure", "im not sure",
+        "maybe", "hmm", "hm", "mm", "mmm", "uh", "um"
+    }
+
+    if lowered in unclear_phrases:
+        return True
+
+    words = re.findall(r"[a-z']+", lowered)
+    filler_words = {"hmm", "hm", "mm", "mmm", "uh", "um", "like", "wait"}
+
+    return bool(words) and all(word in filler_words for word in words)
+
+
+def is_toy_guessing_hint_request(text):
+    lowered = normalize_toy_guessing_text(text)
+
+    hint_phrases = [
+        "hint", "clue", "give me a hint", "give me a clue",
+        "can i have a hint", "can i have a clue", "tell me something",
+        "help me", "i need help"
+    ]
+
+    return any(phrase in lowered for phrase in hint_phrases)
+
+
+def get_toy_guessing_named_toy(text):
+    lowered = normalize_toy_guessing_text(text)
+    words = toy_guessing_words(lowered)
+
+    for toy_key, profile in TOY_GUESSING_GAME_OBJECT_PROFILES.items():
+        for alias in profile.get("aliases", set()):
+            alias_clean = normalize_toy_guessing_text(alias)
+            alias_words = set(re.findall(r"[a-z']+", alias_clean))
+
+            if not alias_clean:
+                continue
+
+            if " " in alias_clean and alias_clean in lowered:
+                return toy_key
+
+            if alias_clean in words:
+                return toy_key
+
+            if alias_words and alias_words.issubset(words) and len(alias_words) > 1:
+                return toy_key
+
+    return None
+
+
+def is_toy_guessing_direct_guess(text):
+    lowered = normalize_toy_guessing_text(text)
+    named_toy = get_toy_guessing_named_toy(lowered)
+
+    if not named_toy:
+        return False
+
+    direct_guess_phrases = [
+        "is it", "is your toy", "is your thing", "are you thinking of",
+        "i guess", "my guess", "i think", "it's", "it is", "maybe",
+        "the toy is", "the thing is"
+    ]
+
+    if any(phrase in lowered for phrase in direct_guess_phrases):
+        return True
+
+    words = re.findall(r"[a-z']+", lowered)
+    return len(words) <= 4
+
+
+def is_toy_guessing_question(text):
+    lowered = normalize_toy_guessing_text(text)
+    words = re.findall(r"[a-z']+", lowered)
+
+    if not words:
+        return False
+
+    question_starters = {
+        "is", "are", "do", "does", "can", "could", "would",
+        "has", "have", "what", "where", "how", "did", "will"
+    }
+
+    return words[0] in question_starters or "?" in str(text)
+
+
+def toy_guessing_question_key(text):
+    lowered = normalize_toy_guessing_text(text)
+    lowered = re.sub(
+        r"\b(the|a|an|your|toy|thing|it|does|do|is|are|can|could|would|has|have|what|where|how)\b",
+        " ",
+        lowered
+    )
+    lowered = re.sub(r"\s+", " ", lowered).strip()
+    return lowered[:80]
+
+
+def get_toy_guessing_question_topic(text):
+    words = toy_guessing_words(text)
+
+    if words & {"big", "small", "little", "tiny", "large", "huge", "size"}:
+        return "size"
+
+    if words & {"color", "colour", "black", "white", "brown", "orange", "yellow", "green", "gray", "grey", "blue", "red", "pink", "purple", "clear", "silver"}:
+        return "color"
+
+    if words & {"where", "store", "shelf", "box", "aisle", "toy", "toys", "floor", "table"}:
+        return "place"
+
+    if words & {"play", "pretend", "build", "stack", "roll", "bounce", "throw", "use", "used", "move", "button", "buttons", "game", "puzzle"}:
+        return "use"
+
+    if words & {"wood", "plastic", "metal", "paper", "cardboard", "fabric", "soft", "hard", "rubber", "flat", "screen", "buttons", "string"}:
+        return "material"
+
+    return "general"
+
+
+def remember_toy_guessing_question_topic(text, game_state):
+    topic = get_toy_guessing_question_topic(text)
+
+    if topic:
+        game_state.setdefault("asked_topics", []).append(topic)
+        game_state["asked_topics"] = game_state["asked_topics"][-10:]
+
+    return topic
+
+
+def calm_toy_guessing_game_line(text, game_complete=False):
+    text = re.sub(r"\s+", " ", str(text or "")).strip()
+
+    if not text:
+        return "I'm thinking of a toy you can find in a toy store."
+
+    replacements = {
+        "Amazing": "Nice",
+        "amazing": "nice",
+        "Awesome": "Nice",
+        "awesome": "nice",
+        "Wow": "Hmm",
+        "wow": "hmm",
+        "Interesting question.": "Good question.",
+        "Interesting.": "",
+        "That is interesting.": "",
+        "That gives me something to think about.": "",
+        "Okay, that helps.": "",
+        "That helps.": "",
+        "I can work with that.": "",
+        "Good job asking": "Good question",
+        "Great job asking": "Great question",
+        "Good job talking": "Thank you",
+        "Great job talking": "Thank you",
+        "Good job using your words": "Thank you",
+        "I couldn't hear you": "That's okay",
+        "I could not hear you": "That's okay"
+    }
+
+    for old, new in replacements.items():
+        text = text.replace(old, new)
+
+    text = re.sub(r"\s+", " ", text).strip()
+
+    if not text:
+        text = "Good question."
+
+    if not game_complete:
+        text = text.replace("!", ".")
+
+    if text.count("!") > 1:
+        first = text.find("!")
+        text = text[:first + 1] + text[first + 1:].replace("!", ".")
+
+    return text[:300].strip()
+
+
+def get_toy_guessing_game_specific_color_answer(text, game_state):
+    words = toy_guessing_words(text)
+    profile = get_toy_guessing_game_profile(game_state)
+
+    color_words = {
+        "black", "white", "brown", "orange", "yellow", "green", "gray", "grey",
+        "blue", "red", "pink", "purple", "clear", "silver", "tan"
+    }
+
+    asked_colors = [color for color in color_words if color in words]
+    colors_for_secret = profile.get("colors", set())
+
+    if asked_colors:
+        spoken_color = asked_colors[0]
+        normalized_color = "gray" if spoken_color == "grey" else spoken_color
+        normalized_colors_for_secret = {
+            "gray" if color == "grey" else color
+            for color in colors_for_secret
+        }
+
+        if normalized_color in normalized_colors_for_secret:
+            return {
+                "type": "answer",
+                "message": f"Yes, it can be {normalized_color}.",
+                "question_answered": True
+            }
+
+        return {
+            "type": "answer",
+            "message": f"No, it is not usually {normalized_color}.",
+            "question_answered": True
+        }
+
+    if "color" in words or "colour" in words:
+        normalized_colors = sorted({
+            "gray" if color == "grey" else color
+            for color in colors_for_secret
+        })
+
+        if not normalized_colors:
+            message = "It can be different colors."
+        elif len(normalized_colors) == 1:
+            message = f"It is often {normalized_colors[0]}."
+        else:
+            message = f"It can be {normalized_colors[0]}."
+
+        return {
+            "type": "answer",
+            "message": message,
+            "question_answered": True
+        }
+
+    return None
+
+
+def get_toy_guessing_game_ai_question_answer(text, game_state):
+    import random
+
+    profile = get_toy_guessing_game_profile(game_state)
+    secret_toy = game_state.get("secret_toy", "teddy_bear")
+    display = profile.get("display", secret_toy)
+    tags = sorted(list(profile.get("tags", [])))
+    asked_topics = set(game_state.get("asked_topics", []))
+    recent_support_lines = list(game_state.get("recent_support_lines", []))[-5:]
+
+    topic_options = [
+        ("place", "You can ask where I might find it in toy store."),
+        ("use", "You can ask what it is used for."),
+        ("color", "You can ask what color it is."),
+        ("size", "You can ask about its size."),
+        ("material", "You can ask what it is made of."),
+        ("general", "You can ask me a yes or no toy question.")
+    ]
+
+    fresh_topic_lines = [
+        line for topic, line in topic_options
+        if topic not in asked_topics and line not in recent_support_lines
+    ]
+
+    general_fallbacks = [
+        "I can answer toy questions best.",
+        "That one is tricky for this game.",
+        "I might give away too much with that one.",
+        "Try asking one toy clue question.",
+        "You can ask me a yes or no question about it."
+    ]
+
+    def fallback_support():
+        if fresh_topic_lines:
+            line = random.choice(fresh_topic_lines)
+        else:
+            fresh = [item for item in general_fallbacks if item not in recent_support_lines]
+            line = random.choice(fresh or general_fallbacks)
+
+        game_state["recent_support_lines"] = (recent_support_lines + [line])[-5:]
+
+        return {
+            "type": "support",
+            "message": line,
+            "question_answered": False
+        }
+
+    try:
+        system_prompt = f"""
+You are a warm cartoon toy worker playing Toy Guessing Game.
+
+The toy worker is thinking of one secret toy a child can find in a toy store.
+The child asks questions to collect clues and guess what it is.
+
+Secret toy:
+{display}
+
+Secret toy tags:
+{tags}
+
+Rules:
+- Answer the child's question naturally and briefly.
+- Do not reveal the secret toy's name unless the child directly guessed it.
+- If the child asks a yes/no question, answer yes or no clearly.
+- If the child asks an open question, give a tiny answer, not a big clue.
+- Keep the answer to 1 short sentence.
+- Do not invite another question every time.
+- Do not say "interesting."
+- Do not mention therapy, anxiety, selective mutism, treatment, progress, confidence, bravery, or speaking.
+- Do not praise the child for talking.
+- Keep the focus on the guessing game and the toy.
+- Use calm periods, not excited exclamation marks.
+
+Output JSON only:
+{{
+  "type": "answer",
+  "message": "Toy Store Worker's spoken line",
+  "question_answered": true
+}}
+"""
+
+        user_prompt = f"""
+Child question:
+{text}
+
+Recent support lines to avoid:
+{recent_support_lines}
+
+Answer the child's question about the secret toy without revealing its name.
+"""
+
+        response = client.responses.create(
+            model="gpt-4.1-mini",
+            input=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ]
+        )
+
+        raw = response.output_text.strip()
+        raw = raw.replace("```json", "").replace("```", "").strip()
+
+        try:
+            parsed = json.loads(raw)
+        except Exception:
+            return fallback_support()
+
+        message = re.sub(r"\s+", " ", str(parsed.get("message", ""))).strip()
+
+        if not message:
+            return fallback_support()
+
+        banned_bits = [
+            "interesting",
+            "something to think about",
+            "good job talking",
+            "great job talking",
+            "use your words"
+        ]
+
+        lowered_message = message.lower()
+
+        if any(bit in lowered_message for bit in banned_bits):
+            return fallback_support()
+
+        guessed_toy = get_toy_guessing_named_toy(text)
+
+        if guessed_toy != secret_toy:
+            message = re.sub(
+                rf"\b{re.escape(display)}s?\b",
+                "it",
+                message,
+                flags=re.IGNORECASE
+            )
+
+        return {
+            "type": parsed.get("type", "answer"),
+            "message": calm_toy_guessing_game_line(message),
+            "question_answered": bool(parsed.get("question_answered", True))
+        }
+
+    except Exception as e:
+        print("Toy Guessing Game flexible answer error:", repr(e))
+        return fallback_support()
+
+
+def answer_toy_guessing_question(text, game_state):
+    profile = get_toy_guessing_game_profile(game_state)
+    tags = profile.get("tags", set())
+    lowered = normalize_toy_guessing_text(text)
+    words = toy_guessing_words(lowered)
+    secret_toy = game_state.get("secret_toy")
+
+    named_toy = get_toy_guessing_named_toy(lowered)
+
+    if named_toy:
+        if named_toy == secret_toy:
+            return {
+                "type": "correct_guess",
+                "message": f"Yes, it is a {profile['display']}. You got it.",
+                "question_answered": True
+            }
+
+        return {
+            "type": "wrong_guess",
+            "message": f"Not quite, it is not a {TOY_GUESSING_GAME_OBJECT_PROFILES[named_toy]['display']}.",
+            "wrong_guess": named_toy,
+            "question_answered": True
+        }
+
+    color_answer = get_toy_guessing_game_specific_color_answer(text, game_state)
+
+    if color_answer:
+        return color_answer
+
+    if (
+        ("how" in words and ("big" in words or "small" in words or "size" in words))
+        or ("big" in words and "small" in words)
+        or ("size" in words)
+    ):
+        if "big" in tags or "large" in tags:
+            message = "It is pretty big."
+        elif "medium" in tags:
+            message = "It is medium sized."
+        elif "small" in tags:
+            message = "It is small."
+        else:
+            message = "It is not especially big."
+
+        return {"type": "answer", "message": message, "question_answered": True}
+
+    if "where" in words or words & {"store", "shelf", "box", "aisle", "toy", "toys", "floor", "table"}:
+        if "toy_store" in tags:
+            message = "You could find it in a toy store."
+        elif "box" in tags:
+            message = "It might come in a box."
+        elif "table" in tags:
+            message = "You might play with it on a table or floor."
+        else:
+            message = "You could find it near other toys."
+
+        return {"type": "answer", "message": message, "question_answered": True}
+
+    toy_checks = [
+        ({"wheel", "wheels", "roll", "rolling"}, {"wheels", "roll"}, "Yes, it can roll or has wheels.", "No, wheels are not a big clue."),
+        ({"stuffed", "plush", "soft"}, {"stuffed", "soft"}, "Yes, it is soft or stuffed.", "No, it is not really a stuffed toy."),
+        ({"build", "stack", "blocks", "lego", "legos"}, {"build", "stack", "pieces"}, "Yes, you can build or stack with it.", "No, it is not mainly for building."),
+        ({"piece", "pieces", "card", "cards", "board"}, {"pieces", "cards", "game"}, "Yes, it can have pieces, cards, or a board.", "No, pieces are not the main clue."),
+        ({"robot", "button", "buttons", "battery", "sound", "sounds", "move"}, {"technology", "electric", "battery", "buttons", "move"}, "Yes, it might have buttons, batteries, or moving parts.", "No, it is not really an electronic toy."),
+        ({"round", "bounce", "bouncy"}, {"round", "bounce"}, "Yes, round or bouncy is a good clue.", "No, it is not mainly round or bouncy."),
+        ({"pretend", "character", "person", "superhero"}, {"pretend", "person", "superhero"}, "Yes, you can use it for pretend play.", "No, pretend play is not the main clue."),
+        ({"string", "yo", "yoyo"}, {"string", "up_down"}, "Yes, it has a string.", "No, it does not use a string.")
+    ]
+
+    for trigger_words, needed_tags, yes_line, no_line in toy_checks:
+        if words & trigger_words:
+            if tags & needed_tags:
+                return {"type": "answer", "message": yes_line, "question_answered": True}
+
+            return {"type": "answer", "message": no_line, "question_answered": True}
+
+    checks = [
+        ({"write", "writing"}, {"writing"}, "Yes, you can use it for writing.", "No, it is not mainly for writing."),
+        ({"draw", "drawing"}, {"drawing"}, "Yes, you can use it for drawing.", "No, it is not mainly for drawing."),
+        ({"color", "colour", "coloring"}, {"color"}, "Yes, it can be used for coloring.", "No, it is not mainly for coloring."),
+        ({"cut", "cutting"}, {"cutting"}, "Yes, it is used for cutting.", "No, it is not used for cutting."),
+        ({"measure", "measuring"}, {"measure"}, "Yes, it is used for measuring.", "No, it is not used for measuring."),
+        ({"glue", "sticky", "stick"}, {"sticky"}, "Yes, it can be sticky or used for sticking things.", "No, it is not sticky."),
+                ({"carry", "hold"}, {"carry"}, "Yes, it can carry or hold things.", "No, it is not mainly for carrying things."),
+        ({"food", "lunch", "eat"}, {"food"}, "Yes, it has to do with food or lunch.", "No, it is not for food."),
+        ({"sit", "seat"}, {"sit"}, "Yes, you can sit on it.", "No, you do not sit on it."),
+        ({"type", "keyboard"}, {"keyboard"}, "Yes, you can type on it.", "No, you do not type on it."),
+        ({"screen"}, {"screen"}, "Yes, it has a screen.", "No, it does not have a screen."),
+        ({"math", "number", "numbers"}, {"math", "numbers"}, "Yes, it is used for math or numbers.", "No, it is not mainly for math."),
+        ({"paint", "painting"}, {"painting"}, "Yes, it is used with paint.", "No, it is not used with paint."),
+        ({"paper", "papers"}, {"paper"}, "Yes, it has to do with paper.", "No, paper is not the main clue."),
+        ({"staple", "stapler"}, {"organize", "paper", "metal"}, "Yes, it can help keep papers together.", "No, it is not used for stapling."),
+        ({"tape"}, {"sticky", "roll"}, "Yes, it can be tape or tape-like.", "No, it is not tape."),
+        ({"wood", "wooden"}, {"wood"}, "Yes, it can be made of wood.", "No, it is not usually wooden."),
+        ({"plastic"}, {"plastic"}, "Yes, it can have plastic.", "No, plastic is not a big clue."),
+        ({"metal"}, {"metal"}, "Yes, it can have metal.", "No, it does not usually have metal."),
+        ({"fabric", "cloth"}, {"fabric"}, "Yes, it can be made of fabric.", "No, it is not usually fabric."),
+        ({"sharp", "pointy"}, {"sharp", "pointy"}, "Yes, it can be sharp or pointy.", "No, it is not really sharp or pointy."),
+        ({"flat"}, {"flat"}, "Yes, it is pretty flat.", "No, flat is not a big clue."),
+        ({"art", "craft", "crafts"}, {"art", "craft"}, "Yes, you might use it for art or crafts.", "No, it is not mainly for art or crafts."),
+        ({"technology", "electric", "electronic"}, {"technology", "electric"}, "Yes, it is technology.", "No, it is not technology.")
+    ]
+
+    for trigger_words, needed_tags, yes_line, no_line in checks:
+        if words & trigger_words:
+            if tags & needed_tags:
+                return {"type": "answer", "message": yes_line, "question_answered": True}
+
+            return {"type": "answer", "message": no_line, "question_answered": True}
+
+    return get_toy_guessing_game_ai_question_answer(text, game_state)
+
+
+def get_toy_guessing_game_hint(game_state):
+    import random
+
+    profile = get_toy_guessing_game_profile(game_state)
+    recent_hints = list(game_state.get("recent_hints", []))
+    hints = list(profile.get("hints", []))
+
+    fresh = [hint for hint in hints if hint not in recent_hints]
+
+    if fresh:
+        hint = random.choice(fresh)
+    elif hints:
+        hint = random.choice(hints)
+    else:
+        hint = "This is something many kids know from toy store."
+
+    game_state["recent_hints"] = (recent_hints + [hint])[-5:]
+    game_state["hint_count"] = int(game_state.get("hint_count", 0)) + 1
+
+    return hint
+
+
+def classify_toy_guessing_game_round_choice(text, offer_next_game=False):
+    lowered = normalize_toy_guessing_text(text)
+    words = toy_guessing_words(lowered)
+
+    if not lowered:
+        return "unclear"
+
+    stop_words = {"stop", "done", "finish", "finished", "end", "quit", "leave", "dashboard", "no", "nope", "nah"}
+    same_game_words = {"again", "same", "replay", "more", "continue", "yes", "yeah", "yep", "yup", "sure", "okay", "ok", "alright", "fine", "good", "cool", "this"}
+
+    if words & stop_words:
+        return "stop"
+
+    if words & same_game_words:
+        return "same_game"
+
+    same_game_phrases = [
+        "play again", "play another round", "another round", "one more round",
+        "same game", "let's play", "lets play", "keep playing", "do it again", "try again"
+    ]
+
+    if any(phrase in lowered for phrase in same_game_phrases):
+        return "same_game"
+
+    return "unclear"
+
+
+def maybe_add_toy_good_question_prefix(message, game_state):
+    import random
+
+    question_count = int(game_state.get("questions_asked", 0))
+
+    should_add = (
+        question_count <= 2
+        or question_count in {4, 6, 8}
+        or random.random() < 0.55
+    )
+
+    if not should_add:
+        return message
+
+    lowered = normalize_toy_guessing_text(message)
+
+    if lowered.startswith(("that's a good question", "that is a good question", "good question", "great question", "nice question")):
+        return message
+
+    prefixes = [
+        "That's a good question.",
+        "Good question.",
+        "Great question.",
+        "Nice question.",
+        "That's a smart thing to ask."
+    ]
+
+    recent = list(game_state.get("recent_good_question_prefixes", []))[-3:]
+    fresh = [prefix for prefix in prefixes if prefix not in recent]
+    prefix = random.choice(fresh or prefixes)
+
+    game_state["recent_good_question_prefixes"] = (recent + [prefix])[-3:]
+
+    return f"{prefix} {message}"
+
+
+def get_toy_guessing_game_follow_up_after_answer(game_state):
+    questions_asked = int(game_state.get("questions_asked", 0))
+    wrong_guess_count = int(game_state.get("wrong_guess_count", 0))
+    total_child_turns = questions_asked + wrong_guess_count
+    last_hint_offer = int(game_state.get("last_hint_offer_question_count", 0))
+
+    if total_child_turns >= 3 and total_child_turns - last_hint_offer >= 3:
+        game_state["last_hint_offer_question_count"] = total_child_turns
+
+        options = [
+            "Let me know whenever you want a hint.",
+            "Let me know if you want a clue.",
+            "You can ask for a hint whenever you want.",
+            "Whenever you want a clue, you can ask me."
+        ]
+
+        recent = list(game_state.get("recent_follow_ups", []))[-4:]
+        follow_up = pick_non_repeating_line(options, recent)
+        game_state["recent_follow_ups"] = (recent + [follow_up])[-4:]
+
+        return follow_up
+
+    return ""
+
+
+def make_toy_guessing_game_audio_response(
+    message,
+    stage,
+    response_mode,
+    expects_response,
+    game_complete,
+    game_state,
+    history,
+    event_type="server_response",
+    child_response="",
+    next_event=None,
+    pause_before_next_ms=None,
+    next_url=None,
+    redirect_after_ms=None,
+    session_done=False
+):
+    message = calm_toy_guessing_game_line(message, game_complete=game_complete)
+
+    history.append({
+        "event_type": event_type,
+        "child_response": child_response,
+        "toy worker": message,
+        "stage": stage,
+        "response_mode": response_mode,
+        "game_complete": game_complete,
+        "session_done": session_done
+    })
+
+    game_state["stage"] = stage
+    game_state["last_response_mode"] = response_mode
+    game_state["game_complete"] = game_complete
+
+    session["toy_guessing_game_history"] = history[-20:]
+    session["toy_guessing_game_state"] = game_state
+    session.modified = True
+
+    audio_bytes = generate_toy_guessing_voice_elevenlabs(message, game_complete=game_complete)
+    audio_base64 = base64.b64encode(audio_bytes).decode("utf-8")
+
+    payload = {
+        "success": True,
+        "message": message,
+        "audio": f"data:audio/mpeg;base64,{audio_base64}",
+        "stage": stage,
+        "expects_response": expects_response,
+        "response_mode": response_mode,
+        "game_complete": game_complete,
+        "session_done": session_done,
+        "offer_next_game": False,
+        "game_state": game_state
+    }
+
+    if next_event:
+        payload["next_event"] = next_event
+
+    if pause_before_next_ms is not None:
+        payload["pause_before_next_ms"] = pause_before_next_ms
+
+    if next_url:
+        payload["next_url"] = next_url
+
+    if redirect_after_ms is not None:
+        payload["redirect_after_ms"] = redirect_after_ms
+
+    return jsonify(payload)
+
+
+def unlock_toy_guessing_game_next_activity_for_user():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT activity_id, scene_id, activity_order
+            FROM activity
+            WHERE activity_name = ?
+              AND is_active = 1
+            LIMIT 1
+        """, ("toy_guessing_game",))
+
+        current_activity = cursor.fetchone()
+
+        if not current_activity:
+            conn.close()
+            return False
+
+        cursor.execute("""
+            SELECT activity_id
+            FROM activity
+            WHERE is_active = 1
+              AND (
+                scene_id > ?
+                OR (scene_id = ? AND activity_order > ?)
+              )
+            ORDER BY scene_id ASC, activity_order ASC
+            LIMIT 1
+        """, (
+            current_activity["scene_id"],
+            current_activity["scene_id"],
+            current_activity["activity_order"]
+        ))
+
+        next_activity = cursor.fetchone()
+
+        if not next_activity:
+            conn.close()
+            return False
+
+        next_activity_id = next_activity["activity_id"]
+
+        cursor.execute("""
+            INSERT OR IGNORE INTO progress (
+                user_id,
+                activity_id,
+                is_unlocked,
+                is_completed,
+                words_spoken,
+                minutes_spoken,
+                active_minutes,
+                time_spent_on_activity
+            )
+            VALUES (?, ?, 1, 0, 0, 0, 0, 0)
+        """, (session["user_id"], next_activity_id))
+
+        cursor.execute("""
+            UPDATE progress
+            SET is_unlocked = 1
+            WHERE user_id = ? AND activity_id = ?
+        """, (session["user_id"], next_activity_id))
+
+        cursor.execute("""
+            UPDATE users
+            SET current_activity_id = ?
+            WHERE user_id = ?
+        """, (next_activity_id, session["user_id"]))
+
+        conn.commit()
+        conn.close()
+
+        return True
+
+    except Exception as e:
+        print("Could not unlock next Toy Guessing Game activity:", repr(e))
+        return False
+
+
+def make_toy_guessing_game_correct_round_response(
+    profile,
+    game_state,
+    history,
+    event_type,
+    child_response,
+    base_message
+):
+    rounds_completed = int(game_state.get("rounds_completed", 0)) + 1
+    game_state["rounds_completed"] = rounds_completed
+    game_state["game_complete"] = True
+
+    if rounds_completed >= TOY_GUESSING_GAME_MAX_ROUNDS:
+        unlock_toy_guessing_game_next_activity_for_user()
+
+        message = (
+            f"{base_message} "
+            "That was our last one for today. "
+            "This was a fun call. I'll see you next time. Bye."
+        )
+
+        return make_toy_guessing_game_audio_response(
+            message=message,
+            stage="session_done",
+            response_mode="none",
+            expects_response=False,
+            game_complete=True,
+            game_state=game_state,
+            history=history,
+            event_type=event_type,
+            child_response=child_response,
+            next_url=url_for("dashboard"),
+            redirect_after_ms=1800,
+            session_done=True
+        )
+
+    if rounds_completed == TOY_GUESSING_GAME_MAX_ROUNDS - 1:
+        message = f"{base_message} Do you want to play one last round before we end the call?"
+    else:
+        message = f"{base_message} Do you want to play another round?"
+
+    return make_toy_guessing_game_audio_response(
+        message=message,
+        stage="round_choice",
+        response_mode="round_choice_voice",
+        expects_response=True,
+        game_complete=True,
+        game_state=game_state,
+        history=history,
+        event_type=event_type,
+        child_response=child_response
+    )
+
+
+@app.route("/api/toy-guessing-game/thinking-audio", methods=["GET"])
+@csrf.exempt
+@login_required
+@limiter.limit("50 per minute")
+def toy_guessing_game_thinking_audio():
+    import hashlib
+    import random
+
+    thinking_lines = ["Hmm."]
+
+    avoid_raw = request.args.get("avoid", "")
+    avoid_lines = {
+        re.sub(r"\s+", " ", item).strip().lower()
+        for item in avoid_raw.split("|")
+        if item.strip()
+    }
+
+    fresh_lines = [
+        line for line in thinking_lines
+        if re.sub(r"\s+", " ", line).strip().lower() not in avoid_lines
+    ]
+
+    if not fresh_lines:
+        fresh_lines = thinking_lines
+
+    line = random.choice(fresh_lines)
+    cache_dir = os.path.join(BASE_DIR, "static", "audio", "toy_guessing_thinking")
+    os.makedirs(cache_dir, exist_ok=True)
+
+    voice_id = os.getenv("TOY_TRIVIA_VOICE_ID") or os.getenv("TOY_WORKER_VOICE_ID") or os.getenv("ELEVENLABS_VOICE_ID", "piI8Kku0DcvcL6TTSeQt")
+    cache_key = f"toy-guessing-thinking-v1:{voice_id}:{line}"
+    filename = hashlib.md5(cache_key.encode("utf-8")).hexdigest() + ".mp3"
+    filepath = os.path.join(cache_dir, filename)
+
+    try:
+        if not os.path.exists(filepath):
+            audio_bytes = generate_toy_guessing_voice_elevenlabs(line, thinking=True)
+
+            with open(filepath, "wb") as f:
+                f.write(audio_bytes)
+
+        return jsonify({
+            "success": True,
+            "line": line,
+            "audio_url": url_for("static", filename=f"audio/toy_guessing_thinking/{filename}")
+        })
+
+    except Exception as e:
+        print("Toy Guessing Game thinking audio error:", repr(e))
+        return jsonify({
+            "success": False,
+            "error": "Could not generate thinking audio"
+        }), 500
+
+
+@app.route("/api/toy-guessing-game/message", methods=["POST"])
+@csrf.exempt
+@login_required
+@limiter.limit("30 per minute")
+def toy_guessing_game_message():
+    data = request.get_json(silent=True) or {}
+
+    event_type = re.sub(r"\s+", " ", str(data.get("event_type", "intro") or "intro")).strip()
+    child_response = re.sub(r"\s+", " ", str(data.get("child_response", "") or "")).strip()
+    previous_response_mode = re.sub(r"\s+", " ", str(data.get("response_mode", "none") or "none")).strip()
+
+    allowed_events = {"intro", "restart", "first_prompt", "child_answer", "no_response"}
+
+    if event_type not in allowed_events:
+        return jsonify({"success": False, "error": "Invalid event_type"}), 400
+
+    if event_type in {"intro", "restart"}:
+        session.pop("toy_guessing_game_history", None)
+        session.pop("toy_guessing_game_state", None)
+        history = []
+        game_state = get_toy_guessing_game_default_state(rounds_completed=0)
+        child_response = ""
+        previous_response_mode = "none"
+    else:
+        history = session.get("toy_guessing_game_history", [])
+        game_state = session.get(
+            "toy_guessing_game_state",
+            get_toy_guessing_game_default_state()
+        )
+
+    profile = get_toy_guessing_game_profile(game_state)
+
+    if event_type in {"intro", "restart"}:
+        intro_options = [
+            "Hi, I'm the toy worker. Let's play a guessing game. I'm thinking of a toy you can find in a toy store. Ask me questions so you can guess what it is.",
+            "Hi, I'm the toy worker. I picked a toy you can find in a toy store. Ask me questions, and when you know it, make a guess.",
+            "Hi, I'm the toy worker. I'm thinking of a toy from the toy store. Your job is to ask questions and guess what it is.",
+            "Hi, I'm the toy worker. I picked one toy. Ask me questions to get clues, then guess what it is."
+        ]
+
+        message = pick_non_repeating_line(
+            intro_options,
+            [item.get("toy worker", "") for item in history[-8:] if isinstance(item, dict)]
+        )
+
+        try:
+            return make_toy_guessing_game_audio_response(
+                message=message,
+                stage="intro",
+                response_mode="none",
+                expects_response=False,
+                game_complete=False,
+                game_state=game_state,
+                history=history,
+                event_type=event_type,
+                child_response="",
+                next_event="first_prompt",
+                pause_before_next_ms=2200
+            )
+
+        except Exception as e:
+            print("Toy Guessing Game intro TTS error:", repr(e))
+            return jsonify({
+                "success": False,
+                "error": "Could not generate Toy Store Worker intro"
+            }), 500
+
+    if event_type == "first_prompt":
+        rounds_completed = int(game_state.get("rounds_completed", 0))
+
+        if rounds_completed == TOY_GUESSING_GAME_MAX_ROUNDS - 1:
+            prompts = [
+                "I picked the last one for today. Ask me a question so you can figure out what it is.",
+                "Okay, this is our last one for today. Ask me a question, then try to guess when you know it.",
+                "I am thinking of the last one now. What question will help you guess it?",
+                "Last one for today. Ask your first question so you can start guessing."
+            ]
+        else:
+            prompts = [
+                "I picked one. Ask me a question so you can guess what it is.",
+                "I am thinking of it now. What question will help you guess it?",
+                "You can ask me something about it, like what it looks like or what it is used for.",
+                "Ask your first question so you can figure out what it is."
+            ]
+
+        recent_lines = [
+            item.get("toy worker", "")
+            for item in history[-8:]
+            if isinstance(item, dict)
+        ]
+
+        message = pick_non_repeating_line(prompts, recent_lines)
+
+        try:
+            return make_toy_guessing_game_audio_response(
+                message=message,
+                stage="asking",
+                response_mode="open_hint",
+                expects_response=True,
+                game_complete=False,
+                game_state=game_state,
+                history=history,
+                event_type=event_type,
+                child_response=child_response
+            )
+
+        except Exception as e:
+            print("Toy Guessing Game first prompt TTS error:", repr(e))
+            return jsonify({
+                "success": False,
+                "error": "Could not generate first prompt"
+            }), 500
+
+    if previous_response_mode in {"round_choice", "round_choice_voice"} and event_type in {"child_answer", "no_response"}:
+        rounds_completed = int(game_state.get("rounds_completed", 0))
+
+        if event_type == "no_response":
+            choice = "unclear"
+        else:
+            choice = classify_toy_guessing_game_round_choice(child_response, offer_next_game=False)
+
+        if choice == "same_game":
+            previous_toy = game_state.get("secret_toy")
+            used_toys = list(game_state.get("used_toys", []))
+
+            if previous_toy and previous_toy not in used_toys:
+                used_toys.append(previous_toy)
+
+            new_game_state = get_toy_guessing_game_default_state(
+                rounds_completed=rounds_completed,
+                used_toys=used_toys
+            )
+
+            if rounds_completed == TOY_GUESSING_GAME_MAX_ROUNDS - 1:
+                replay_prompts = [
+                    "Okay. Let's play one more round before we end our call today. I picked something new you can find at toy store.",
+                    "Okay. One more round for today. I have a new one in mind.",
+                    "Sure. This will be our last one today. I picked something new."
+                ]
+            else:
+                replay_prompts = [
+                    "Okay. I picked something new you can find at toy store.",
+                    "Sure. I have a different one in mind now.",
+                    "Okay. New one. Ask me questions so you can guess it.",
+                    "Let's do another one. I picked something different."
+                ]
+
+            recent_prompts = game_state.get("recent_round_prompts", [])
+            message = pick_non_repeating_line(replay_prompts, recent_prompts)
+            new_game_state["recent_round_prompts"] = (recent_prompts + [message])[-4:]
+
+            try:
+                return make_toy_guessing_game_audio_response(
+                    message=message,
+                    stage="intro",
+                    response_mode="none",
+                    expects_response=False,
+                    game_complete=False,
+                    game_state=new_game_state,
+                    history=[],
+                    event_type="replay",
+                    child_response=child_response,
+                    next_event="first_prompt",
+                    pause_before_next_ms=1600
+                )
+
+            except Exception as e:
+                print("Toy Guessing Game replay TTS error:", repr(e))
+                return jsonify({
+                    "success": False,
+                    "error": "Could not generate replay response"
+                }), 500
+
+        if choice == "stop":
+            message = "Okay. We can stop here. Thanks for playing Toy Guessing Game with me."
+
+            try:
+                return make_toy_guessing_game_audio_response(
+                    message=message,
+                    stage="session_done",
+                    response_mode="none",
+                    expects_response=False,
+                    game_complete=False,
+                    game_state=game_state,
+                    history=history,
+                    event_type="stop",
+                    child_response=child_response,
+                    session_done=True
+                )
+
+            except Exception as e:
+                print("Toy Guessing Game stop TTS error:", repr(e))
+                return jsonify({
+                    "success": False,
+                    "error": "Could not end the game"
+                }), 500
+
+        message = "That's okay. Do you want to play another round?"
+
+        try:
+            return make_toy_guessing_game_audio_response(
+                message=message,
+                stage="round_choice",
+                response_mode="round_choice_voice",
+                expects_response=True,
+                game_complete=False,
+                game_state=game_state,
+                history=history,
+                event_type="choice_clarification",
+                child_response=child_response
+            )
+
+        except Exception as e:
+            print("Toy Guessing Game choice clarification TTS error:", repr(e))
+            return jsonify({
+                "success": False,
+                "error": "Could not generate choice response"
+            }), 500
+
+    if event_type == "no_response" or is_toy_guessing_unclear_or_silent(child_response):
+        game_state["unclear_or_silent_count"] = int(game_state.get("unclear_or_silent_count", 0)) + 1
+        game_state["unclear_streak"] = int(game_state.get("unclear_streak", 0)) + 1
+
+        options = [
+            "That's okay. You can ask if it is big or small.",
+            "No worries. You can ask what it is used for.",
+            "That's okay. You can ask where you might find it in toy store.",
+            "No problem. You can ask for a hint whenever you want."
+        ]
+
+        recent_lines = [item.get("toy worker", "") for item in history[-8:] if isinstance(item, dict)]
+        message = pick_non_repeating_line(options, recent_lines)
+
+        try:
+            return make_toy_guessing_game_audio_response(
+                message=message,
+                stage="support",
+                response_mode="open_hint",
+                expects_response=True,
+                game_complete=False,
+                game_state=game_state,
+                history=history,
+                event_type=event_type,
+                child_response=child_response
+            )
+
+        except Exception as e:
+            print("Toy Guessing Game no-response TTS error:", repr(e))
+            return jsonify({
+                "success": False,
+                "error": "Could not generate support response"
+            }), 500
+
+    if is_toy_guessing_hint_request(child_response):
+        hint = get_toy_guessing_game_hint(game_state)
+        follow_up = get_toy_guessing_game_follow_up_after_answer(game_state)
+        message = f"Here's a hint. {hint} {follow_up}".strip()
+
+        try:
+            return make_toy_guessing_game_audio_response(
+                message=message,
+                stage="hint",
+                response_mode="open_hint",
+                expects_response=True,
+                game_complete=False,
+                game_state=game_state,
+                history=history,
+                event_type="hint_request",
+                child_response=child_response
+            )
+
+        except Exception as e:
+            print("Toy Guessing Game hint TTS error:", repr(e))
+            return jsonify({
+                "success": False,
+                "error": "Could not generate hint"
+            }), 500
+
+    if is_toy_guessing_direct_guess(child_response):
+        guessed_toy = get_toy_guessing_named_toy(child_response)
+
+        if guessed_toy:
+            secret_toy = game_state.get("secret_toy")
+
+            if guessed_toy == secret_toy:
+                base_message = f"Yes, it is a {profile['display']}. You got it."
+
+                try:
+                    return make_toy_guessing_game_correct_round_response(
+                        profile=profile,
+                        game_state=game_state,
+                        history=history,
+                        event_type="correct_guess",
+                        child_response=child_response,
+                        base_message=base_message
+                    )
+
+                except Exception as e:
+                    print("Toy Guessing Game direct correct TTS error:", repr(e))
+                    return jsonify({
+                        "success": False,
+                        "error": "Could not generate correct response"
+                    }), 500
+
+            game_state.setdefault("wrong_guesses", []).append(guessed_toy)
+            game_state["wrong_guess_count"] = int(game_state.get("wrong_guess_count", 0)) + 1
+
+            base_options = [
+                f"Not quite, it is not a {TOY_GUESSING_GAME_OBJECT_PROFILES[guessed_toy]['display']}.",
+                f"Good guess, but it is not a {TOY_GUESSING_GAME_OBJECT_PROFILES[guessed_toy]['display']}.",
+                "Not that one.",
+                f"It is not a {TOY_GUESSING_GAME_OBJECT_PROFILES[guessed_toy]['display']}."
+            ]
+
+            recent_lines = [item.get("toy worker", "") for item in history[-8:] if isinstance(item, dict)]
+            base_message = pick_non_repeating_line(base_options, recent_lines)
+            follow_up = get_toy_guessing_game_follow_up_after_answer(game_state)
+            message = f"{base_message} {follow_up}".strip()
+
+            try:
+                return make_toy_guessing_game_audio_response(
+                    message=message,
+                    stage="wrong_guess",
+                    response_mode="open_hint",
+                    expects_response=True,
+                    game_complete=False,
+                    game_state=game_state,
+                    history=history,
+                    event_type="wrong_guess",
+                    child_response=child_response
+                )
+
+            except Exception as e:
+                print("Toy Guessing Game wrong guess TTS error:", repr(e))
+                return jsonify({
+                    "success": False,
+                    "error": "Could not generate wrong guess response"
+                }), 500
+
+    if is_toy_guessing_question(child_response):
+        answer = answer_toy_guessing_question(child_response, game_state)
+
+        if answer["type"] == "correct_guess":
+            base_message = answer["message"]
+
+            try:
+                return make_toy_guessing_game_correct_round_response(
+                    profile=profile,
+                    game_state=game_state,
+                    history=history,
+                    event_type="correct_guess",
+                    child_response=child_response,
+                    base_message=base_message
+                )
+
+            except Exception as e:
+                print("Toy Guessing Game question correct TTS error:", repr(e))
+                return jsonify({
+                    "success": False,
+                    "error": "Could not generate correct response"
+                }), 500
+
+        if answer["type"] == "wrong_guess":
+            wrong_guess = answer.get("wrong_guess")
+
+            if wrong_guess:
+                game_state.setdefault("wrong_guesses", []).append(wrong_guess)
+
+            game_state["wrong_guess_count"] = int(game_state.get("wrong_guess_count", 0)) + 1
+            base_message = answer["message"]
+            follow_up = get_toy_guessing_game_follow_up_after_answer(game_state)
+            message = f"{base_message} {follow_up}".strip()
+
+            try:
+                return make_toy_guessing_game_audio_response(
+                    message=message,
+                    stage="wrong_guess",
+                    response_mode="open_hint",
+                    expects_response=True,
+                    game_complete=False,
+                    game_state=game_state,
+                    history=history,
+                    event_type="wrong_guess",
+                    child_response=child_response
+                )
+
+            except Exception as e:
+                print("Toy Guessing Game question wrong TTS error:", repr(e))
+                return jsonify({
+                    "success": False,
+                    "error": "Could not generate wrong guess response"
+                }), 500
+
+        if answer.get("question_answered"):
+            game_state["questions_asked"] = int(game_state.get("questions_asked", 0)) + 1
+            game_state["comfortable_question_count"] = int(game_state.get("comfortable_question_count", 0)) + 1
+            game_state["unclear_streak"] = 0
+
+            question_key = toy_guessing_question_key(child_response)
+
+            if question_key:
+                game_state.setdefault("asked_questions", []).append(question_key)
+                game_state["asked_questions"] = game_state["asked_questions"][-12:]
+
+            remember_toy_guessing_question_topic(child_response, game_state)
+            answer_message = maybe_add_toy_good_question_prefix(answer["message"], game_state)
+            follow_up = get_toy_guessing_game_follow_up_after_answer(game_state)
+            message = f"{answer_message} {follow_up}".strip()
+
+            try:
+                return make_toy_guessing_game_audio_response(
+                    message=message,
+                    stage="answering",
+                    response_mode="open_hint",
+                    expects_response=True,
+                    game_complete=False,
+                    game_state=game_state,
+                    history=history,
+                    event_type=event_type,
+                    child_response=child_response
+                )
+
+            except Exception as e:
+                print("Toy Guessing Game answer TTS error:", repr(e))
+                return jsonify({
+                    "success": False,
+                    "error": "Could not answer question"
+                }), 500
+
+        try:
+            return make_toy_guessing_game_audio_response(
+                message=answer["message"],
+                stage="support",
+                response_mode="open_hint",
+                expects_response=True,
+                game_complete=False,
+                game_state=game_state,
+                history=history,
+                event_type=event_type,
+                child_response=child_response
+            )
+
+        except Exception as e:
+            print("Toy Guessing Game support answer TTS error:", repr(e))
+            return jsonify({
+                "success": False,
+                "error": "Could not generate support"
+            }), 500
+
+    named_toy = get_toy_guessing_named_toy(child_response)
+
+    if named_toy:
+        secret_toy = game_state.get("secret_toy")
+
+        if named_toy == secret_toy:
+            base_message = f"Yes, it is a {profile['display']}. You got it."
+
+            try:
+                return make_toy_guessing_game_correct_round_response(
+                    profile=profile,
+                    game_state=game_state,
+                    history=history,
+                    event_type="correct_guess",
+                    child_response=child_response,
+                    base_message=base_message
+                )
+
+            except Exception as e:
+                print("Toy Guessing Game named correct TTS error:", repr(e))
+                return jsonify({
+                    "success": False,
+                    "error": "Could not generate correct response"
+                }), 500
+
+        game_state.setdefault("wrong_guesses", []).append(named_toy)
+        game_state["wrong_guess_count"] = int(game_state.get("wrong_guess_count", 0)) + 1
+        base_message = f"Not quite, it is not a {TOY_GUESSING_GAME_OBJECT_PROFILES[named_toy]['display']}."
+        follow_up = get_toy_guessing_game_follow_up_after_answer(game_state)
+        message = f"{base_message} {follow_up}".strip()
+
+        try:
+            return make_toy_guessing_game_audio_response(
+                message=message,
+                stage="wrong_guess",
+                response_mode="open_hint",
+                expects_response=True,
+                game_complete=False,
+                game_state=game_state,
+                history=history,
+                event_type="wrong_guess",
+                child_response=child_response
+            )
+
+        except Exception as e:
+            print("Toy Guessing Game named wrong TTS error:", repr(e))
+            return jsonify({
+                "success": False,
+                "error": "Could not generate wrong guess response"
+            }), 500
+
+    game_state["comfortable_question_count"] = int(game_state.get("comfortable_question_count", 0)) + 1
+
+    fallback_lines = [
+        "You can ask me a yes or no question about it.",
+        "You can ask about the thing I'm thinking of.",
+        "You can ask for a hint whenever you want.",
+        "You can make a guess whenever you're ready."
+    ]
+
+    recent_lines = [item.get("toy worker", "") for item in history[-8:] if isinstance(item, dict)]
+    message = pick_non_repeating_line(fallback_lines, recent_lines)
+
+    try:
+        return make_toy_guessing_game_audio_response(
+            message=message,
+            stage="support",
+            response_mode="open_hint",
+            expects_response=True,
+            game_complete=False,
+            game_state=game_state,
+            history=history,
+            event_type=event_type,
+            child_response=child_response
+        )
+
+    except Exception as e:
+        print("Toy Guessing Game fallback TTS error:", repr(e))
+        return jsonify({
+            "success": False,
+            "error": "Could not generate fallback response"
+        }), 500
+
+
+@app.route("/api/toy-guessing-game/transcribe", methods=["POST"])
+@csrf.exempt
+@login_required
+@limiter.limit("20 per minute")
+def toy_guessing_game_transcribe():
+    if "audio" not in request.files:
+        return jsonify({
+            "success": False,
+            "error": "Missing audio"
+        }), 400
+
+    audio_file = request.files["audio"]
+
+    try:
+        import io
+
+        audio_bytes = audio_file.read()
+
+        if not audio_bytes:
+            return jsonify({
+                "success": False,
+                "error": "Empty audio file"
+            }), 400
+
+        file_obj = io.BytesIO(audio_bytes)
+        file_obj.name = "toy-guessing-response.webm"
+
+        transcript = client.audio.transcriptions.create(
+            model="gpt-4o-mini-transcribe",
+            file=file_obj
+        )
+
+        text = transcript.text.strip()
+
+        print("LIBRARY GUESSING GAME TRANSCRIPT:", text)
+
+        return jsonify({
+            "success": True,
+            "text": text
+        })
+
+    except Exception as e:
+        print("Toy Guessing Game transcription error:", repr(e))
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+

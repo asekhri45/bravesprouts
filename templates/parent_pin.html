@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}Parent PIN{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/parent_pin.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="pin-page">
+
+    <h1 class="pin-title">Enter your parent PIN</h1>
+
+    <p class="pin-subtitle">
+        Enter your four-digit PIN to access the dashboard.
+    </p>
+
+    <form method="POST" class="pin-form">
+
+        <input
+            type="password"
+            name="parent_pin"
+            maxlength="4"
+            inputmode="numeric"
+            pattern="[0-9]{4}"
+            placeholder="••••"
+            required
+            autofocus
+            class="pin-input"
+        >
+
+        {% if error %}
+        <div class="pin-error">
+            {{ error }}
+        </div>
+        {% endif %}
+
+        <button type="submit" class="pin-button">
+            Continue
+        </button>
+
+    </form>
+
+</div>
+{% endblock %}

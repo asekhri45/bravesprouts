@@ -1,0 +1,215 @@
+{% extends "activity_layout.html" %}
+
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/toy_sorting_game.css') }}?v=3">
+<script src="{{ url_for('static', filename='js/toy_sorting_game.js') }}?v=3" defer></script>
+{% endblock %}
+
+{% block title %}Toy Sorting Game{% endblock %}
+
+{% block content %}
+
+<div
+  class="toy-sorting-page"
+  data-activity-id="{{ activity.activity_id if activity else 4 }}"
+  data-child-name="{{ child|e }}"
+>
+  <div class="incoming-call-screen" id="incomingCallScreen">
+    <div class="incoming-bg"></div>
+
+    <div class="incoming-content">
+      <div class="incoming-copy">
+        <h1>Incoming Call</h1>
+        <p><span>Librarian and Toy Store Worker</span> are calling you...</p>
+      </div>
+
+      <div class="incoming-avatar-pair">
+        <span class="call-ring ring-one"></span>
+        <span class="call-ring ring-two"></span>
+
+        <div class="incoming-avatar">
+          <img src="{{ url_for('static', filename='images/librarianpfp.png') }}" alt="Librarian profile picture">
+        </div>
+
+        <!-- Rename this if your Toy Store Worker profile image uses a different file name. -->
+        <div class="incoming-avatar">
+          <img src="{{ url_for('static', filename='images/toy_worker_pfp.png') }}" alt="Toy Store Worker profile picture">
+        </div>
+      </div>
+
+      <div class="incoming-actions">
+        <button class="incoming-btn decline-btn" id="declineCall" type="button" aria-label="Decline call">
+          ☎
+        </button>
+
+        <button class="incoming-btn accept-btn" id="acceptCall" type="button" aria-label="Accept call">
+          ☎
+        </button>
+      </div>
+
+      <div class="incoming-labels">
+        <span>Decline</span>
+        <span>Accept</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="intro-screen hidden" id="introScreen">
+    <div class="screen-share-loading" id="screenShareLoading">
+      <div class="share-loader">
+        <div class="share-loader-screen"></div>
+        <h2>Librarian is sharing a screen</h2>
+        <p>Preparing toy buckets...</p>
+      </div>
+    </div>
+
+    <div class="intro-split" id="introSplit">
+      <div class="intro-tile librarian-intro-tile" id="introLibrarianTile">
+        <div class="video-label">Librarian</div>
+
+        <div class="character-wrap librarian-wrap">
+          <img
+            src="{{ url_for('static', filename='images/librarian.png') }}"
+            alt="Librarian character"
+            class="character-img librarian-img"
+          >
+
+          <img
+            src="{{ url_for('static', filename='images/librarian-mouth-closed.png') }}"
+            alt=""
+            class="mouth-img librarian-mouth-img"
+            id="introLibrarianMouth"
+          >
+        </div>
+      </div>
+
+      <div class="intro-tile toyworker-intro-tile" id="introToyWorkerTile">
+        <div class="video-label">Toy Store Worker</div>
+
+        <div class="character-wrap toyworker-wrap">
+          <!-- Rename this if your Toy Store Worker image uses a different file name. -->
+          <img
+            src="{{ url_for('static', filename='images/toy_worker.png') }}"
+            alt="Toy Store Worker character"
+            class="character-img toyworker-img"
+          >
+
+          <img
+            src="{{ url_for('static', filename='images/toyworker-mouth-closed.png') }}"
+            alt=""
+            class="mouth-img toyworker-mouth-img"
+            id="introToyWorkerMouth"
+          >
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <main class="zoom-stage call-hidden side-panel-hidden" id="zoomStage">
+    <section class="sorting-area">
+      <div class="sorting-header">
+        <div>
+          <span class="eyebrow">Toy Sorting Game</span>
+          <h1 id="roundTitle">Sort the toys</h1>
+          <p id="roundText">Pick a toy, then tap the bucket where it belongs.</p>
+        </div>
+
+        <div class="round-pill" aria-live="polite">
+          <span>Round</span>
+          <strong id="roundNumber">1</strong>
+        </div>
+      </div>
+
+      <div class="bin-board-card">
+        <div class="board-topline">
+          <div>
+            <h2>Put each toy in the right bucket</h2>
+            <p>Choose one toy from below, then tap its bucket.</p>
+          </div>
+          <strong class="toys-left-pill" id="toysLeftCount">4 left</strong>
+        </div>
+
+        <div class="bin-grid" id="binGrid" aria-label="Sorting buckets"></div>
+      </div>
+
+      <div class="toy-tray-card">
+        <div class="tray-topline">
+          <span>Choose a toy</span>
+          <small>Tap a toy first.</small>
+        </div>
+
+        <div class="toy-grid" id="toyGrid" aria-label="Toys to sort"></div>
+      </div>
+
+      <div class="action-row">
+        <button type="button" class="light-btn" id="resetRoundBtn">Reset round</button>
+        <button type="button" class="done-btn" id="doneSortingBtn">Done Sorting</button>
+      </div>
+    </section>
+
+    <aside class="side-panel">
+      <div class="video-grid">
+        <div class="video-tile librarian-video-tile" id="librarianVideoTile">
+          <div class="video-label">Librarian</div>
+
+          <div class="character-wrap small-librarian-wrap">
+            <img
+              src="{{ url_for('static', filename='images/librarian.png') }}"
+              alt="Librarian character"
+              class="character-img"
+            >
+
+            <img
+              src="{{ url_for('static', filename='images/librarian-mouth-closed.png') }}"
+              alt=""
+              class="mouth-img librarian-mouth-img"
+              id="librarianMouth"
+            >
+          </div>
+        </div>
+
+        <div class="video-tile toyworker-video-tile" id="toyWorkerVideoTile">
+          <div class="video-label">Toy Store Worker</div>
+
+          <div class="character-wrap small-toyworker-wrap">
+            <!-- Rename this if your Toy Store Worker image uses a different file name. -->
+            <img
+              src="{{ url_for('static', filename='images/toy_worker.png') }}"
+              alt="Toy Store Worker character"
+              class="character-img"
+            >
+
+            <img
+              src="{{ url_for('static', filename='images/toyworker-mouth-closed.png') }}"
+              alt=""
+              class="mouth-img toyworker-mouth-img"
+              id="toyWorkerMouth"
+            >
+          </div>
+        </div>
+      </div>
+
+      <div class="quiet-status-card" id="quietStatusCard" aria-hidden="true">
+        <div class="quiet-dot"></div>
+        <span id="quietStatusText">Sorting toys together</span>
+      </div>
+    </aside>
+  </main>
+
+  <div class="call-controls">
+    <a href="{{ url_for('dashboard') }}" class="back-link">
+      ← Back to Dashboard
+    </a>
+
+    <div class="controls-center">
+      <div class="control-button mic-control" id="micControl" title="Microphone">🎙️</div>
+      <div class="control-button">🎥</div>
+      <div class="hangup-button" id="hangupButton">☎</div>
+      <div class="control-button">💬</div>
+      <div class="control-button">⋯</div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

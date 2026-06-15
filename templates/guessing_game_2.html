@@ -6,19 +6,19 @@
 <script src="{{ url_for('static', filename='js/guessing_game_2.js') }}?v=1" defer></script>
 {% endblock %}
 
-{% block title %}Guessing Game 2{% endblock %}
+{% block title %}Toy Guessing Game{% endblock %}
 
 {% block content %}
 
-<div class="guess2-page">
+<div class="toy-page">
 
   <div class="incoming-call-screen" id="incomingCallScreen">
     <div class="incoming-bg"></div>
 
     <div class="incoming-content">
       <div class="incoming-copy">
-        <h1>Incoming Call</h1>
-        <p><span>Toy Store Worker</span> is calling you...</p>
+        <h1>Toy Store Worker is ready</h1>
+        <p><span>Toy Store Worker</span> wants to play Toy Guessing Game.</p>
       </div>
 
       <div class="incoming-avatar-area">
@@ -30,13 +30,18 @@
         <span class="music-note note-two">♫</span>
 
         <div class="incoming-avatar">
-          <img src="{{ url_for('static', filename='images/toy_worker_pfp.png') }}" alt="Toy worker profile picture">
+          <img src="{{ url_for('static', filename='images/toy_worker_pfp.png') }}" alt="Toy store worker profile picture">
         </div>
       </div>
 
       <div class="incoming-actions">
-        <button class="incoming-btn decline-btn" id="declineCall" type="button">☎</button>
-        <button class="incoming-btn accept-btn" id="acceptCall" type="button">☎</button>
+        <button class="incoming-btn decline-btn" id="declineCall" type="button" aria-label="Decline call">
+          ☎
+        </button>
+
+        <button class="incoming-btn accept-btn" id="acceptCall" type="button" aria-label="Accept call">
+          ☎
+        </button>
       </div>
 
       <div class="incoming-labels">
@@ -46,7 +51,8 @@
     </div>
   </div>
 
-  <main class="guess2-stage call-hidden" id="guess2Stage">
+  <main class="toy-stage call-hidden" id="toyStage">
+
     <section class="character-fullscreen">
 
       <div class="character-wrap">
@@ -57,7 +63,7 @@
         >
 
         <img
-          src="{{ url_for('static', filename='images/toy_worker_mouth-closed.png') }}"
+          src="{{ url_for('static', filename='images/toyworker-mouth-closed.png') }}"
           alt=""
           class="character-mouth-img"
           id="characterMouth"
@@ -65,6 +71,11 @@
       </div>
 
     </section>
+
+    <div class="toy-status" id="toyStatus" aria-live="polite"></div>
+
+    <div class="toy-response-panel hide" id="toyResponsePanel" aria-label="Optional response buttons"></div>
+
   </main>
 
   <div class="call-controls">
@@ -74,24 +85,17 @@
     </a>
 
     <div class="controls-center">
-      <div class="control-button">🎙️</div>
+      <div class="control-button mic-control">🎙️</div>
       <div class="control-button">🎥</div>
-      <div class="hangup-button">☎</div>
+
+      <button class="hangup-button" id="hangupBtn" type="button" aria-label="End call">
+        ☎
+      </button>
+
       <div class="control-button">💬</div>
       <div class="control-button">⋯</div>
     </div>
 
-  </div>
-
-  <div class="complete-modal" id="completeModal">
-    <div class="complete-card">
-      <h2>You guessed it!</h2>
-      <p>The toy store worker loved playing the animal guessing game with you.</p>
-
-      <button id="restartBtn" type="button">
-        Play Again
-      </button>
-    </div>
   </div>
 
 </div>

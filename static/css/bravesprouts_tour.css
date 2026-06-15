@@ -1,0 +1,793 @@
+.bravesprouts-tour-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99990;
+  background: rgba(18, 18, 35, 0.38);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  opacity: 0;
+  transition: opacity 0.18s ease;
+  pointer-events: auto;
+}
+
+.bravesprouts-tour-overlay.is-visible {
+  opacity: 1;
+}
+
+.bravesprouts-tour-spotlight {
+  position: fixed;
+  z-index: 99991;
+  border-radius: 28px;
+  border: 2px solid rgba(255, 255, 255, 0.98);
+  box-shadow:
+    0 0 0 6px rgba(139, 92, 246, 0.20),
+    0 18px 46px rgba(31, 27, 46, 0.22);
+  background: rgba(255, 255, 255, 0.10);
+  pointer-events: none;
+  transition:
+    top 0.24s ease,
+    left 0.24s ease,
+    width 0.24s ease,
+    height 0.24s ease;
+}
+
+.bravesprouts-tour-card {
+  position: fixed;
+  z-index: 99992;
+  width: min(390px, calc(100vw - 36px));
+  background: #ffffff;
+  border: 1.5px solid #ece7ff;
+  border-radius: 26px;
+  padding: 22px;
+  box-shadow: 0 24px 70px rgba(31, 27, 46, 0.24);
+  color: #1f1b2e;
+  transform: translateY(8px);
+  opacity: 0;
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease,
+    top 0.24s ease,
+    left 0.24s ease;
+}
+
+.bravesprouts-tour-card.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.bravesprouts-tour-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #f3ecff;
+  color: #7c3aed;
+  font-size: 12px;
+  font-weight: 900;
+  margin-bottom: 12px;
+}
+
+.bravesprouts-tour-card h3 {
+  margin: 0 0 8px;
+  font-size: 22px;
+  line-height: 1.15;
+  font-weight: 900;
+  color: #1f1b2e;
+}
+
+.bravesprouts-tour-card p {
+  margin: 0;
+  color: #6f6780;
+  font-size: 14.5px;
+  line-height: 1.55;
+  font-weight: 600;
+}
+
+.bravesprouts-tour-dots {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 18px;
+}
+
+.bravesprouts-tour-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #ded8ee;
+}
+
+.bravesprouts-tour-dot.active {
+  width: 22px;
+  background: #8b5cf6;
+}
+
+.bravesprouts-tour-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.bravesprouts-tour-left-actions,
+.bravesprouts-tour-right-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.bravesprouts-tour-btn {
+  border: 0;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 900;
+  border-radius: 15px;
+  padding: 10px 14px;
+  transition:
+    transform 0.16s ease,
+    box-shadow 0.16s ease,
+    background 0.16s ease;
+}
+
+.bravesprouts-tour-btn:hover {
+  transform: translateY(-1px);
+}
+
+.bravesprouts-tour-btn-primary {
+  color: #ffffff;
+  background: #8b5cf6;
+  box-shadow: 0 5px 0 #6d28d9;
+}
+
+.bravesprouts-tour-btn-primary:active {
+  transform: translateY(3px);
+  box-shadow: 0 2px 0 #6d28d9;
+}
+
+.bravesprouts-tour-btn-secondary {
+  color: #6d28d9;
+  background: #f3ecff;
+}
+
+.bravesprouts-tour-btn-ghost {
+  color: #8b8498;
+  background: transparent;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.bravesprouts-tour-arrow {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  background: #ffffff;
+  transform: rotate(45deg);
+  border-left: 1.5px solid #ece7ff;
+  border-top: 1.5px solid #ece7ff;
+}
+
+.bravesprouts-tour-card.arrow-left .bravesprouts-tour-arrow {
+  left: -9px;
+  top: 34px;
+}
+
+.bravesprouts-tour-card.arrow-right .bravesprouts-tour-arrow {
+  right: -9px;
+  top: 34px;
+  border-left: 0;
+  border-top: 0;
+  border-right: 1.5px solid #ece7ff;
+  border-bottom: 1.5px solid #ece7ff;
+}
+
+.bravesprouts-tour-card.arrow-top .bravesprouts-tour-arrow {
+  top: -9px;
+  left: 36px;
+}
+
+.bravesprouts-tour-card.arrow-bottom .bravesprouts-tour-arrow {
+  bottom: -9px;
+  left: 36px;
+  border-left: 0;
+  border-top: 0;
+  border-right: 1.5px solid #ece7ff;
+  border-bottom: 1.5px solid #ece7ff;
+}
+
+.bravesprouts-tour-no-scroll {
+  overflow: hidden !important;
+}
+
+@media (max-width: 760px) {
+  .bravesprouts-tour-card {
+    left: 18px !important;
+    right: 18px !important;
+    width: auto;
+  }
+
+  .bravesprouts-tour-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .bravesprouts-tour-left-actions,
+  .bravesprouts-tour-right-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .bravesprouts-tour-btn {
+    flex: 1;
+  }
+}
+
+.bravesprouts-tour-target-active {
+  position: relative !important;
+  z-index: 99991 !important;
+}
+
+.bravesprouts-tour-step-pill {
+  position: fixed;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 99994;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 16px;
+
+  padding: 10px 22px;
+  border-radius: 16px;
+  background: #ffffff;
+  border: 1.5px solid #ece7ff;
+  box-shadow: 0 12px 34px rgba(31, 27, 46, 0.18);
+
+  color: #8b5cf6;
+  font-weight: 900;
+  font-size: 14px;
+}
+
+.bravesprouts-tour-step-number {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  background: #8b5cf6;
+  color: #ffffff;
+
+  display: grid;
+  place-items: center;
+
+  box-shadow: 0 4px 0 #6d28d9;
+}
+
+.bravesprouts-tour-step-text {
+  color: #8b5cf6;
+}
+
+.bravesprouts-tour-step-name {
+  color: #8b5cf6;
+}
+
+.bravesprouts-tour-card.is-intro {
+  width: min(390px, calc(100vw - 36px));
+  padding: 24px 26px 22px;
+  text-align: center;
+  border-radius: 22px;
+}
+
+.bravesprouts-tour-intro-heading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.bravesprouts-tour-intro-star {
+  width: 62px;
+  height: 62px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.bravesprouts-tour-card.is-intro h3 {
+  color: #8b5cf6;
+  font-size: 25px;
+  margin: 0;
+  line-height: 1.1;
+}
+
+.bravesprouts-tour-card.is-intro p {
+  margin-top: 10px;
+  color: #6f6780;
+  font-size: 15px;
+  line-height: 1.45;
+  font-weight: 700;
+}
+
+.bravesprouts-tour-card.is-intro .bravesprouts-tour-dots {
+  justify-content: center;
+}
+
+.bravesprouts-tour-card.is-intro .bravesprouts-tour-actions {
+  justify-content: flex-end;
+}
+
+.bravesprouts-tour-card.is-intro .bravesprouts-tour-left-actions {
+  display: none;
+}
+
+.bravesprouts-tour-card.is-intro .bravesprouts-tour-btn-primary {
+  padding: 13px 22px;
+  border-radius: 12px;
+}
+
+.bravesprouts-tour-curve-arrow {
+  position: fixed;
+  z-index: 99991;
+  width: 120px;
+  height: 80px;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.bravesprouts-tour-curve-arrow.is-visible {
+  opacity: 1;
+}
+
+.bravesprouts-tour-curve-arrow svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.bravesprouts-tour-curve-arrow path {
+  fill: none;
+  stroke: #ffffff;
+  stroke-width: 6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 3px 5px rgba(31, 27, 46, 0.18));
+}
+
+.bravesprouts-tour-curve-arrow polygon {
+  fill: #ffffff;
+  filter: drop-shadow(0 3px 5px rgba(31, 27, 46, 0.18));
+}
+
+.bravesprouts-tour-card.is-intro .bravesprouts-tour-arrow {
+  display: none;
+}
+
+.bravesprouts-tour-overlay {
+  background: rgba(18, 18, 35, 0.34);
+  backdrop-filter: blur(1.5px);
+  -webkit-backdrop-filter: blur(1.5px);
+}
+
+.bravesprouts-tour-spotlight {
+  border: 3px solid rgba(255, 255, 255, 0.98);
+  box-shadow:
+    0 0 0 5px rgba(139, 92, 246, 0.24),
+    0 18px 46px rgba(31, 27, 46, 0.20);
+}
+
+.bravesprouts-tour-card.is-intro .bravesprouts-tour-arrow,
+.bravesprouts-tour-curve-arrow {
+  display: none !important;
+}
+
+.bravesprouts-tour-card.is-intro .bravesprouts-tour-intro-heading {
+  justify-content: center;
+}
+
+.bravesprouts-tour-card.is-intro h3 {
+  text-align: center;
+}
+
+.bravesprouts-tour-card.is-intro {
+  text-align: left;
+  overflow: visible;
+  padding: 26px 28px 22px 78px;
+}
+
+.bravesprouts-tour-card.is-intro .bravesprouts-tour-intro-star {
+  position: absolute;
+  left: 18px;
+  top: 28px;
+
+  width: 54px;
+  height: 54px;
+  object-fit: contain;
+
+  margin: 0;
+  pointer-events: none;
+}
+
+.bravesprouts-tour-intro-content {
+  width: 100%;
+}
+
+.bravesprouts-tour-card.is-intro h3 {
+  text-align: left;
+  color: #8b5cf6;
+  font-size: 25px;
+  margin: 0 0 10px;
+  line-height: 1.1;
+}
+
+.bravesprouts-tour-card.is-intro p {
+  text-align: left;
+  margin: 0;
+  color: #6f6780;
+  font-size: 15px;
+  line-height: 1.45;
+  font-weight: 700;
+}
+
+.bravesprouts-tour-card.is-intro .bravesprouts-tour-dots {
+  justify-content: flex-start;
+}
+
+.bravesprouts-tour-card.is-intro .bravesprouts-tour-actions {
+  justify-content: flex-end;
+}
+
+.bravesprouts-tour-image-arrow {
+  position: fixed;
+  z-index: 99991;
+  width: 110px;
+  height: auto;
+  pointer-events: none;
+  opacity: 0;
+  transition:
+    opacity 0.18s ease,
+    left 0.24s ease,
+    top 0.24s ease;
+  filter: drop-shadow(0 4px 8px rgba(31, 27, 46, 0.18));
+}
+
+.bravesprouts-tour-image-arrow.is-visible {
+  opacity: 1;
+}
+
+.bravesprouts-tour-card.is-intro {
+  padding-left: 90px !important;
+}
+
+.bravesprouts-tour-card.is-intro .bravesprouts-tour-intro-star {
+  left: 22px !important;
+  width: 56px !important;
+  height: 56px !important;
+}
+
+.bravesprouts-tour-intro-content {
+  padding-left: 8px;
+}
+
+.bravesprouts-tour-card.has-side-image {
+  text-align: left;
+  overflow: visible;
+  padding: 28px 28px 24px 108px !important;
+}
+
+.bravesprouts-tour-card.has-side-image .bravesprouts-tour-side-star {
+  position: absolute;
+  left: 24px;
+  top: 30px;
+  width: 58px;
+  height: 58px;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.bravesprouts-tour-card.has-side-image .bravesprouts-tour-side-content {
+  width: 100%;
+}
+
+.bravesprouts-tour-card.has-side-image h3 {
+  text-align: left;
+  color: #1f1b2e;
+  font-size: 24px;
+  line-height: 1.12;
+  margin: 0 0 12px;
+  font-weight: 900;
+}
+
+.bravesprouts-tour-card.has-side-image.is-intro h3 {
+  color: #8b5cf6;
+}
+
+.bravesprouts-tour-card.has-side-image p {
+  text-align: left;
+  margin: 0;
+  color: #6f6780;
+  font-size: 15px;
+  line-height: 1.48;
+  font-weight: 700;
+}
+
+.bravesprouts-tour-card.has-side-image .bravesprouts-tour-dots {
+  justify-content: flex-start;
+}
+
+.bravesprouts-tour-card.has-side-image .bravesprouts-tour-actions {
+  justify-content: flex-end;
+}
+
+/* ===============================
+   STEP 2 / SIDE IMAGE TOUR CARD FIXES
+================================ */
+
+.bravesprouts-tour-card.has-side-image {
+  width: min(420px, calc(100vw - 36px)) !important;
+  text-align: left !important;
+  overflow: visible !important;
+  padding: 28px 28px 24px 112px !important;
+}
+
+.bravesprouts-tour-card.has-side-image .bravesprouts-tour-side-star {
+  position: absolute !important;
+  left: 26px !important;
+  top: 30px !important;
+  width: 58px !important;
+  height: 58px !important;
+  object-fit: contain !important;
+  pointer-events: none !important;
+}
+
+.bravesprouts-tour-card.has-side-image .bravesprouts-tour-side-content {
+  width: 100% !important;
+  padding-left: 4px !important;
+}
+
+.bravesprouts-tour-card.has-side-image h3 {
+  text-align: left !important;
+  color: #8b5cf6 !important;
+  font-size: 25px !important;
+  line-height: 1.12 !important;
+  margin: 0 0 12px !important;
+  font-weight: 900 !important;
+}
+
+.bravesprouts-tour-card.has-side-image p {
+  text-align: left !important;
+  margin: 0 !important;
+  color: #6f6780 !important;
+  font-size: 15px !important;
+  line-height: 1.48 !important;
+  font-weight: 700 !important;
+}
+
+.bravesprouts-tour-card.has-side-image .bravesprouts-tour-dots {
+  justify-content: flex-start !important;
+}
+
+.bravesprouts-tour-card.has-side-image .bravesprouts-tour-actions {
+  justify-content: flex-end !important;
+}
+
+/* Hide the inner pill style if any old Step 2 markup is still being used */
+.bravesprouts-tour-card.has-side-image .bravesprouts-tour-kicker {
+  display: none !important;
+}
+
+/* ===============================
+   BRIGHTER HIGHLIGHTED JOURNEY AREA
+================================ */
+
+.journey-section.bravesprouts-tour-target-active {
+  background: #ffffff !important;
+  border-radius: 30px !important;
+  box-shadow:
+    0 0 0 3px rgba(255, 255, 255, 0.95),
+    0 0 0 8px rgba(139, 92, 246, 0.22),
+    0 24px 70px rgba(31, 27, 46, 0.20) !important;
+  filter: brightness(1.08) saturate(1.08) !important;
+  opacity: 1 !important;
+}
+
+.journey-section.bravesprouts-tour-target-active,
+.journey-section.bravesprouts-tour-target-active * {
+  opacity: 1 !important;
+  color: inherit;
+  filter: none !important;
+}
+
+.journey-section.bravesprouts-tour-target-active .section-header-row h2 {
+  color: #1f1b2e !important;
+}
+
+.journey-section.bravesprouts-tour-target-active .section-header-row a {
+  color: #8b5cf6 !important;
+}
+
+.journey-section.bravesprouts-tour-target-active .journey-card {
+  background: #ffffff !important;
+  border-color: #eee7ff !important;
+  box-shadow: 0 12px 30px rgba(31, 27, 46, 0.07) !important;
+}
+
+.journey-section.bravesprouts-tour-target-active .journey-text h3 {
+  color: #1f1b2e !important;
+}
+
+.journey-section.bravesprouts-tour-target-active .journey-text p {
+  color: #6f6780 !important;
+}
+
+/* Keep the spotlight clean and bright */
+.bravesprouts-tour-spotlight {
+  background: rgba(255, 255, 255, 0.14) !important;
+  border: 3px solid rgba(255, 255, 255, 1) !important;
+  box-shadow:
+    0 0 0 5px rgba(139, 92, 246, 0.25),
+    0 18px 46px rgba(31, 27, 46, 0.18) !important;
+}
+
+/* =========================================================
+   FINAL TOUR OVERRIDES
+   Fixes Step 2 double container, brightness, card style, arrow
+========================================================= */
+
+/* Make the dimming come from the spotlight shadow, not an overlay
+   sitting on top of the highlighted content. */
+.bravesprouts-tour-overlay {
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* One clean highlighted container only */
+.bravesprouts-tour-spotlight {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 3px solid rgba(255, 255, 255, 1) !important;
+  box-shadow:
+    0 0 0 9999px rgba(18, 18, 35, 0.34),
+    0 0 0 6px rgba(139, 92, 246, 0.25),
+    0 24px 70px rgba(31, 27, 46, 0.20) !important;
+}
+
+/* Remove the extra white/box-shadow container that was being added
+   directly to the Journey section */
+.journey-section.bravesprouts-tour-target-active {
+  background: transparent !important;
+  box-shadow: none !important;
+  filter: none !important;
+  border-radius: 0 !important;
+}
+
+/* Keep highlighted journey content clean and bright */
+body.bravesprouts-tour-step-2-active .journey-section {
+  opacity: 1 !important;
+  filter: none !important;
+}
+
+body.bravesprouts-tour-step-2-active .journey-section * {
+  opacity: 1 !important;
+  filter: none !important;
+}
+
+body.bravesprouts-tour-step-2-active .journey-card {
+  background: #ffffff !important;
+}
+
+body.bravesprouts-tour-step-2-active .journey-text h3,
+body.bravesprouts-tour-step-2-active .section-header-row h2 {
+  color: #1f1b2e !important;
+}
+
+body.bravesprouts-tour-step-2-active .journey-text p {
+  color: #6f6780 !important;
+}
+
+/* Same image-and-text card style as Step 1 */
+.bravesprouts-tour-card.has-side-image {
+  width: min(420px, calc(100vw - 36px)) !important;
+  text-align: left !important;
+  overflow: visible !important;
+  padding: 28px 28px 24px 112px !important;
+}
+
+.bravesprouts-tour-card.has-side-image .bravesprouts-tour-side-star {
+  position: absolute !important;
+  left: 26px !important;
+  top: 30px !important;
+  width: 58px !important;
+  height: 58px !important;
+  object-fit: contain !important;
+  pointer-events: none !important;
+}
+
+.bravesprouts-tour-card.has-side-image .bravesprouts-tour-side-content {
+  width: 100% !important;
+  padding-left: 4px !important;
+}
+
+.bravesprouts-tour-card.has-side-image h3 {
+  text-align: left !important;
+  color: #8b5cf6 !important;
+  font-size: 25px !important;
+  line-height: 1.12 !important;
+  margin: 0 0 12px !important;
+  font-weight: 900 !important;
+}
+
+.bravesprouts-tour-card.has-side-image p {
+  text-align: left !important;
+  margin: 0 !important;
+  color: #6f6780 !important;
+  font-size: 15px !important;
+  line-height: 1.48 !important;
+  font-weight: 700 !important;
+}
+
+.bravesprouts-tour-card.has-side-image .bravesprouts-tour-dots {
+  justify-content: flex-start !important;
+}
+
+.bravesprouts-tour-card.has-side-image .bravesprouts-tour-actions {
+  justify-content: flex-end !important;
+}
+
+/* No little triangle pointer for Step 2 */
+.bravesprouts-tour-card.is-step-2 .bravesprouts-tour-arrow {
+  display: none !important;
+}
+
+/* Reuse white image arrow for Step 2 */
+.bravesprouts-tour-image-arrow {
+  z-index: 99991 !important;
+  width: 110px !important;
+  height: auto !important;
+  pointer-events: none !important;
+  transform-origin: center center !important;
+}
+
+.bravesprouts-tour-image-arrow.is-step-2-arrow {
+  width: 105px !important;
+}
+
+.bravesprouts-tour-card.has-side-image {
+  width: min(455px, calc(100vw - 36px)) !important;
+}
+
+/* Reduce space between girlstar image and text for tour cards 2–4 */
+.bravesprouts-tour-card.has-side-image:not(.is-intro) {
+  padding-left: 96px !important;
+}
+
+.bravesprouts-tour-card.has-side-image:not(.is-intro) .bravesprouts-tour-side-star {
+  left: 24px !important;
+  width: 54px !important;
+  height: 54px !important;
+}
+
+.bravesprouts-tour-card.has-side-image:not(.is-intro) .bravesprouts-tour-side-content {
+  padding-left: 0 !important;
+}
+
+.bravesprouts-tour-requirement {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: #fff2f2;
+  color: #dc2626;
+  font-size: 13px;
+  line-height: 1.35;
+  font-weight: 850;
+}
+
+.bravesprouts-tour-step-5-active .bravesprouts-tour-overlay,
+.bravesprouts-tour-step-6-active .bravesprouts-tour-overlay {
+  pointer-events: none;
+}
+
+.bravesprouts-tour-step-5-active [data-tour-target="settings-child-profile"],
+.bravesprouts-tour-step-6-active [data-tour-target="settings-permissions"] {
+  position: relative !important;
+  z-index: 99993 !important;
+}

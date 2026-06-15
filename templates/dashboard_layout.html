@@ -4,13 +4,16 @@
 
 {% block head %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard_layout.css') }}?v=6">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/bravesprouts_tour.css') }}?v=1">
+
 <script src="{{ url_for('static', filename='js/chart.umd.js') }}" defer></script>
 <script src="{{ url_for('static', filename='js/dashboard.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/bravesprouts_tour.js') }}?v=1" defer></script>
 {% endblock %}
 
 {% block content %}
 
-<div class="dashboard-layout">
+<div class="dashboard-layout" data-has-seen-tour="{{ has_seen_tour|default(1)|int }}">
 
   <aside class="sidebar">
     <div class="sidebar-logo">
@@ -59,7 +62,7 @@
   </aside>
 
   <div class="dashboard-right">
-    <main class="dashboard-main">
+    <main class="dashboard-main {% block dashboard_main_class %}{% endblock %}">
       {% block dashboard_content %}{% endblock %}
     </main>
   </div>

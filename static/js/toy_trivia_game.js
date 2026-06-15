@@ -1,11 +1,14 @@
 document.addEventListener("DOMContentLoaded", function () {
-  const completeModal = document.getElementById("completeModal");
-  const restartBtn = document.getElementById("restartBtn");
+  const toyPage = document.querySelector(".toy-page");
 
   const incomingCallScreen = document.getElementById("incomingCallScreen");
   const acceptCall = document.getElementById("acceptCall");
   const declineCall = document.getElementById("declineCall");
   const toyStage = document.getElementById("toyStage");
+
+  const hangupBtn = document.getElementById("hangupBtn");
+  const toyStatus = document.getElementById("toyStatus");
+  const toyResponsePanel = document.getElementById("toyResponsePanel");
 
   let characterAudio = null;
   let audioContext = null;
@@ -16,8 +19,46 @@ document.addEventListener("DOMContentLoaded", function () {
   let mediaRecorder = null;
   let audioChunks = [];
   let isListening = false;
-  let silenceTimer = null;
+  let maxRecordTimer = null;
+
   let currentResponseMode = "none";
+  let currentStage = "intro";
+  let offerNextGame = false;
+
+  let activeStream = null;
+  let micAudioContext = null;
+  let micAnalyser = null;
+  let micSource = null;
+  let micAnimationFrame = null;
+  let recordStartedAt = 0;
+  let firstSpeechAt = 0;
+  let lastSpeechAt = 0;
+  let speechDetected = false;
+  let ignoreNextRecording = false;
+
+  let waitingForToyWorker = false;
+  let gameActive = false;
+  let sessionDone = false;
+
+  let recognition = null;
+  let recognitionActive = false;
+  let recognitionStartedAt = 0;
+  let recognitionHardCapTimer = null;
+  let recognitionRestartTimer = null;
+  let recognitionSubmitTimer = null;
+  let recognitionStoppedByUs = false;
+  let lastLiveTranscript = "";
+  let lastCleanTranscript = "";
+  let thinkingRestartCount = 0;
+
+  let thinkingFillerTimer = null;
+  let thinkingFillerInterval = null;
+  let thinkingFillerAudio = null;
+  let recentThinkingLines = [];
+  let thinkingFillerRequestId = 0;
+
+  const SpeechRecognition =
+    window.SpeechRecognition || window.webkitSpeechRecognition || null;
 
   const ringtone = new Audio("/static/images/ringtone.mp3");
   ringtone.loop = true;
@@ -27,6 +68,386 @@ document.addEventListener("DOMContentLoaded", function () {
   callAcceptedSound.volume = 0.5;
 
   let ringtoneStarted = false;
+
+  function setStatus(text, shouldShow = true) {
+    if (!toyStatus) return;
+
+    toyStatus.textContent = text || "";
+
+    if (shouldShow && text) {
+      toyStatus.classList.add("show");
+    } else {
+      toyStatus.classList.remove("show");
+    }
+  }
+
+  function setListeningUI(active) {
+    if (!toyPage) return;
+
+    if (active) {
+      toyPage.classList.add("is-listening");
+      setStatus("I’m listening.");
+    } else {
+      toyPage.classList.remove("is-listening");
+    }
+  }
+
+  function getLiveHardCapDuration() {
+    const extraThinkingTime = Math.min(thinkingRestartCount * 2500, 5000);
+
+    if (currentResponseMode === "round_choice") return 16000 + extraThinkingTime;
+    return 19000 + extraThinkingTime;
+  }
+
+  function getBackupListeningDuration() {
+    const extraThinkingTime = Math.min(thinkingRestartCount * 2500, 5000);
+
+    if (currentResponseMode === "round_choice") return 12000 + extraThinkingTime;
+    return 15000 + extraThinkingTime;
+  }
+
+  function getBackupSilenceAfterSpeechDuration() {
+    const extraThinkingPause = Math.min(thinkingRestartCount * 500, 1000);
+
+    if (currentResponseMode === "round_choice") return 1900 + extraThinkingPause;
+    return 2300 + extraThinkingPause;
+  }
+
+  function getBackupMinimumRecordingDuration() {
+    if (currentResponseMode === "round_choice") return 1400;
+    return 1800;
+  }
+
+  function getLiveSubmitDelay(cleanedTranscript) {
+    if (currentResponseMode === "round_choice") {
+      if (isShortChoiceLike(cleanedTranscript)) return 300;
+      return 650;
+    }
+
+    if (isLikelyDirectGuess(cleanedTranscript)) return 500;
+    if (isLikelyShortQuestion(cleanedTranscript)) return 800;
+
+    return 950;
+  }
+
+  function normalizeTranscriptText(text) {
+    return String(text || "")
+      .toLowerCase()
+      .replace(/[.,!?;:()[\]{}"“”‘’]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function cleanTranscriptForMeaning(text) {
+    let cleaned = normalizeTranscriptText(text);
+
+    if (!cleaned) return "";
+
+    const startingFillers = new Set([
+      "um", "uh", "umm", "uhh", "hmm", "hm", "mmm", "like"
+    ]);
+
+    let words = cleaned.split(" ").filter(Boolean);
+
+    while (words.length > 0 && startingFillers.has(words[0])) {
+      words.shift();
+    }
+
+    cleaned = words.join(" ").trim();
+
+    const softStarts = [
+      "let me think", "i think", "i guess", "maybe", "wait", "hold on"
+    ];
+
+    for (const phrase of softStarts) {
+      if (cleaned === phrase) return "";
+
+      if (cleaned.startsWith(phrase + " ")) {
+        cleaned = cleaned.slice(phrase.length).trim();
+        break;
+      }
+    }
+
+    return cleaned.replace(/\s+/g, " ").trim();
+  }
+
+  function isThinkingOnlyTranscript(text) {
+    const cleaned = normalizeTranscriptText(text);
+
+    if (!cleaned) return true;
+
+    const thinkingOnlyPhrases = new Set([
+      "um", "uh", "umm", "uhh", "hmm", "hm", "mmm",
+      "let me think", "i am thinking", "i'm thinking", "im thinking",
+      "thinking", "wait", "one second", "hold on", "give me a second",
+      "give me one second", "give me a minute", "i need a second",
+      "i need to think", "let me see"
+    ]);
+
+    if (thinkingOnlyPhrases.has(cleaned)) return true;
+
+    const words = cleaned.split(" ").filter(Boolean);
+    const fillerWords = new Set(["um", "uh", "umm", "uhh", "hmm", "hm", "mmm", "like", "wait"]);
+
+    return words.length > 0 && words.every(function (word) {
+      return fillerWords.has(word);
+    });
+  }
+
+  function isShortChoiceLike(text) {
+    const cleaned = normalizeTranscriptText(text);
+    const words = cleaned.split(" ").filter(Boolean);
+
+    if (words.length > 4) return false;
+
+    const choiceWords = new Set([
+      "yes", "yeah", "yep", "yup", "sure", "okay", "ok", "alright", "cool",
+      "again", "more", "stop", "done", "no", "nope", "next", "different"
+    ]);
+
+    return words.some(function (word) {
+      return choiceWords.has(word);
+    });
+  }
+
+  function isLikelyDirectGuess(text) {
+    const cleaned = normalizeTranscriptText(text);
+
+    if (!cleaned) return false;
+
+    const toyWords = new Set([
+      "teddy", "bear", "doll", "car", "truck", "train", "ball", "blocks",
+      "lego", "legos", "puzzle", "game", "robot", "dinosaur", "stuffed",
+      "animal", "action", "figure", "crayons", "slime", "yo", "yo-yo", "kite"
+    ]);
+
+    const words = cleaned.split(" ").filter(Boolean);
+    const hasToy = words.some(function (word) {
+      return toyWords.has(word);
+    });
+
+    if (!hasToy) return false;
+
+    return cleaned.includes("is it") || cleaned.includes("i think") || cleaned.includes("guess") || words.length <= 4;
+  }
+
+  function isLikelyShortQuestion(text) {
+    const cleaned = normalizeTranscriptText(text);
+    const words = cleaned.split(" ").filter(Boolean);
+
+    if (words.length <= 3) return false;
+
+    const starters = ["is", "are", "do", "does", "can", "could", "would", "has", "have", "what", "where", "how"];
+    return starters.includes(words[0]);
+  }
+
+  function resetThinkingState() {
+    thinkingRestartCount = 0;
+  }
+
+  async function playThinkingFillerLine() {
+    if (!waitingForToyWorker || sessionDone) return;
+
+    // Do not layer or restart thinking sounds. If a "hmm" is already playing,
+    // let it finish instead of cutting into another filler clip.
+    if (
+      thinkingFillerAudio &&
+      !thinkingFillerAudio.paused &&
+      !thinkingFillerAudio.ended
+    ) {
+      return;
+    }
+
+    const requestId = thinkingFillerRequestId;
+
+    try {
+      const avoid = encodeURIComponent(recentThinkingLines.join("|"));
+      const response = await fetch(`/api/toy-trivia-game/thinking-audio?avoid=${avoid}`, {
+        method: "GET",
+        credentials: "same-origin"
+      });
+
+      const data = await response.json();
+
+      if (requestId !== thinkingFillerRequestId || !waitingForToyWorker || sessionDone) return;
+      if (!response.ok || !data.success || !data.audio_url) return;
+
+      if (
+        data.line &&
+        recentThinkingLines.length > 0 &&
+        recentThinkingLines[recentThinkingLines.length - 1] === data.line
+      ) {
+        return;
+      }
+
+      if (data.line) {
+        recentThinkingLines.push(data.line);
+        recentThinkingLines = recentThinkingLines.slice(-5);
+      }
+
+      thinkingFillerAudio = new Audio(data.audio_url);
+      thinkingFillerAudio.volume = 0.62;
+      thinkingFillerAudio.playbackRate = 0.96;
+      thinkingFillerAudio.preservesPitch = false;
+      thinkingFillerAudio.mozPreservesPitch = false;
+      thinkingFillerAudio.webkitPreservesPitch = false;
+
+      thinkingFillerAudio.addEventListener("ended", function () {
+        if (thinkingFillerAudio === this) {
+          thinkingFillerAudio = null;
+        }
+      }, { once: true });
+
+      thinkingFillerAudio.play().catch(function (error) {
+        console.log("Could not play thinking filler:", error);
+      });
+    } catch (error) {
+      console.log("Thinking filler unavailable:", error);
+    }
+  }
+
+  function clearThinkingFillerTimers() {
+    if (thinkingFillerTimer) {
+      clearTimeout(thinkingFillerTimer);
+      thinkingFillerTimer = null;
+    }
+
+    if (thinkingFillerInterval) {
+      clearInterval(thinkingFillerInterval);
+      thinkingFillerInterval = null;
+    }
+  }
+
+  function startThinkingFiller() {
+    stopThinkingFiller();
+    thinkingFillerRequestId += 1;
+
+    // Wait a little longer before playing "hmm" so fast responses do not get
+    // interrupted halfway through by the real Toy Worker response.
+    thinkingFillerTimer = setTimeout(function () {
+      playThinkingFillerLine();
+
+      thinkingFillerInterval = setInterval(function () {
+        if (!waitingForToyWorker || sessionDone) {
+          stopThinkingFiller();
+          return;
+        }
+
+        playThinkingFillerLine();
+      }, 6000);
+    }, 1150);
+  }
+
+  function stopThinkingFiller(options = {}) {
+    thinkingFillerRequestId += 1;
+    clearThinkingFillerTimers();
+
+    const keepCurrentAudio = Boolean(options.keepCurrentAudio);
+
+    if (!keepCurrentAudio && thinkingFillerAudio) {
+      try {
+        thinkingFillerAudio.pause();
+        thinkingFillerAudio.currentTime = 0;
+      } catch (error) {}
+
+      thinkingFillerAudio = null;
+    }
+  }
+
+  function waitForThinkingFillerToFinish(maxWaitMs = 950) {
+    thinkingFillerRequestId += 1;
+    clearThinkingFillerTimers();
+
+    const audio = thinkingFillerAudio;
+
+    if (!audio || audio.paused || audio.ended) {
+      thinkingFillerAudio = null;
+      return Promise.resolve();
+    }
+
+    return new Promise(function (resolve) {
+      let finished = false;
+
+      function finish() {
+        if (finished) return;
+
+        finished = true;
+
+        try {
+          audio.removeEventListener("ended", finish);
+        } catch (error) {}
+
+        if (thinkingFillerAudio === audio) {
+          thinkingFillerAudio = null;
+        }
+
+        resolve();
+      }
+
+      audio.addEventListener("ended", finish, { once: true });
+
+      setTimeout(function () {
+        // If the filler somehow runs too long, end it before the real response.
+        if (!finished) {
+          try {
+            audio.pause();
+            audio.currentTime = 0;
+          } catch (error) {}
+
+          finish();
+        }
+      }, maxWaitMs);
+    });
+  }
+
+  function continueListeningAfterThinkingSound() {
+    if (!gameActive || sessionDone) return;
+
+    thinkingRestartCount += 1;
+    setStatus("Take your time.", true);
+
+    if (SpeechRecognition) return;
+
+    setTimeout(function () {
+      if (!isListening && !waitingForToyWorker && gameActive && !sessionDone) {
+        startListeningForChild();
+      }
+    }, 250);
+  }
+
+  function makeResponseButton(label, value) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "toy-response-btn";
+    button.textContent = label;
+
+    button.addEventListener("click", function () {
+      handleManualResponse(value);
+    });
+
+    return button;
+  }
+
+  function showResponseButtons(mode) {
+    // Voice-only game: no play-again / stop buttons.
+    hideResponseButtons();
+  }
+
+  function hideResponseButtons() {
+    if (!toyResponsePanel) return;
+
+    toyResponsePanel.classList.add("hide");
+    toyResponsePanel.innerHTML = "";
+  }
+
+  function handleManualResponse(value) {
+    if (waitingForToyWorker || sessionDone) return;
+
+    resetThinkingState();
+    cancelListening();
+    hideResponseButtons();
+    requestToyWorkerMessage("child_answer", value);
+  }
 
   function startRingtone() {
     if (ringtoneStarted) return;
@@ -54,12 +475,30 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  async function requestCharacterMessage(eventType, childResponse = "") {
-    console.log("🚀 Sending to LLM:", {
-      eventType,
-      childResponse,
-      currentResponseMode
-    });
+  async function requestToyWorkerMessage(eventType, childResponse = "") {
+    if (waitingForToyWorker || sessionDone) return;
+
+    waitingForToyWorker = true;
+    hideResponseButtons();
+    setListeningUI(false);
+
+    if (eventType === "first_question") {
+      setStatus("Toy worker is ready.");
+    } else if (eventType === "no_response") {
+      setStatus("Toy worker is thinking.");
+      startThinkingFiller();
+    } else if (eventType === "child_answer") {
+      if (currentResponseMode === "guess_confirmation") {
+        // When the child confirms the worker's guess, do not add another
+        // thinking filler. It should feel like an immediate, excited reveal.
+        setStatus("Toy worker found it.");
+      } else {
+        setStatus("Toy worker is thinking.");
+        startThinkingFiller();
+      }
+    } else {
+      setStatus("Toy worker is getting ready.");
+    }
 
     try {
       const response = await fetch("/api/toy-trivia-game/message", {
@@ -76,68 +515,313 @@ document.addEventListener("DOMContentLoaded", function () {
       });
 
       const data = await response.json();
-      console.log("🧸 Toy worker response:", data);
+      console.log("⭐ Toy Trivia worker response:", data);
 
-      if (!data.success) {
-        console.error(data.error || "Toy worker response failed");
-        return;
+      if (!response.ok || !data.success) {
+        stopThinkingFiller();
+        throw new Error(data.error || "Toy worker response failed");
       }
+
+      await waitForThinkingFillerToFinish(950);
 
       currentResponseMode = data.response_mode || "none";
+      currentStage = data.stage || "intro";
+      offerNextGame = Boolean(data.offer_next_game);
 
-      if (data.game_complete) {
-        setTimeout(function () {
-          completeModal.classList.add("show");
-        }, 900);
-      }
+      const expectsResponse = Boolean(data.expects_response) && !data.session_done;
+      const nextEvent = data.next_event || null;
+      const pauseBeforeNext = data.pause_before_next_ms || 0;
+      const nextUrl = data.next_url || null;
+      const redirectAfterMs = Number(data.redirect_after_ms || 0);
 
-      playCharacterAudio(data.audio, data.expects_response !== false);
+      playCharacterAudio(data.audio, expectsResponse, function () {
+        if (nextUrl) {
+          sessionDone = true;
+          gameActive = false;
+          setStatus("Calling you right back.", true);
+          playCallAcceptedSound();
 
+          if (toyPage) {
+            toyPage.classList.add("call-ending-transition");
+          }
+
+          setTimeout(function () {
+            window.location.href = nextUrl;
+          }, redirectAfterMs || 1500);
+
+          return;
+        }
+
+        if (data.session_done) {
+          sessionDone = true;
+          gameActive = false;
+          setStatus("Game finished.", true);
+          return;
+        }
+
+        if (nextEvent) {
+          setStatus("Take a second.", true);
+
+          setTimeout(function () {
+            requestToyWorkerMessage(nextEvent);
+          }, pauseBeforeNext);
+
+          return;
+        }
+
+        if (expectsResponse && gameActive && !sessionDone) {
+          setTimeout(function () {
+            startListeningForChild();
+          }, 150);
+        }
+      });
     } catch (error) {
+      stopThinkingFiller();
       console.error("Toy Trivia request error:", error);
+      setStatus("Something got quiet. You can try again.");
+    } finally {
+      waitingForToyWorker = false;
     }
   }
 
   async function startListeningForChild() {
-    console.log("🎤 Starting microphone...");
+    if (isListening || waitingForToyWorker || sessionDone || !gameActive) return;
 
-    if (isListening) {
-      console.log("Already listening.");
+    hideResponseButtons();
+    setListeningUI(true);
+    showResponseButtons(currentResponseMode);
+
+    if (SpeechRecognition) {
+      startLiveSpeechRecognition();
       return;
     }
 
+    startAudioRecorderFallback();
+  }
+
+  function startLiveSpeechRecognition() {
+    stopLiveSpeechRecognition(false);
+
+    isListening = true;
+    recognitionActive = true;
+    recognitionStoppedByUs = false;
+    recognitionStartedAt = Date.now();
+    lastLiveTranscript = "";
+    lastCleanTranscript = "";
+
+    recognition = new SpeechRecognition();
+    recognition.lang = "en-US";
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
+
+    setStatus("I’m listening.");
+
+    recognition.onresult = function (event) {
+      let transcript = "";
+
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        transcript += event.results[i][0].transcript || "";
+      }
+
+      transcript = transcript.trim();
+      if (!transcript) return;
+
+      lastLiveTranscript = transcript;
+
+      const cleanedTranscript = cleanTranscriptForMeaning(transcript);
+
+      if (!cleanedTranscript || isThinkingOnlyTranscript(cleanedTranscript)) {
+        lastCleanTranscript = "";
+        clearRecognitionSubmitTimer();
+        continueListeningAfterThinkingSound();
+        return;
+      }
+
+      lastCleanTranscript = cleanedTranscript;
+      setStatus("I heard you.");
+
+      clearRecognitionSubmitTimer();
+
+      recognitionSubmitTimer = setTimeout(function () {
+        submitLiveTranscriptIfReady();
+      }, getLiveSubmitDelay(cleanedTranscript));
+    };
+
+    recognition.onerror = function (event) {
+      console.warn("Speech recognition error:", event.error);
+
+      if (
+        event.error === "not-allowed" ||
+        event.error === "service-not-allowed" ||
+        event.error === "audio-capture"
+      ) {
+        stopLiveSpeechRecognition(true);
+        startAudioRecorderFallback();
+      }
+    };
+
+    recognition.onend = function () {
+      const elapsed = Date.now() - recognitionStartedAt;
+
+      if (recognitionStoppedByUs || !recognitionActive || sessionDone || !gameActive) return;
+
+      if (elapsed < getLiveHardCapDuration()) {
+        clearTimeout(recognitionRestartTimer);
+
+        recognitionRestartTimer = setTimeout(function () {
+          if (
+            recognitionActive &&
+            !recognitionStoppedByUs &&
+            !waitingForToyWorker &&
+            gameActive &&
+            !sessionDone
+          ) {
+            try {
+              recognition.start();
+            } catch (error) {
+              console.warn("Could not restart speech recognition:", error);
+            }
+          }
+        }, 120);
+      }
+    };
+
+    recognitionHardCapTimer = setTimeout(function () {
+      if (!isListening || waitingForToyWorker || sessionDone || !gameActive) return;
+
+      const cleanedTranscript = cleanTranscriptForMeaning(lastLiveTranscript);
+
+      if (cleanedTranscript && !isThinkingOnlyTranscript(cleanedTranscript)) {
+        submitLiveTranscript(cleanedTranscript);
+        return;
+      }
+
+      stopLiveSpeechRecognition(true);
+      resetThinkingState();
+      requestToyWorkerMessage("no_response", "");
+    }, getLiveHardCapDuration());
+
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: true
-      });
+      recognition.start();
+    } catch (error) {
+      console.warn("Speech recognition could not start, using backup recorder:", error);
+      stopLiveSpeechRecognition(true);
+      startAudioRecorderFallback();
+    }
+  }
 
-      console.log("✅ Microphone permission granted");
+  function submitLiveTranscriptIfReady() {
+    if (!recognitionActive || !isListening || waitingForToyWorker || sessionDone || !gameActive) return;
 
+    const cleanedTranscript = cleanTranscriptForMeaning(lastCleanTranscript || lastLiveTranscript);
+
+    if (!cleanedTranscript || isThinkingOnlyTranscript(cleanedTranscript)) {
+      continueListeningAfterThinkingSound();
+      return;
+    }
+
+    submitLiveTranscript(cleanedTranscript);
+  }
+
+  function submitLiveTranscript(cleanedTranscript) {
+    if (waitingForToyWorker || sessionDone || !gameActive) return;
+
+    console.log("Sending live transcript:", cleanedTranscript);
+
+    resetThinkingState();
+    stopLiveSpeechRecognition(true);
+    setListeningUI(false);
+    hideResponseButtons();
+
+    requestToyWorkerMessage("child_answer", cleanedTranscript);
+  }
+
+  function stopLiveSpeechRecognition(markStoppedByUs) {
+    clearRecognitionSubmitTimer();
+
+    if (recognitionRestartTimer) {
+      clearTimeout(recognitionRestartTimer);
+      recognitionRestartTimer = null;
+    }
+
+    if (recognitionHardCapTimer) {
+      clearTimeout(recognitionHardCapTimer);
+      recognitionHardCapTimer = null;
+    }
+
+    if (markStoppedByUs) recognitionStoppedByUs = true;
+
+    if (recognition) {
+      try {
+        recognition.onresult = null;
+        recognition.onerror = null;
+        recognition.onend = null;
+        recognition.stop();
+      } catch (error) {
+        try {
+          recognition.abort();
+        } catch (e) {}
+      }
+    }
+
+    recognition = null;
+    recognitionActive = false;
+
+    if (markStoppedByUs) isListening = false;
+  }
+
+  function clearRecognitionSubmitTimer() {
+    if (recognitionSubmitTimer) {
+      clearTimeout(recognitionSubmitTimer);
+      recognitionSubmitTimer = null;
+    }
+  }
+
+  async function startAudioRecorderFallback() {
+    if (sessionDone || !gameActive) return;
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+      activeStream = stream;
       audioChunks = [];
+      speechDetected = false;
+      firstSpeechAt = 0;
+      ignoreNextRecording = false;
+
       mediaRecorder = new MediaRecorder(stream);
       isListening = true;
+      recordStartedAt = Date.now();
+      lastSpeechAt = recordStartedAt;
+
+      setListeningUI(true);
+      showResponseButtons(currentResponseMode);
 
       mediaRecorder.addEventListener("dataavailable", function (event) {
-        if (event.data.size > 0) {
-          audioChunks.push(event.data);
-        }
+        if (event.data && event.data.size > 0) audioChunks.push(event.data);
       });
 
       mediaRecorder.addEventListener("stop", async function () {
-        console.log("🛑 Recording stopped");
+        const shouldIgnore = ignoreNextRecording;
+
         isListening = false;
+        setListeningUI(false);
+        hideResponseButtons();
+        clearMaxRecordTimer();
+        cleanupMicAnalysis();
+        stopActiveStream();
 
-        stream.getTracks().forEach(function (track) {
-          track.stop();
-        });
+        if (shouldIgnore) {
+          ignoreNextRecording = false;
+          return;
+        }
 
-        const audioBlob = new Blob(audioChunks, {
-          type: "audio/webm"
-        });
+        const audioBlob = new Blob(audioChunks, { type: "audio/webm" });
 
-        if (!audioBlob.size) {
-          console.warn("No audio captured.");
-          requestCharacterMessage("no_response", "");
+        if (!audioBlob.size || !speechDetected) {
+          resetThinkingState();
+          await requestToyWorkerMessage("no_response", "");
           return;
         }
 
@@ -145,30 +829,169 @@ document.addEventListener("DOMContentLoaded", function () {
       });
 
       mediaRecorder.start();
-      console.log("🎙️ Recording started");
+      setupMicSilenceDetection(stream);
 
-      silenceTimer = setTimeout(function () {
+      maxRecordTimer = setTimeout(function () {
         stopListeningForChild();
-      }, 8000);
-
+      }, getBackupListeningDuration());
     } catch (error) {
       console.error("Microphone error:", error);
-      requestCharacterMessage("no_response", "");
+      isListening = false;
+      setListeningUI(false);
+      showResponseButtons(currentResponseMode);
+      setStatus("You can try the mic again.");
     }
   }
 
   function stopListeningForChild() {
-    console.log("🛑 Stopping recording...");
+    if (recognitionActive) {
+      stopLiveSpeechRecognition(true);
+      setListeningUI(false);
+      hideResponseButtons();
+      return;
+    }
 
     if (!mediaRecorder) return;
     if (mediaRecorder.state === "inactive") return;
 
-    clearTimeout(silenceTimer);
-    mediaRecorder.stop();
+    try {
+      mediaRecorder.stop();
+    } catch (error) {
+      console.error("Could not stop recorder:", error);
+    }
+  }
+
+  function cancelListening() {
+    clearRecognitionSubmitTimer();
+
+    if (recognitionActive || recognition) stopLiveSpeechRecognition(true);
+
+    if (!isListening && !mediaRecorder) return;
+
+    ignoreNextRecording = true;
+    clearMaxRecordTimer();
+    cleanupMicAnalysis();
+
+    if (mediaRecorder && mediaRecorder.state !== "inactive") {
+      try {
+        mediaRecorder.stop();
+      } catch (error) {
+        console.error("Could not cancel recorder:", error);
+      }
+    } else {
+      stopActiveStream();
+      setListeningUI(false);
+    }
+
+    isListening = false;
+  }
+
+  function clearMaxRecordTimer() {
+    if (maxRecordTimer) {
+      clearTimeout(maxRecordTimer);
+      maxRecordTimer = null;
+    }
+  }
+
+  function stopActiveStream() {
+    if (!activeStream) return;
+
+    activeStream.getTracks().forEach(function (track) {
+      track.stop();
+    });
+
+    activeStream = null;
+  }
+
+  function setupMicSilenceDetection(stream) {
+    cleanupMicAnalysis();
+
+    try {
+      micAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+      micAnalyser = micAudioContext.createAnalyser();
+      micAnalyser.fftSize = 512;
+
+      micSource = micAudioContext.createMediaStreamSource(stream);
+      micSource.connect(micAnalyser);
+
+      const dataArray = new Uint8Array(micAnalyser.fftSize);
+
+      function checkVolume() {
+        if (!isListening || !micAnalyser) return;
+
+        micAnalyser.getByteTimeDomainData(dataArray);
+
+        let sum = 0;
+        for (let i = 0; i < dataArray.length; i++) {
+          const centered = (dataArray[i] - 128) / 128;
+          sum += centered * centered;
+        }
+
+        const rms = Math.sqrt(sum / dataArray.length);
+        const now = Date.now();
+
+        if (rms > 0.035) {
+          if (!speechDetected) firstSpeechAt = now;
+          speechDetected = true;
+          lastSpeechAt = now;
+        }
+
+        const elapsedSinceStart = now - recordStartedAt;
+        const speechDuration = firstSpeechAt ? lastSpeechAt - firstSpeechAt : 0;
+
+        let silenceNeeded = getBackupSilenceAfterSpeechDuration();
+
+        const speechWasVeryBrief =
+          speechDetected &&
+          speechDuration < 850 &&
+          elapsedSinceStart < getBackupListeningDuration() - 1200;
+
+        if (speechWasVeryBrief) silenceNeeded += 2500;
+
+        const heardSpeechAndThenPause =
+          speechDetected &&
+          elapsedSinceStart > getBackupMinimumRecordingDuration() &&
+          now - lastSpeechAt > silenceNeeded;
+
+        if (heardSpeechAndThenPause) {
+          stopListeningForChild();
+          return;
+        }
+
+        micAnimationFrame = requestAnimationFrame(checkVolume);
+      }
+
+      checkVolume();
+    } catch (error) {
+      console.warn("Mic silence detection unavailable:", error);
+    }
+  }
+
+  function cleanupMicAnalysis() {
+    if (micAnimationFrame) {
+      cancelAnimationFrame(micAnimationFrame);
+      micAnimationFrame = null;
+    }
+
+    if (micSource) {
+      try { micSource.disconnect(); } catch (e) {}
+      micSource = null;
+    }
+
+    if (micAnalyser) {
+      try { micAnalyser.disconnect(); } catch (e) {}
+      micAnalyser = null;
+    }
+
+    if (micAudioContext) {
+      try { micAudioContext.close(); } catch (e) {}
+      micAudioContext = null;
+    }
   }
 
   async function sendAudioToTranscribe(audioBlob) {
-    console.log("📤 Sending audio to transcribe...");
+    setStatus("Toy worker is thinking.");
+    stopThinkingFiller();
 
     try {
       const formData = new FormData();
@@ -181,75 +1004,116 @@ document.addEventListener("DOMContentLoaded", function () {
       });
 
       const data = await response.json();
+      stopThinkingFiller();
 
-      console.log("📝 RAW TRANSCRIPTION RESPONSE:", data);
-
-      if (!data.success) {
-        console.error(data.error || "Transcription failed");
-        requestCharacterMessage("no_response", "");
+      if (!response.ok || !data.success) {
+        resetThinkingState();
+        await requestToyWorkerMessage("no_response", "");
         return;
       }
 
       const transcript = (data.text || "").trim();
 
-      console.log("📝 TRANSCRIPT:", transcript);
-
       if (!transcript) {
-        requestCharacterMessage("no_response", "");
+        resetThinkingState();
+        await requestToyWorkerMessage("no_response", "");
         return;
       }
 
-      requestCharacterMessage("child_answer", transcript);
+      if (isThinkingOnlyTranscript(transcript)) {
+        continueListeningAfterThinkingSound();
+        return;
+      }
 
+      const cleanedTranscript = cleanTranscriptForMeaning(transcript);
+
+      if (!cleanedTranscript || isThinkingOnlyTranscript(cleanedTranscript)) {
+        continueListeningAfterThinkingSound();
+        return;
+      }
+
+      resetThinkingState();
+      await requestToyWorkerMessage("child_answer", cleanedTranscript);
     } catch (error) {
+      stopThinkingFiller();
       console.error("Transcription request error:", error);
-      requestCharacterMessage("no_response", "");
+      resetThinkingState();
+      await requestToyWorkerMessage("no_response", "");
     }
   }
 
-  function playCharacterAudio(audioSrc, shouldListenAfter = true) {
+  function playCharacterAudio(audioSrc, expectsResponse = true, onEnded = null) {
     if (!audioSrc) {
       stopMouthAnimation();
+      if (onEnded) onEnded();
       return;
     }
 
-    if (isListening) {
-      stopListeningForChild();
-    }
+    stopThinkingFiller();
+
+    if (isListening || recognitionActive) cancelListening();
 
     if (characterAudio) {
       characterAudio.pause();
       characterAudio.currentTime = 0;
     }
 
+    stopMouthAnimation();
+    hideResponseButtons();
+    setStatus("", false);
+
     characterAudio = new Audio(audioSrc);
     characterAudio.volume = 1.0;
-    characterAudio.playbackRate = 1.04;
+    characterAudio.playbackRate = 0.94;
+    characterAudio.preservesPitch = false;
+    characterAudio.mozPreservesPitch = false;
+    characterAudio.webkitPreservesPitch = false;
 
     characterAudio.addEventListener("play", function () {
-      console.log("🔊 Character audio playing");
       startMouthAnimation();
     });
 
     characterAudio.addEventListener("ended", function () {
-      console.log("🔇 Character audio ended");
       stopMouthAnimation();
 
-      if (shouldListenAfter) {
+      if (onEnded) {
+        onEnded();
+        return;
+      }
+
+      if (expectsResponse && gameActive && !sessionDone) {
         setTimeout(function () {
           startListeningForChild();
-        }, 500);
+        }, 150);
       }
     });
 
     characterAudio.addEventListener("error", function () {
-      console.error("Character audio error");
+      console.error("Toy Trivia worker audio error");
       stopMouthAnimation();
+
+      if (onEnded) {
+        onEnded();
+        return;
+      }
+
+      if (expectsResponse && gameActive && !sessionDone) {
+        setTimeout(startListeningForChild, 150);
+      }
     });
 
     characterAudio.play().catch(function (error) {
       console.error("Audio playback error:", error);
       stopMouthAnimation();
+
+      if (onEnded) {
+        onEnded();
+        return;
+      }
+
+      if (expectsResponse && gameActive && !sessionDone) {
+        setTimeout(startListeningForChild, 150);
+      }
     });
   }
 
@@ -259,20 +1123,25 @@ document.addEventListener("DOMContentLoaded", function () {
 
     stopMouthAnimation();
 
-    audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    analyser = audioContext.createAnalyser();
-    analyser.fftSize = 256;
+    try {
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      analyser = audioContext.createAnalyser();
+      analyser.fftSize = 256;
 
-    sourceNode = audioContext.createMediaElementSource(characterAudio);
-    sourceNode.connect(analyser);
-    analyser.connect(audioContext.destination);
+      sourceNode = audioContext.createMediaElementSource(characterAudio);
+      sourceNode.connect(analyser);
+      analyser.connect(audioContext.destination);
+    } catch (error) {
+      console.warn("Mouth animation could not start:", error);
+      return;
+    }
 
     const dataArray = new Uint8Array(analyser.frequencyBinCount);
     let currentMouth = "closed";
 
     function setMouth(state, scaleX, scaleY) {
       if (currentMouth !== state) {
-        mouth.src = `/static/images/toy_worker_mouth-${state}.png`;
+        mouth.src = `/static/images/toyworker-mouth-${state}.png`;
         currentMouth = state;
       }
 
@@ -280,13 +1149,12 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     function animateMouth() {
+      if (!analyser) return;
+
       analyser.getByteFrequencyData(dataArray);
 
       let sum = 0;
-
-      for (let i = 0; i < dataArray.length; i++) {
-        sum += dataArray[i];
-      }
+      for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
 
       const average = sum / dataArray.length;
       const normalized = Math.min(Math.max((average - 10) / 70, 0), 1);
@@ -294,15 +1162,10 @@ document.addEventListener("DOMContentLoaded", function () {
       const scaleX = 1 + normalized * 0.18;
       const scaleY = 1 + normalized * 0.32;
 
-      if (average < 14) {
-        setMouth("closed", 1, 1);
-      } else if (average < 34) {
-        setMouth("small", scaleX, scaleY);
-      } else if (average < 58) {
-        setMouth("medium", scaleX, scaleY);
-      } else {
-        setMouth("wide", scaleX, scaleY);
-      }
+      if (average < 14) setMouth("closed", 1, 1);
+      else if (average < 34) setMouth("small", scaleX, scaleY);
+      else if (average < 58) setMouth("medium", scaleX, scaleY);
+      else setMouth("wide", scaleX, scaleY);
 
       mouthAnimationFrame = requestAnimationFrame(animateMouth);
     }
@@ -319,26 +1182,22 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     if (sourceNode) {
-      try {
-        sourceNode.disconnect();
-      } catch (e) {}
+      try { sourceNode.disconnect(); } catch (e) {}
       sourceNode = null;
     }
 
     if (analyser) {
-      try {
-        analyser.disconnect();
-      } catch (e) {}
+      try { analyser.disconnect(); } catch (e) {}
       analyser = null;
     }
 
     if (audioContext) {
-      audioContext.close();
+      try { audioContext.close(); } catch (e) {}
       audioContext = null;
     }
 
     if (mouth) {
-      mouth.src = "/static/images/toy_worker_mouth-closed.png";
+      mouth.src = "/static/images/toyworker-mouth-closed.png";
       mouth.style.transform = "translateX(-50%) scale(1)";
     }
   }
@@ -349,53 +1208,106 @@ document.addEventListener("DOMContentLoaded", function () {
       characterAudio.currentTime = 0;
     }
 
-    if (isListening) {
-      stopListeningForChild();
-    }
-
+    cancelListening();
+    stopThinkingFiller();
     stopMouthAnimation();
-    completeModal.classList.remove("show");
+    resetThinkingState();
+
     currentResponseMode = "none";
+    currentStage = "intro";
+    offerNextGame = false;
+    sessionDone = false;
+    gameActive = true;
 
     setTimeout(function () {
-      requestCharacterMessage("restart");
-    }, 500);
+      requestToyWorkerMessage("restart");
+    }, 350);
   }
 
   function startGameAfterCall() {
-    acceptCall.disabled = true;
-    declineCall.disabled = true;
+    if (acceptCall) acceptCall.disabled = true;
+    if (declineCall) declineCall.disabled = true;
 
     stopRingtone();
     playCallAcceptedSound();
 
-    incomingCallScreen.classList.add("hide");
-    toyStage.classList.remove("call-hidden");
+    if (incomingCallScreen) incomingCallScreen.classList.add("hide");
+    if (toyStage) toyStage.classList.remove("call-hidden");
 
     setTimeout(function () {
-      incomingCallScreen.style.display = "none";
+      if (incomingCallScreen) incomingCallScreen.style.display = "none";
     }, 450);
 
+    currentResponseMode = "none";
+    currentStage = "intro";
+    offerNextGame = false;
+    sessionDone = false;
+    gameActive = true;
+    resetThinkingState();
+
     setTimeout(function () {
-      requestCharacterMessage("intro");
-    }, 700);
+      requestToyWorkerMessage("intro");
+    }, 650);
   }
 
-  acceptCall.addEventListener("click", startGameAfterCall);
-
-  declineCall.addEventListener("click", function () {
-    acceptCall.disabled = true;
-    declineCall.disabled = true;
+  function endCall() {
+    gameActive = false;
+    sessionDone = true;
 
     stopRingtone();
-    playCallAcceptedSound();
+    stopThinkingFiller();
+
+    if (characterAudio) {
+      characterAudio.pause();
+      characterAudio.currentTime = 0;
+    }
+
+    cancelListening();
+    stopMouthAnimation();
+    resetThinkingState();
+
+    if (toyPage) {
+      toyPage.classList.add("call-ending-transition");
+    }
+
+    setStatus("Ending call.", true);
 
     setTimeout(function () {
       window.location.href = "/dashboard";
-    }, 300);
-  });
+    }, 1050);
+  }
 
-  restartBtn.addEventListener("click", restartGame);
+  if (acceptCall) acceptCall.addEventListener("click", startGameAfterCall);
+
+  if (declineCall) {
+    declineCall.addEventListener("click", function () {
+      if (acceptCall) acceptCall.disabled = true;
+      if (declineCall) declineCall.disabled = true;
+
+      stopRingtone();
+      playCallAcceptedSound();
+
+      if (toyPage) {
+        toyPage.classList.add("call-ending-transition");
+      }
+
+      setTimeout(function () {
+        window.location.href = "/dashboard";
+      }, 1050);
+    });
+  }
+
+  if (hangupBtn) hangupBtn.addEventListener("click", endCall);
 
   setTimeout(startRingtone, 400);
+
+  const params = new URLSearchParams(window.location.search);
+
+  if (params.get("skip_call") === "1") {
+    setTimeout(function () {
+      startGameAfterCall();
+    }, 250);
+  }
+
+  window.restartToyTriviaGame = restartGame;
 });

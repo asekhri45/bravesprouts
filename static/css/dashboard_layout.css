@@ -811,20 +811,3 @@ body {
   color: #a4a7c8;
 }
 
-.journey-node-shine {
-  position: absolute;
-  width: 34px;
-  height: 34px;
-  top: 50%;
-  transform: translateY(-50%);
-  pointer-events: none;
-  animation: sparkleNode 2.5s ease-in-out infinite;
-}
-
-.journey-node-shine-left {
-  left: -28px;
-}
-
-.journey-node-shine-right {
-  right: -28px;
-}

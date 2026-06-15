@@ -4,64 +4,62 @@
 
 {% block head %}
 <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/signup.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/signup.css') }}?v=2">
 {% endblock %}
 
 {% block content %}
 <div class="page">
   <header class="topbar">
-    <img src="{{ url_for('static', filename='images/logo_v2.png') }}" class="logo">
+    <img src="{{ url_for('static', filename='images/logo_v2.png') }}" class="logo" alt="BraveSprouts logo">
     <a href="/" class="back-home">← Back to Home</a>
   </header>
 
   <main class="login-layout">
     <section class="login-card">
       <h1>Welcome!</h1>
-      <p class="subtitle">Begin your child’s journey with BraveSprouts</p>
+      <p class="subtitle">Create your BraveSprouts parent account</p>
 
       <form method="POST" class="login-form" id="signupForm">
-
-        <div class="dual-row">
-          <div class="field-col">
-            <label for="child_name" class="field-label">Child's Name</label>
-            <div class="input-group">
-              <img src="{{ url_for('static', filename='images/profile.svg') }}" class="input-icon">
-              <input type="text" placeholder="First Name Only" name="child_name" id="child_name" required/>
-            </div>
-          </div>
-
-          <div class="field-col dob-col">
-            <label for="child_dob" class="field-label">Child's Date of Birth</label>
-            <div class="input-group">
-              <img src="{{ url_for('static', filename='images/calendar.svg') }}" class="input-icon">
-              <input type="date" name="child_dob" id="child_dob" required/>
-            </div>
-          </div>
-        </div>
-
         {% if error %}
-          <div class="error-message">
-            {{ error }}
-          </div>
+          <div class="error-message">{{ error }}</div>
         {% endif %}
 
         <div class="input-group">
-          <img src="{{ url_for('static', filename='images/emailiconblue.svg') }}" class="input-icon">
-          <input type="email" placeholder="Email address" name="email" id="email" required/>
+          <img src="{{ url_for('static', filename='images/profile.svg') }}" class="input-icon" alt="">
+          <input type="text" placeholder="Parent Name" name="parent_name" id="parent_name" maxlength="50" required>
         </div>
 
         <div class="input-group">
-          <img src="{{ url_for('static', filename='images/profile.svg') }}" class="input-icon">
-          <input type="text" placeholder="Parent Name (Full Name)" name="parent_name" id="parent_name" required/>
+          <img src="{{ url_for('static', filename='images/emailiconblue.svg') }}" class="input-icon" alt="">
+          <input type="email" placeholder="Email address" name="email" id="email" maxlength="120" required>
         </div>
 
         <div class="input-group">
-          <img src="{{ url_for('static', filename='images/lockiconblue.svg') }}" class="input-icon">
+          <img src="{{ url_for('static', filename='images/lockiconblue.svg') }}" class="input-icon" alt="">
+          <input
+            type="password"
+            placeholder="4-digit Parent PIN"
+            name="parent_pin"
+            id="parent_pin"
+            inputmode="numeric"
+            pattern="[0-9]{4}"
+            minlength="4"
+            maxlength="4"
+            required
+          >
+        </div>
+
+        <div class="pin-note">
+          You’ll use this PIN to access parent-only areas.
+        </div>
+
+        <div class="input-group">
+          <img src="{{ url_for('static', filename='images/lockiconblue.svg') }}" class="input-icon" alt="">
           <input type="password" id="password" name="password" placeholder="Password" required>
         </div>
 
         <div class="input-group">
-          <img src="{{ url_for('static', filename='images/lockiconblue.svg') }}" class="input-icon">
+          <img src="{{ url_for('static', filename='images/lockiconblue.svg') }}" class="input-icon" alt="">
           <input type="password" id="confirm_password" name="confirm_password" placeholder="Confirm Password" required>
         </div>
 
@@ -93,10 +91,10 @@
       <div class="sparkle sparkle-1">✦</div>
       <div class="sparkle sparkle-2">✦</div>
 
-      <img src="{{ url_for('static', filename='images/signup2.gif') }}" class="image-placeholder">
+      <img src="{{ url_for('static', filename='images/signup2.gif') }}" class="image-placeholder" alt="">
     </section>
   </main>
 </div>
 
-<script src="{{ url_for('static', filename='js/register.js') }}"></script>
+<script src="{{ url_for('static', filename='js/register.js') }}?v=2"></script>
 {% endblock %}
