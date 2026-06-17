@@ -1,4 +1,5 @@
 document.addEventListener("DOMContentLoaded", () => {
+  setupSettingsTourMode();
   setupProfileDropdown();
   setupAgeSlider();
   setupPermissionToggles();
@@ -6,6 +7,31 @@ document.addEventListener("DOMContentLoaded", () => {
   setupPinModal();
   setupDeleteModal();
 });
+
+function setupSettingsTourMode() {
+  const tourStep = new URLSearchParams(window.location.search).get("tour");
+
+  const isChildProfileTourStep = tourStep === "6";
+  const isPermissionsTourStep = tourStep === "7";
+
+  document.body.classList.toggle("settings-tour-child-profile-active", isChildProfileTourStep);
+  document.body.classList.toggle("settings-tour-permissions-active", isPermissionsTourStep);
+
+  if (!isChildProfileTourStep) return;
+
+  const childProfileForm = document.querySelector('[data-tour-target="settings-child-profile"]');
+
+  if (!childProfileForm) return;
+
+  childProfileForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (event.stopImmediatePropagation) {
+      event.stopImmediatePropagation();
+    }
+  }, true);
+}
 
 function setupProfileDropdown() {
   const profileDropdown = document.querySelector(".profile-dropdown");
@@ -79,7 +105,7 @@ function setupAgeSlider() {
   slider.addEventListener("input", updateSlider);
 
 const isTourChildProfileStep =
-  new URLSearchParams(window.location.search).get("tour") === "5";
+  new URLSearchParams(window.location.search).get("tour") === "6";
 
 if (isTourChildProfileStep) {
   const min = Number(slider.min);
@@ -102,7 +128,7 @@ function setupPermissionToggles() {
   if (!audioToggle || !micToggle) return;
 
   const isTourPermissionStep =
-    new URLSearchParams(window.location.search).get("tour") === "6";
+    new URLSearchParams(window.location.search).get("tour") === "7";
 
   if (isTourPermissionStep) {
     localStorage.setItem("bravesprouts_audio_enabled", "false");

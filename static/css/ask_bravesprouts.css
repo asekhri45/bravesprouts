@@ -1009,3 +1009,1037 @@
 .ask-send-btn:active {
   transform: translateY(1px);
 }
+
+/* =========================================================
+   RESPONSIVE PATCH FOR ASK BRAVESPROUTS
+   Add this at the VERY BOTTOM of ask_bravesprouts.css
+========================================================= */
+
+/* Prevent page-level clipping from fighting the chatbot */
+.dashboard-main {
+  min-height: 100vh;
+}
+
+.ask-page {
+  min-height: 100vh;
+}
+
+/* =========================
+   HORIZONTAL WIDTH RESPONSIVENESS
+========================= */
+
+/* Medium laptop widths: sidebar is smaller, so fixed chat input needs to move left */
+@media (max-width: 1150px) and (min-width: 901px) {
+  .ask-page.chat-started .ask-search-bar {
+    left: calc(250px + 32px);
+    right: 72px;
+    max-width: none;
+  }
+
+  .ask-page.chat-started .ask-disclaimer {
+    left: calc(250px + 32px);
+    right: 72px;
+  }
+
+  .ask-page.chat-started::after {
+    left: 250px;
+  }
+
+  .ask-page.chat-started .ask-chat-area {
+    padding-left: 34px;
+    padding-right: 34px;
+  }
+
+  .ask-history-panel {
+    width: 350px;
+  }
+}
+
+/* Narrow tablet widths: sidebar is 220px */
+@media (max-width: 900px) and (min-width: 761px) {
+  .ask-hero {
+    padding-left: 28px;
+    padding-right: 28px;
+  }
+
+  .ask-search-bar {
+    width: min(100%, 680px);
+  }
+
+  .ask-suggestions {
+    gap: 18px;
+  }
+
+  .suggestion-pill {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+
+  .support-grid {
+    gap: 28px;
+  }
+
+  .support-item {
+    grid-template-columns: 60px 1fr;
+  }
+
+  .support-icon {
+    width: 56px;
+    height: 56px;
+    font-size: 24px;
+  }
+
+  .ask-page.chat-started .ask-search-bar {
+    left: calc(220px + 24px);
+    right: 64px;
+    max-width: none;
+  }
+
+  .ask-page.chat-started .ask-disclaimer {
+    left: calc(220px + 24px);
+    right: 64px;
+  }
+
+  .ask-page.chat-started::after {
+    left: 220px;
+  }
+
+  .ask-page.chat-started .ask-chat-area {
+    padding-left: 28px;
+    padding-right: 28px;
+  }
+
+  .ask-page.chat-started .ask-message {
+    max-width: 82%;
+  }
+
+  .ask-page.chat-started .ask-message-user {
+    max-width: 72%;
+  }
+
+  .ask-history-panel {
+    width: 330px;
+  }
+
+  .ask-history-toggle {
+    right: 16px;
+  }
+}
+
+/* Mobile layout: sidebar becomes horizontal, so fixed input must use full viewport width */
+@media (max-width: 760px) {
+  .dashboard-main {
+    min-height: 0;
+  }
+
+  .ask-page {
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  .ask-hero {
+    min-height: auto;
+    padding: 34px 22px 34px;
+  }
+
+  .ask-bunny {
+    width: 128px;
+    margin-bottom: 8px;
+  }
+
+  .ask-hero h1 {
+    font-size: 34px;
+    letter-spacing: -0.8px;
+  }
+
+  .ask-hero p {
+    margin: 13px 0 32px;
+    font-size: 15.5px;
+    line-height: 1.45;
+  }
+
+  .ask-search-bar {
+    width: 100%;
+    min-height: 62px;
+    padding: 12px 13px;
+    border-radius: 24px;
+  }
+
+  .ask-search-bar textarea {
+    padding-left: 14px;
+    padding-right: 14px;
+    font-size: 15.5px;
+  }
+
+  .ask-plus-btn,
+  .ask-send-btn {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    min-height: 38px;
+  }
+
+  .ask-suggestions {
+    width: 100%;
+    gap: 12px;
+    margin-top: 24px;
+    margin-bottom: 18px;
+  }
+
+  .suggestion-pill {
+    width: 100%;
+    max-width: 420px;
+    justify-content: center;
+    height: 48px;
+    padding: 0 18px;
+  }
+
+  .support-section {
+    min-height: auto;
+    padding: 28px 22px 24px;
+  }
+
+  .support-inner h2 {
+    margin-bottom: 18px;
+  }
+
+  .support-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .support-item {
+    max-width: none;
+    grid-template-columns: 58px 1fr;
+  }
+
+  .support-icon {
+    width: 54px;
+    height: 54px;
+    font-size: 23px;
+  }
+
+  .ask-disclaimer {
+    height: auto;
+    padding: 0 22px 22px;
+  }
+
+  .ask-page.chat-started {
+    height: auto;
+    min-height: 100vh;
+  }
+
+  .ask-page.chat-started .ask-hero {
+    min-height: 100vh;
+    padding: 20px 0 132px;
+  }
+
+  .ask-page.chat-started .ask-chat-area {
+    padding: 10px 18px 20px;
+  }
+
+  .ask-page.chat-started .ask-search-bar {
+    position: fixed;
+    left: 16px;
+    right: 16px;
+    bottom: 34px;
+    width: auto;
+    max-width: none;
+  }
+
+  .ask-page.chat-started .ask-disclaimer {
+    position: fixed;
+    left: 16px;
+    right: 16px;
+    bottom: 8px;
+    width: auto;
+    padding: 0;
+    font-size: 12px;
+  }
+
+  .ask-page.chat-started::after {
+    left: 0;
+    right: 0;
+    height: 132px;
+  }
+
+  .ask-page.chat-started .ask-message,
+  .ask-page.chat-started .ask-message-bot,
+  .ask-page.chat-started .ask-message-user {
+    max-width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  .ask-message {
+    padding: 18px 20px;
+    border-radius: 20px;
+    font-size: 14.5px;
+  }
+
+  .ask-card-hero {
+    gap: 12px;
+  }
+
+  .ask-card-hero h3 {
+    font-size: 21px;
+  }
+
+  .ask-card-hero p {
+    font-size: 14px;
+    line-height: 1.55;
+  }
+
+  .ask-visual-section {
+    grid-template-columns: 38px 1fr;
+    gap: 12px;
+    padding: 12px 0;
+  }
+
+  .ask-section-icon {
+    width: 34px;
+    height: 34px;
+    font-size: 18px;
+  }
+
+  .ask-section-body h4 {
+    font-size: 15px;
+  }
+
+  .ask-section-body p,
+  .ask-section-body li {
+    font-size: 13.5px;
+    line-height: 1.5;
+  }
+
+  .ask-tradeoff-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ask-history-sidebar {
+    z-index: 90;
+  }
+
+  .ask-history-panel {
+    width: min(88vw, 330px);
+    padding: 20px;
+  }
+
+  .ask-history-toggle {
+    top: 14px;
+    right: 14px;
+    width: 42px;
+    height: 42px;
+  }
+}
+
+/* Extra skinny phones/windows */
+@media (max-width: 480px) {
+  .ask-hero {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .ask-bunny {
+    width: 112px;
+  }
+
+  .ask-hero h1 {
+    font-size: 30px;
+  }
+
+  .ask-hero p {
+    font-size: 14.5px;
+  }
+
+  .ask-search-bar {
+    min-height: 58px;
+    border-radius: 22px;
+    padding: 10px 11px;
+  }
+
+  .ask-search-bar textarea {
+    font-size: 14.5px;
+    padding-left: 11px;
+    padding-right: 11px;
+  }
+
+  .ask-plus-btn,
+  .ask-send-btn {
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
+    min-height: 34px;
+  }
+
+  .suggestion-pill {
+    height: auto;
+    min-height: 46px;
+    padding: 10px 14px;
+    font-size: 14px;
+    white-space: normal;
+  }
+
+  .support-section {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .support-item {
+    grid-template-columns: 50px 1fr;
+    gap: 12px;
+  }
+
+  .support-icon {
+    width: 48px;
+    height: 48px;
+    font-size: 21px;
+  }
+
+  .support-item h3 {
+    font-size: 14.5px;
+  }
+
+  .support-item p {
+    font-size: 13.5px;
+  }
+
+  .ask-page.chat-started .ask-search-bar {
+    left: 12px;
+    right: 12px;
+  }
+
+  .ask-page.chat-started .ask-disclaimer {
+    left: 12px;
+    right: 12px;
+  }
+
+  .ask-message {
+    padding: 16px 17px;
+  }
+
+  .ask-history-panel {
+    width: min(92vw, 310px);
+  }
+}
+
+/* =========================
+   VERTICAL HEIGHT RESPONSIVENESS
+========================= */
+
+/* Slightly shorter browser windows */
+@media (max-height: 820px) and (min-width: 761px) {
+  .ask-hero {
+    min-height: 60vh;
+    padding-top: 38px;
+    padding-bottom: 34px;
+  }
+
+  .ask-bunny {
+    width: 128px;
+    margin-bottom: 8px;
+  }
+
+  .ask-hero h1 {
+    font-size: 37px;
+  }
+
+  .ask-hero p {
+    margin-top: 12px;
+    margin-bottom: 34px;
+    font-size: 16px;
+  }
+
+  .ask-search-bar {
+    min-height: 64px;
+  }
+
+  .ask-suggestions {
+    margin-top: 24px;
+    margin-bottom: 16px;
+  }
+
+  .suggestion-pill {
+    height: 46px;
+  }
+
+  .support-section {
+    min-height: 24vh;
+    padding-top: 22px;
+  }
+
+  .support-inner h2 {
+    margin-bottom: 18px;
+  }
+
+  .support-grid {
+    gap: 34px;
+  }
+
+  .support-icon {
+    width: 58px;
+    height: 58px;
+    font-size: 25px;
+  }
+
+  .support-item {
+    grid-template-columns: 64px 1fr;
+  }
+
+  .support-item p {
+    font-size: 13.8px;
+    line-height: 1.42;
+  }
+
+  .ask-page.chat-started .ask-hero {
+    padding-top: 22px;
+    padding-bottom: 140px;
+  }
+
+  .ask-page.chat-started .ask-search-bar {
+    bottom: 30px;
+  }
+
+  .ask-page.chat-started::after {
+    height: 136px;
+  }
+
+  .ask-message {
+    padding: 19px 23px;
+  }
+
+  .ask-visual-section {
+    padding: 12px 0;
+  }
+
+  .ask-history-panel {
+    padding-top: 20px;
+    padding-bottom: 20px;
+  }
+
+  .ask-new-chat-btn {
+    height: 44px;
+    margin-bottom: 14px;
+  }
+
+  .ask-history-header {
+    margin-bottom: 16px;
+  }
+}
+
+/* Short browser windows */
+@media (max-height: 720px) and (min-width: 761px) {
+  .ask-hero {
+    min-height: 56vh;
+    padding-top: 28px;
+    padding-bottom: 26px;
+  }
+
+  .ask-bunny {
+    width: 108px;
+    margin-bottom: 6px;
+  }
+
+  .ask-hero h1 {
+    font-size: 33px;
+  }
+
+  .ask-hero p {
+    margin-top: 10px;
+    margin-bottom: 26px;
+    font-size: 15px;
+    line-height: 1.4;
+  }
+
+  .ask-search-bar {
+    min-height: 58px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    border-radius: 23px;
+  }
+
+  .ask-plus-btn,
+  .ask-send-btn {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    min-height: 36px;
+  }
+
+  .ask-search-bar textarea {
+    font-size: 15.5px;
+  }
+
+  .ask-suggestions {
+    margin-top: 18px;
+    margin-bottom: 12px;
+    gap: 18px;
+  }
+
+  .suggestion-pill {
+    height: 42px;
+    padding-left: 20px;
+    padding-right: 20px;
+    font-size: 14px;
+  }
+
+  .support-section {
+    min-height: auto;
+    padding-top: 18px;
+  }
+
+  .support-inner h2 {
+    margin-bottom: 14px;
+    font-size: 18px;
+  }
+
+  .support-grid {
+    gap: 24px;
+  }
+
+  .support-icon {
+    width: 52px;
+    height: 52px;
+    font-size: 22px;
+  }
+
+  .support-item {
+    grid-template-columns: 58px 1fr;
+    gap: 12px;
+  }
+
+  .support-item h3 {
+    margin-bottom: 5px;
+    font-size: 14.5px;
+  }
+
+  .support-item p {
+    font-size: 13.2px;
+    line-height: 1.35;
+  }
+
+  .ask-disclaimer {
+    font-size: 12.5px;
+  }
+
+  .ask-page.chat-started .ask-hero {
+    padding-top: 18px;
+    padding-bottom: 126px;
+  }
+
+  .ask-page.chat-started .ask-chat-area {
+    padding-top: 6px;
+    padding-bottom: 18px;
+  }
+
+  .ask-page.chat-started .ask-search-bar {
+    bottom: 28px;
+    min-height: 56px;
+  }
+
+  .ask-page.chat-started .ask-disclaimer {
+    bottom: 7px;
+  }
+
+  .ask-page.chat-started::after {
+    height: 122px;
+  }
+
+  .ask-message {
+    padding: 17px 21px;
+    border-radius: 20px;
+    font-size: 14.3px;
+    line-height: 1.48;
+  }
+
+  .ask-card-hero h3 {
+    font-size: 22px;
+  }
+
+  .ask-card-hero p {
+    font-size: 14px;
+    line-height: 1.52;
+  }
+
+  .ask-visual-section {
+    padding: 10px 0;
+  }
+
+  .ask-section-body h4 {
+    margin-bottom: 6px;
+  }
+
+  .ask-section-body p,
+  .ask-section-body li {
+    font-size: 13.7px;
+    line-height: 1.45;
+  }
+
+  .ask-follow-up-box {
+    margin-top: 14px;
+    padding: 14px;
+  }
+
+  .ask-history-panel {
+    padding: 18px;
+  }
+
+  .ask-history-header h3 {
+    font-size: 18px;
+  }
+
+  .ask-history-header p {
+    font-size: 12.5px;
+  }
+
+  .ask-new-chat-btn {
+    height: 42px;
+    border-radius: 16px;
+  }
+
+  .ask-history-item {
+    padding: 12px 13px;
+  }
+}
+
+/* Very short browser windows */
+@media (max-height: 640px) and (min-width: 761px) {
+  .ask-hero {
+    min-height: 52vh;
+    padding-top: 20px;
+    padding-bottom: 20px;
+  }
+
+  .ask-bunny {
+    width: 92px;
+    margin-bottom: 4px;
+  }
+
+  .ask-hero h1 {
+    font-size: 30px;
+  }
+
+  .ask-hero p {
+    margin-top: 8px;
+    margin-bottom: 20px;
+    font-size: 14px;
+    line-height: 1.32;
+  }
+
+  .ask-search-bar {
+    min-height: 52px;
+    padding: 8px 10px;
+    border-radius: 21px;
+  }
+
+  .ask-plus-btn,
+  .ask-send-btn {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    min-height: 32px;
+  }
+
+  .ask-search-bar textarea {
+    font-size: 14.5px;
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .ask-suggestions {
+    margin-top: 14px;
+    margin-bottom: 8px;
+    gap: 12px;
+  }
+
+  .suggestion-pill {
+    height: 38px;
+    padding-left: 16px;
+    padding-right: 16px;
+    font-size: 13px;
+  }
+
+  .support-section {
+    padding-top: 14px;
+  }
+
+  .support-inner h2 {
+    margin-bottom: 12px;
+    font-size: 17px;
+  }
+
+  .support-grid {
+    gap: 18px;
+  }
+
+  .support-icon {
+    width: 46px;
+    height: 46px;
+    font-size: 20px;
+  }
+
+  .support-item {
+    grid-template-columns: 52px 1fr;
+  }
+
+  .support-item h3 {
+    font-size: 13.8px;
+  }
+
+  .support-item p {
+    font-size: 12.5px;
+    line-height: 1.3;
+  }
+
+  .ask-page.chat-started .ask-hero {
+    padding-top: 14px;
+    padding-bottom: 112px;
+  }
+
+  .ask-page.chat-started .ask-search-bar {
+    bottom: 26px;
+    min-height: 50px;
+  }
+
+  .ask-page.chat-started::after {
+    height: 108px;
+  }
+
+  .ask-page.chat-started .ask-disclaimer {
+    font-size: 11.5px;
+  }
+
+  .ask-message {
+    padding: 15px 18px;
+    border-radius: 18px;
+    font-size: 13.8px;
+    line-height: 1.42;
+  }
+
+  .ask-card-hero {
+    gap: 10px;
+    padding-bottom: 10px;
+  }
+
+  .ask-card-eyebrow {
+    margin-bottom: 7px;
+    font-size: 12px;
+  }
+
+  .ask-card-hero h3 {
+    font-size: 20px;
+  }
+
+  .ask-card-hero p {
+    margin-top: 8px;
+    font-size: 13.5px;
+    line-height: 1.45;
+  }
+
+  .ask-confidence-badge {
+    height: 26px;
+    font-size: 11px;
+  }
+
+  .ask-visual-section {
+    grid-template-columns: 42px 1fr;
+    gap: 12px;
+    padding: 8px 0;
+  }
+
+  .ask-section-icon {
+    width: 34px;
+    height: 34px;
+    font-size: 18px;
+  }
+
+  .ask-section-body h4 {
+    font-size: 15px;
+  }
+
+  .ask-section-body p,
+  .ask-section-body li {
+    font-size: 13px;
+    line-height: 1.38;
+  }
+
+  .ask-section-body li {
+    margin-bottom: 6px;
+  }
+
+  .ask-follow-up-box {
+    margin-top: 12px;
+    padding: 12px;
+    border-radius: 16px;
+  }
+
+  .ask-gentle-reminder {
+    margin-top: 12px;
+    padding: 10px 12px;
+    font-size: 12.5px;
+  }
+
+  .ask-history-panel {
+    padding: 16px;
+  }
+
+  .ask-history-header {
+    margin-bottom: 12px;
+  }
+
+  .ask-history-header p {
+    display: none;
+  }
+
+  .ask-new-chat-btn {
+    height: 38px;
+    margin-bottom: 12px;
+    font-size: 13.5px;
+  }
+
+  .ask-history-list {
+    gap: 8px;
+  }
+
+  .ask-history-item {
+    padding: 10px 12px;
+  }
+}
+
+/* Extremely short browser windows */
+@media (max-height: 560px) and (min-width: 761px) {
+  .ask-hero {
+    min-height: auto;
+    padding-top: 16px;
+    padding-bottom: 16px;
+  }
+
+  .ask-bunny {
+    width: 76px;
+  }
+
+  .ask-hero h1 {
+    font-size: 27px;
+  }
+
+  .ask-hero p {
+    margin-bottom: 16px;
+  }
+
+  .ask-suggestions {
+    margin-top: 12px;
+  }
+
+  .suggestion-pill {
+    height: 36px;
+  }
+
+  .support-section {
+    padding-top: 12px;
+  }
+
+  .support-item p {
+    display: none;
+  }
+
+  .ask-page.chat-started .ask-hero {
+    padding-bottom: 100px;
+  }
+
+  .ask-page.chat-started .ask-search-bar {
+    bottom: 24px;
+  }
+
+  .ask-page.chat-started::after {
+    height: 96px;
+  }
+
+  .ask-visual-section {
+    padding: 6px 0;
+  }
+
+  .ask-section-body p {
+    line-height: 1.32;
+  }
+
+  .ask-follow-up-box {
+    display: none;
+  }
+}
+
+/* Mobile-width + short-height tuning */
+@media (max-width: 760px) and (max-height: 760px) {
+  .ask-hero {
+    padding-top: 24px;
+    padding-bottom: 26px;
+  }
+
+  .ask-bunny {
+    width: 104px;
+  }
+
+  .ask-hero h1 {
+    font-size: 30px;
+  }
+
+  .ask-hero p {
+    margin-bottom: 24px;
+  }
+
+  .ask-suggestions {
+    margin-top: 18px;
+  }
+
+  .support-section {
+    padding-top: 22px;
+  }
+
+  .ask-page.chat-started .ask-hero {
+    padding-top: 14px;
+    padding-bottom: 118px;
+  }
+
+  .ask-page.chat-started .ask-search-bar {
+    bottom: 30px;
+    min-height: 54px;
+  }
+
+  .ask-page.chat-started::after {
+    height: 118px;
+  }
+
+  .ask-message {
+    padding: 15px 17px;
+  }
+}
+
+@media (max-width: 760px) and (max-height: 640px) {
+  .ask-bunny {
+    width: 90px;
+  }
+
+  .ask-hero p {
+    margin-top: 8px;
+    margin-bottom: 18px;
+  }
+
+  .suggestion-pill {
+    min-height: 42px;
+  }
+
+  .support-item p {
+    display: none;
+  }
+
+  .ask-page.chat-started .ask-hero {
+    padding-bottom: 108px;
+  }
+
+  .ask-page.chat-started .ask-search-bar {
+    bottom: 28px;
+  }
+
+  .ask-page.chat-started::after {
+    height: 108px;
+  }
+}

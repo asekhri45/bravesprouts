@@ -2,7 +2,7 @@
 
 {% block head %}
 {{ super() }}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/parent_academy.css') }}?v=15">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/parent_academy.css') }}?v=18">
 {% endblock %}
 
 {% block title %}{{ article.title }}{% endblock %}
@@ -29,11 +29,19 @@
     </div>
   </section>
 
-  <section class="article-content-card">
-  <h2>Quick Answer</h2>
-  <p>{{ article.summary }}</p>
+  <section class="article-research-note">
+  <div class="research-note-icon">i</div>
 
-  {% include article.template %}
+  <div class="research-note-copy">
+    <h2>How this article was created</h2>
+    <p>
+      This article was created with help from ChatGPT using compiled research papers, clinical resources, and selective mutism information. It is for educational purposes only and should not be used as medical advice, a diagnosis, treatment guidance, or a replacement for support from a licensed therapist, clinician, or other qualified specialist.
+    </p>
+  </div>
+</section>
+
+  <section class="article-content-card">
+    {% include article.template %}
   </section>
 
 </div>

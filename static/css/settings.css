@@ -814,3 +814,31 @@
 .settings-profile-dropdown {
   transform: translateX(74px);
 }
+
+/* =========================
+   SETTINGS TOUR MODE
+========================= */
+
+body.settings-tour-child-profile-active
+[data-tour-target="settings-child-profile"] .save-btn {
+  display: none !important;
+}
+
+body.settings-tour-child-profile-active
+[data-tour-target="settings-child-profile"] .name-control,
+body.settings-tour-child-profile-active
+[data-tour-target="settings-child-profile"] .age-control-wrap {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+body.settings-tour-child-profile-active
+[data-tour-target="settings-child-profile"] {
+  overflow: visible !important;
+}
+
+body.settings-tour-child-profile-active
+[data-tour-target="settings-child-profile"] input,
+body.settings-tour-child-profile-active
+[data-tour-target="settings-child-profile"] .age-slider {
+  pointer-events: auto !important;
+}

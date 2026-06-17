@@ -14,7 +14,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   const urlParams = new URLSearchParams(window.location.search);
   const urlStep = Number(urlParams.get("tour"));
-  const hasUrlStep = Number.isInteger(urlStep) && urlStep >= 1 && urlStep <= 6;
+  const hasUrlStep = Number.isInteger(urlStep) && urlStep >= 1 && urlStep <= 7;
 
   const hasSeenTour = layout.dataset.hasSeenTour === "1";
 
@@ -27,67 +27,88 @@ document.addEventListener("DOMContentLoaded", function () {
       step: 1,
       page: "dashboard",
       path: "/dashboard",
-      target: "current-activity",
-      pillLabel: "Start here",
+      target: null,
+      pillLabel: "Start guided tour",
       title: "Welcome to BraveSprouts!",
-      text: "We'll guide your child through activities designed to build confidence one small step at a time.\n\nStart here whenever you're ready.",
+      text: "Let's take a quick 7-step tour before getting started. It takes about one minute and shows the activity path, parent resources, questions, profile setup, and permissions.",
+      badge: "Required setup • About 1 minute",
+      instruction: "Select Next to begin the guided tour.",
       nextText: "Next",
       intro: true,
-      sideImage: true
+      sideImage: true,
+      centerOnly: true
     },
     {
       step: 2,
       page: "dashboard",
       path: "/dashboard",
-      target: "journey",
-      pillLabel: "Your child's journey",
-      title: "Your Child's Journey",
-      text: "Activities unlock in a recommended order. Each one builds on the skills practiced in the previous activity.",
+      target: "current-activity",
+      pillLabel: "Current Activity",
+      title: "Start Activities Here",
+      text: "This is the recommended activity to begin with. Activities are designed to build comfort and confidence one small step at a time.",
+      instruction: "Follow the highlighted area, then select Next to continue.",
       nextText: "Next",
+      intro: true,
       sideImage: true
     },
     {
       step: 3,
-      page: "parent-academy",
-      path: "/parent-academy",
-      target: "parent-academy",
-      pillLabel: "Learn along the way",
-      title: "Learn Along the Way",
-      text: "Not sure why your child behaves differently in different situations? Browse short, evidence-based articles written specifically for parents.",
+      page: "dashboard",
+      path: "/dashboard",
+      target: "journey",
+      pillLabel: "Progression Path",
+      title: "Your Child's Journey",
+      text: "Activities unlock in a recommended order. Each one builds on the skills practiced in the previous activity.",
+      instruction: "Follow the highlighted area, then select Next to continue.",
       nextText: "Next",
       sideImage: true
     },
     {
       step: 4,
-      page: "ask-bravesprouts",
-      path: "/ask-bravesprouts",
-      target: "ask-input",
-      pillLabel: "Get answers anytime",
-      title: "Ask BraveSprouts",
-      text: "Have a question? Ask BraveSprouts anytime for guidance, explanations, and practical ideas. It provides general information, not medical advice.",
+      page: "parent-academy",
+      path: "/parent-academy",
+      target: "parent-academy",
+      pillLabel: "Parent Resources",
+      title: "Parent Academy",
+      text: "Browse short articles that explain selective mutism concepts, family situations, and support strategies in parent-friendly language.",
+      instruction: "Follow the highlighted area, then select Next to continue.",
       nextText: "Next",
       sideImage: true
     },
     {
       step: 5,
-      page: "settings",
-      path: "/settings",
-      target: "settings-child-profile",
-      pillLabel: "Child profile",
-      title: "Set Up Your Child's Profile",
-      text: "Add your child's name and age before getting started. BraveSprouts uses this to make activities feel more personal.",
+      page: "ask-bravesprouts",
+      path: "/ask-bravesprouts",
+      target: "ask-input",
+      pillLabel: "Ask BraveSprouts",
+      title: "Ask BraveSprouts",
+      text: "Use this space to ask questions and get general guidance, explanations, and practical ideas. It provides general information, not medical advice.",
+      instruction: "Follow the highlighted area, then select Next to continue.",
       nextText: "Next",
-      sideImage: true,
-      required: "child-profile"
+      sideImage: true
     },
     {
       step: 6,
       page: "settings",
       path: "/settings",
+      target: "settings-child-profile",
+      pillLabel: "Child Profile",
+      title: "Set Up Your Child's Profile",
+      text: "Add your child's name and age before getting started. BraveSprouts uses this to make activities feel more personal.",
+      instruction: "Complete the highlighted section, then select Next to continue.",
+      nextText: "Next",
+      sideImage: true,
+      required: "child-profile"
+    },
+    {
+      step: 7,
+      page: "settings",
+      path: "/settings",
       target: "settings-permissions",
-      pillLabel: "Site permissions",
+      pillLabel: "Audio + Microphone",
       title: "Turn On Audio and Microphone",
       text: "Turn on audio and microphone access so your child can hear characters and practice speaking during activities.",
+      instruction: "Turn on both highlighted permissions, then select Finish.",
       nextText: "Finish",
       sideImage: true,
       required: "permissions"
@@ -118,6 +139,7 @@ document.addEventListener("DOMContentLoaded", function () {
   let stepPill = null;
   let imageArrow = null;
   let resizeHandler = null;
+  let tourCompleteShowing = false;
 
   function getStep(stepNumber) {
     return steps.find((item) => item.step === stepNumber);
@@ -154,8 +176,84 @@ document.addEventListener("DOMContentLoaded", function () {
       console.error("Could not save tour completion:", error);
     }
 
-    destroyTour();
-    window.location.href = "/dashboard";
+    showTourCompleteScreen();
+  }
+
+  function positionCompleteCard() {
+    if (!card) return;
+
+    const cardWidth = Math.min(430, window.innerWidth - 36);
+    const cardHeight = card.offsetHeight || 320;
+
+    card.style.left = `${Math.max(18, (window.innerWidth - cardWidth) / 2)}px`;
+    card.style.top = `${Math.max(88, (window.innerHeight - cardHeight) / 2)}px`;
+
+    card.classList.remove("arrow-left", "arrow-right", "arrow-top", "arrow-bottom");
+  }
+
+  function showTourCompleteScreen() {
+    tourCompleteShowing = true;
+
+    document.body.classList.remove(
+      "bravesprouts-tour-center-active",
+      "bravesprouts-tour-step-2-active",
+      "bravesprouts-tour-step-5-active",
+      "bravesprouts-tour-step-6-active",
+      "bravesprouts-tour-step-7-active"
+    );
+
+    if (spotlight) {
+      spotlight.style.display = "none";
+    }
+
+    if (imageArrow) {
+      imageArrow.classList.remove("is-visible");
+      imageArrow.classList.remove("is-step-2-arrow");
+    }
+
+    if (stepPill) {
+      stepPill.innerHTML = `
+        <span class="bravesprouts-tour-step-number">✓</span>
+        <span class="bravesprouts-tour-step-main">
+          <span class="bravesprouts-tour-step-type">Guided Tour</span>
+          <span class="bravesprouts-tour-step-text">Complete</span>
+        </span>
+      `;
+    }
+
+    card.className = "bravesprouts-tour-card bravesprouts-tour-complete-card is-visible";
+    card.style.zIndex = "99997";
+
+    card.innerHTML = `
+      <div class="bravesprouts-tour-confetti" aria-hidden="true">
+        <span></span><span></span><span></span><span></span>
+        <span></span><span></span><span></span><span></span>
+        <span></span><span></span><span></span><span></span>
+      </div>
+
+      <img src="/static/images/girlstar.png" class="bravesprouts-tour-complete-star" alt="">
+
+      <h3>Tour complete!</h3>
+
+      <p>
+        BraveSprouts is ready. You can start playing games from the dashboard and follow the recommended activity path.
+      </p>
+
+      <div class="bravesprouts-tour-actions bravesprouts-tour-complete-actions">
+        <button type="button" class="bravesprouts-tour-btn bravesprouts-tour-btn-primary" data-tour-action="go-dashboard">
+          Go to Dashboard →
+        </button>
+      </div>
+    `;
+
+    const dashboardButton = card.querySelector('[data-tour-action="go-dashboard"]');
+
+    dashboardButton.addEventListener("click", function () {
+      destroyTour();
+      window.location.href = "/dashboard";
+    });
+
+    positionCompleteCard();
   }
 
   function createTourElements() {
@@ -183,6 +281,14 @@ document.addEventListener("DOMContentLoaded", function () {
     document.body.appendChild(imageArrow);
     document.body.appendChild(card);
 
+    /*
+      Keep the actual tour card above highlighted settings cards.
+      The settings target needs a high z-index so parents can click toggles,
+      but the tour instructions must still stay visible.
+    */
+    card.style.zIndex = "99997";
+    stepPill.style.zIndex = "99998";
+
     document.documentElement.classList.add("bravesprouts-tour-no-scroll");
 
     requestAnimationFrame(() => {
@@ -196,6 +302,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     window.addEventListener("resize", resizeHandler);
     window.addEventListener("scroll", resizeHandler, true);
+    document.addEventListener("submit", handleTourFormSubmit, true);
   }
 
   function destroyTour() {
@@ -204,10 +311,15 @@ document.addEventListener("DOMContentLoaded", function () {
       window.removeEventListener("scroll", resizeHandler, true);
     }
 
+    document.removeEventListener("submit", handleTourFormSubmit, true);
+    tourCompleteShowing = false;
+
     document.body.classList.remove(
+      "bravesprouts-tour-center-active",
       "bravesprouts-tour-step-2-active",
       "bravesprouts-tour-step-5-active",
-      "bravesprouts-tour-step-6-active"
+      "bravesprouts-tour-step-6-active",
+      "bravesprouts-tour-step-7-active"
     );
 
     document.documentElement.classList.remove("bravesprouts-tour-no-scroll");
@@ -262,28 +374,28 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function showTourRequirement(message) {
-  const existing = card.querySelector(".bravesprouts-tour-requirement");
+    const existing = card.querySelector(".bravesprouts-tour-requirement");
 
-  if (existing) {
-    existing.textContent = message;
-    return;
+    if (existing) {
+      existing.textContent = message;
+      return;
+    }
+
+    const warning = document.createElement("div");
+    warning.className = "bravesprouts-tour-requirement";
+    warning.textContent = message;
+
+    const contentArea =
+      card.querySelector(".bravesprouts-tour-side-content") || card;
+
+    const dots = card.querySelector(".bravesprouts-tour-dots");
+
+    if (dots) {
+      dots.before(warning);
+    } else {
+      contentArea.prepend(warning);
+    }
   }
-
-  const warning = document.createElement("div");
-  warning.className = "bravesprouts-tour-requirement";
-  warning.textContent = message;
-
-  const contentArea =
-    card.querySelector(".bravesprouts-tour-side-content") || card;
-
-  const dots = card.querySelector(".bravesprouts-tour-dots");
-
-  if (dots) {
-    dots.before(warning);
-  } else {
-    contentArea.prepend(warning);
-  }
-}
 
   function clearTourRequirement() {
     const existing = card.querySelector(".bravesprouts-tour-requirement");
@@ -297,7 +409,12 @@ document.addEventListener("DOMContentLoaded", function () {
     const childName = childNameInput ? childNameInput.value.trim() : "";
     const childAge = childAgeInput ? Number(childAgeInput.value) : 0;
 
-    return childName.length > 0 && childName.toLowerCase() !== "child" && childAge >= 3 && childAge <= 12;
+    return (
+      childName.length > 0 &&
+      childName.toLowerCase() !== "child" &&
+      childAge >= 3 &&
+      childAge <= 12
+    );
   }
 
   function arePermissionsComplete() {
@@ -331,6 +448,79 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
+  function showTourStatus(message) {
+    if (!card) return;
+
+    const existing = card.querySelector(".bravesprouts-tour-status");
+
+    if (existing) {
+      existing.textContent = message;
+      return;
+    }
+
+    const status = document.createElement("div");
+    status.className = "bravesprouts-tour-status";
+    status.textContent = message;
+
+    const dots = card.querySelector(".bravesprouts-tour-dots");
+    const contentArea =
+      card.querySelector(".bravesprouts-tour-side-content") || card;
+
+    if (dots) {
+      dots.before(status);
+    } else {
+      contentArea.appendChild(status);
+    }
+  }
+
+  async function handleTourFormSubmit(event) {
+    const step = getStep(activeStepNumber);
+
+    if (!step || step.required !== "child-profile" || tourCompleteShowing) return;
+
+    const form = event.target.closest
+      ? event.target.closest('form[data-tour-target="settings-child-profile"]')
+      : null;
+
+    if (!form) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (event.stopImmediatePropagation) {
+      event.stopImmediatePropagation();
+    }
+
+    clearTourRequirement();
+
+    if (!isChildProfileComplete()) {
+      showTourRequirement("Add your child's real name and age before continuing.");
+      return;
+    }
+
+    const submitButton = event.submitter;
+    const originalButtonText = submitButton ? submitButton.textContent : "";
+
+    if (submitButton) {
+      submitButton.disabled = true;
+      submitButton.textContent = "Saving...";
+    }
+
+    const saved = await saveChildProfileDuringTour();
+
+    if (submitButton) {
+      submitButton.disabled = false;
+      submitButton.textContent = originalButtonText;
+    }
+
+    if (!saved) {
+      showTourRequirement("Save failed. Try again, then continue.");
+      return;
+    }
+
+    showTourStatus("Saved. Select Next to continue.");
+  }
+
   async function validateRequiredStep(step) {
     clearTourRequirement();
 
@@ -343,7 +533,7 @@ document.addEventListener("DOMContentLoaded", function () {
       const saved = await saveChildProfileDuringTour();
 
       if (!saved) {
-        showTourRequirement("Save failed. Try clicking the Save button, then continue.");
+        showTourRequirement("Save failed. Try again, then continue.");
         return false;
       }
     }
@@ -364,14 +554,19 @@ document.addEventListener("DOMContentLoaded", function () {
     if (stepPill) {
       stepPill.innerHTML = `
         <span class="bravesprouts-tour-step-number">${step.step}</span>
-        <span class="bravesprouts-tour-step-text">Step ${step.step} of ${steps.length}</span>
+        <span class="bravesprouts-tour-step-main">
+          <span class="bravesprouts-tour-step-type">Guided Tour</span>
+          <span class="bravesprouts-tour-step-text">Step ${step.step} of ${steps.length}</span>
+        </span>
         <span class="bravesprouts-tour-step-name">${step.pillLabel || step.title}</span>
       `;
     }
 
     card.classList.toggle("is-intro", !!step.intro);
     card.classList.toggle("has-side-image", !!step.sideImage);
-    card.classList.toggle("is-step-2", step.step === 2);
+    card.classList.toggle("is-center-only", !!step.centerOnly);
+    card.classList.toggle("is-step-2", step.step === 3);
+    card.classList.toggle("is-step-7", step.step === 7);
 
     if (step.sideImage) {
       card.innerHTML = `
@@ -382,11 +577,19 @@ document.addEventListener("DOMContentLoaded", function () {
         <div class="bravesprouts-tour-side-content">
           <h3>${step.title}</h3>
 
+          ${
+            step.badge
+              ? `<div class="bravesprouts-tour-setup-badge">${step.badge}</div>`
+              : ""
+          }
+
           <p>${step.text.replace(/\n\n/g, "<br><br>")}</p>
 
           <div class="bravesprouts-tour-dots">
             ${renderDots(step.step)}
           </div>
+
+          <p class="bravesprouts-tour-instruction">${step.instruction || "Select Next to continue."}</p>
 
           <div class="bravesprouts-tour-actions">
             <div class="bravesprouts-tour-left-actions"></div>
@@ -413,11 +616,19 @@ document.addEventListener("DOMContentLoaded", function () {
 
         <h3>${step.title}</h3>
 
+        ${
+          step.badge
+            ? `<div class="bravesprouts-tour-setup-badge">${step.badge}</div>`
+            : ""
+        }
+
         <p>${step.text}</p>
 
         <div class="bravesprouts-tour-dots">
           ${renderDots(step.step)}
         </div>
+
+        <p class="bravesprouts-tour-instruction">${step.instruction || "Select Next to continue."}</p>
 
         <div class="bravesprouts-tour-actions">
           <div class="bravesprouts-tour-left-actions"></div>
@@ -484,7 +695,7 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function getTourRect(step, target) {
-    if (step.step !== 2) {
+    if (step.step !== 3) {
       return target.getBoundingClientRect();
     }
 
@@ -522,7 +733,7 @@ document.addEventListener("DOMContentLoaded", function () {
   function positionImageArrow(step, rect, cardLeft, cardTop, cardWidth, cardHeight) {
     if (!imageArrow) return;
 
-    if (step.step === 1) {
+    if (step.step === 2) {
       imageArrow.classList.add("is-visible");
       imageArrow.classList.remove("is-step-2-arrow");
 
@@ -532,7 +743,7 @@ document.addEventListener("DOMContentLoaded", function () {
       return;
     }
 
-    if (step.step === 2) {
+    if (step.step === 3) {
       imageArrow.classList.add("is-visible");
       imageArrow.classList.add("is-step-2-arrow");
 
@@ -548,18 +759,43 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function positionTour() {
+    if (tourCompleteShowing) {
+      positionCompleteCard();
+      return;
+    }
+
     const step = getStep(activeStepNumber);
 
     if (!step || !spotlight || !card) return;
 
     positionStepPill();
 
+    if (step.centerOnly) {
+      spotlight.style.display = "none";
+
+      if (imageArrow) {
+        imageArrow.classList.remove("is-visible");
+        imageArrow.classList.remove("is-step-2-arrow");
+      }
+
+      const cardWidth = Math.min(TOUR_CARD_WIDTH, window.innerWidth - 36);
+      const finalCardHeight = card.offsetHeight || 250;
+
+      card.style.left = `${Math.max(18, (window.innerWidth - cardWidth) / 2)}px`;
+      card.style.top = `${Math.max(88, (window.innerHeight - finalCardHeight) / 2)}px`;
+
+      card.classList.remove("arrow-left", "arrow-right", "arrow-top", "arrow-bottom");
+      return;
+    }
+
+    spotlight.style.display = "block";
+
     const target = document.querySelector(`[data-tour-target="${step.target}"]`);
 
     if (!target) return;
 
     const rect = getTourRect(step, target);
-    const padding = step.step === 2 ? 12 : step.intro ? 8 : 10;
+    const padding = step.step === 3 ? 12 : step.intro ? 8 : 10;
 
     const spotTop = Math.max(10, rect.top - padding);
     const spotLeft = Math.max(10, rect.left - padding);
@@ -572,16 +808,26 @@ document.addEventListener("DOMContentLoaded", function () {
     spotlight.style.height = `${spotHeight}px`;
 
     const cardWidth = Math.min(TOUR_CARD_WIDTH, window.innerWidth - 36);
+    const cardHeight = card.offsetHeight || 285;
 
     let top;
     let left;
     let arrowClass = "arrow-left";
 
-    if (step.step === 1) {
+    if (step.step === 2) {
       left = rect.left + rect.width / 2 - cardWidth / 2;
       top = rect.bottom - 6;
       arrowClass = "arrow-top";
-    } else if (step.step === 2) {
+    } else if (step.step === 7) {
+      /*
+        Step 7 should sit ABOVE the permissions card.
+        arrow-bottom means the pointer appears on the bottom of the tour card,
+        pointing down toward the highlighted permissions section.
+      */
+      left = rect.left + rect.width / 2 - cardWidth / 2;
+      top = rect.top - cardHeight - 24;
+      arrowClass = "arrow-bottom";
+    } else if (step.step === 3) {
       const estimatedCardHeight = 210;
 
       left = rect.left + STEP_2_CARD_LEFT_OFFSET;
@@ -607,16 +853,22 @@ document.addEventListener("DOMContentLoaded", function () {
         arrowClass = "arrow-top";
       } else {
         left = rect.left;
-        top = rect.top - 260;
+        top = rect.top - cardHeight - 24;
         arrowClass = "arrow-bottom";
       }
     }
 
     left = clamp(left, 18, window.innerWidth - cardWidth - 18);
-    top = clamp(top, 18, window.innerHeight - 280);
+
+    if (step.step === 7) {
+      top = clamp(top, 76, Math.max(76, window.innerHeight - cardHeight - 18));
+    } else {
+      top = clamp(top, 86, Math.max(86, window.innerHeight - cardHeight - 18));
+    }
 
     card.style.left = `${left}px`;
     card.style.top = `${top}px`;
+    card.style.zIndex = "99997";
 
     card.classList.remove("arrow-left", "arrow-right", "arrow-top", "arrow-bottom");
     card.classList.add(arrowClass);
@@ -656,25 +908,41 @@ document.addEventListener("DOMContentLoaded", function () {
       return;
     }
 
-    const target = await waitForTarget(`[data-tour-target="${step.target}"]`);
+    let target = null;
 
-    if (!target) {
-      console.warn("Tour target not found:", step.target);
-      return;
+    if (!step.centerOnly) {
+      target = await waitForTarget(`[data-tour-target="${step.target}"]`);
+
+      if (!target) {
+        console.warn("Tour target not found:", step.target);
+        return;
+      }
     }
 
-    document.body.classList.toggle("bravesprouts-tour-step-2-active", step.step === 2);
-    document.body.classList.toggle("bravesprouts-tour-step-5-active", step.step === 5);
+    document.body.classList.toggle("bravesprouts-tour-center-active", !!step.centerOnly);
+    document.body.classList.toggle("bravesprouts-tour-step-2-active", step.step === 3);
     document.body.classList.toggle("bravesprouts-tour-step-6-active", step.step === 6);
+    document.body.classList.toggle("bravesprouts-tour-step-7-active", step.step === 7);
 
-    if (step.step === 2) {
+    if (step.step === 3) {
       scrollStep2Slightly();
-    } else {
-      target.scrollIntoView({
-        behavior: "smooth",
-        block: "center",
-        inline: "nearest"
-      });
+    } else if (target) {
+      if (step.step === 7) {
+        /*
+          Put permissions lower in the viewport so the tour card has room above it.
+        */
+        target.scrollIntoView({
+          behavior: "smooth",
+          block: "end",
+          inline: "nearest"
+        });
+      } else {
+        target.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+          inline: "nearest"
+        });
+      }
     }
 
     setTimeout(() => {
@@ -685,7 +953,11 @@ document.addEventListener("DOMContentLoaded", function () {
       renderCardContent(step);
       positionTour();
       cleanUrl();
-    }, step.step === 2 ? 220 : 300);
+
+      if (step.step === 7) {
+        setTimeout(positionTour, 250);
+      }
+    }, step.step === 3 ? 220 : step.centerOnly ? 120 : step.step === 7 ? 420 : 300);
   }
 
   renderStep();

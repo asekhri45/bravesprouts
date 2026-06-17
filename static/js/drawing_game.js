@@ -34,20 +34,32 @@ document.addEventListener("DOMContentLoaded", function () {
     {
       title: "Draw a flower",
       text: "A simple flower, any color.",
-      intro: "Now can you draw a flower?",
+      intro: "Let's start with a flower.",
       firstQuestion: [
-        "{child}, what color are you starting with?",
-        "{child}, which part are you starting with?",
-        "{child}, have you drawn a flower before?"
+        "What color do you want to start with, {child}?",
+        "{child}, should we start with the stem or the petals?",
+        "Which part should we draw first, {child}?"
       ],
       starDuring: [
-        "{child}, what color are you using now?",
-        "{child}, are you drawing the petals first?",
+        "What color are you using now, {child}?",
+        "Are you adding petals first, {child}?",
         "{child}, what should we add next?"
       ],
+      librarianRedirect: [
+        "Do you two want to add leaves to the flower?",
+        "Should this flower have a big stem or a little stem?",
+        "Do you think the flower should have more petals?"
+      ],
+      starRedirect: [
+        "What do you think, {child}?",
+        "{child}, what sounds good to you?",
+        "Should we try that, {child}?",
+        "What would you pick, {child}?"
+      ],
       librarianDirect: [
-        "{child}, what should we add to the flower?",
-        "{child}, what color should the flower be?"
+        "What should we add to the flower, {child}?",
+        "{child}, what color should the flower be?",
+        "Should we add leaves or more petals, {child}?"
       ],
       doneLines: [
         "Nice flower, {child}.",
@@ -56,99 +68,147 @@ document.addEventListener("DOMContentLoaded", function () {
       ]
     },
     {
-      title: "Draw a silly face",
-      text: "A happy, silly, or surprised face.",
-      intro: "Now can you draw a silly face?",
+      title: "Draw a sun",
+      text: "A bright sun in the sky.",
+      intro: "Now let's draw a sun.",
       firstQuestion: [
-        "{child}, what part should we start with?",
-        "{child}, should the face be happy or surprised?",
-        "{child}, what color are you choosing first?"
+        "Should the sun be big or small, {child}?",
+        "{child}, what color should the sun be?",
+        "Where should we put the sun, {child}?"
       ],
       starDuring: [
-        "{child}, what kind of mouth are you drawing?",
-        "{child}, should we add hair or a hat?",
-        "{child}, what should we draw next?"
+        "Are you adding sun rays, {child}?",
+        "{child}, should we add clouds too?",
+        "What should go near the sun, {child}?"
+      ],
+      librarianRedirect: [
+        "Do you two want to add clouds near the sun?",
+        "Should the sun have a happy face?",
+        "Do you think the sky should have something else in it?"
+      ],
+      starRedirect: [
+        "What do you think, {child}?",
+        "{child}, what would you choose?",
+        "Should we add that, {child}?",
+        "What sounds best to you, {child}?"
       ],
       librarianDirect: [
-        "{child}, should the face have a hat or hair?",
-        "{child}, what should the face look like?"
+        "{child}, should the sun have clouds around it?",
+        "What should we add near the sun, {child}?",
+        "Should the sun be smiling, {child}?"
       ],
       doneLines: [
-        "That is a fun face, {child}.",
-        "I like that silly face, {child}.",
-        "Nice silly face, {child}."
+        "That is a bright sun, {child}.",
+        "Nice sun drawing, {child}.",
+        "I like that sunny picture, {child}."
       ]
     },
     {
-      title: "Draw a book cover",
-      text: "A pretend cover for a storybook.",
-      intro: "Now can you draw a book cover?",
+      title: "Draw a tree",
+      text: "A tree with leaves, branches, or fruit.",
+      intro: "Now let's draw a tree.",
       firstQuestion: [
-        "{child}, what should be on the cover?",
-        "{child}, what color should we start with?",
-        "{child}, should it be a funny book or a cozy book?"
+        "What should we start with, {child}?",
+        "{child}, should the tree be tall or short?",
+        "Should we draw the trunk first, {child}?"
       ],
       starDuring: [
-        "{child}, what detail are you adding now?",
-        "{child}, should we add a star or a heart?",
-        "{child}, what should go in the middle?"
+        "Are you adding leaves now, {child}?",
+        "{child}, should we add apples or flowers?",
+        "What should go next on the tree, {child}?"
+      ],
+      librarianRedirect: [
+        "Do you two want to add apples to the tree?",
+        "Should this tree have lots of leaves?",
+        "Do you think an animal should be near the tree?"
+      ],
+      starRedirect: [
+        "What do you think, {child}?",
+        "{child}, would you add that?",
+        "Should we try that idea, {child}?",
+        "What would you like, {child}?"
       ],
       librarianDirect: [
-        "{child}, should the book cover have a star or a heart?",
-        "{child}, what should we add to the book cover?"
+        "What should be on the tree, {child}?",
+        "{child}, should we add apples or leaves?",
+        "Should an animal sit near the tree, {child}?"
       ],
       doneLines: [
-        "That looks like a good book cover, {child}.",
-        "Nice book cover, {child}.",
-        "I like that story idea, {child}."
+        "Nice tree, {child}.",
+        "That tree looks good, {child}.",
+        "I like that tree drawing, {child}."
       ]
     },
     {
-      title: "Draw a tiny animal",
-      text: "A cat, dog, bunny, bird, or any animal.",
-      intro: "Now can you draw a tiny animal?",
+      title: "Draw a dog",
+      text: "A simple dog with ears, legs, and a tail.",
+      intro: "Now let's draw a dog.",
       firstQuestion: [
-        "{child}, what animal are you thinking of?",
-        "{child}, what color should the animal be?",
-        "{child}, what part should we start with?"
+        "What part should we draw first, {child}?",
+        "{child}, should the dog have floppy ears?",
+        "What color should the dog be, {child}?"
       ],
       starDuring: [
-        "{child}, are you adding ears or a tail?",
-        "{child}, what should we draw next?",
-        "{child}, what color are you using now?"
+        "Are you adding ears or a tail, {child}?",
+        "{child}, should the dog be sitting or standing?",
+        "What should we add next, {child}?"
+      ],
+      librarianRedirect: [
+        "Do you two want to give the dog a collar?",
+        "Should the dog have a long tail or a short tail?",
+        "Do you think the dog should be sitting?"
+      ],
+      starRedirect: [
+        "What do you think, {child}?",
+        "{child}, which one should we pick?",
+        "Should we do that, {child}?",
+        "What sounds good to you, {child}?"
       ],
       librarianDirect: [
-        "{child}, what animal did you choose?",
-        "{child}, should the animal have ears or a tail?"
+        "{child}, should the dog have a collar?",
+        "What should the dog look like, {child}?",
+        "Should the dog have long ears or short ears, {child}?"
       ],
       doneLines: [
-        "That animal is cute, {child}.",
-        "Nice animal drawing, {child}.",
-        "I like that tiny animal, {child}."
+        "That dog is cute, {child}.",
+        "Nice dog drawing, {child}.",
+        "I like that dog, {child}."
       ]
     },
     {
-      title: "Draw one final picture",
-      text: "Anything you want before the next game.",
-      intro: "Now can you draw one final picture?",
+      title: "Draw a book",
+      text: "A simple book, open or closed.",
+      intro: "Now let's draw one final book.",
       firstQuestion: [
-        "{child}, what do you want to draw for the last one?",
-        "{child}, what color should we start with?",
-        "{child}, what part should we start with?"
+        "Should the book be open or closed, {child}?",
+        "{child}, what color should the book be?",
+        "What should we draw first on the book, {child}?"
       ],
       starDuring: [
-        "{child}, what are you adding now?",
-        "{child}, what should go next?",
-        "{child}, what color are you using now?"
+        "Are you adding pages, {child}?",
+        "{child}, should we add a title?",
+        "What should go on the book, {child}?"
+      ],
+      librarianRedirect: [
+        "Do you two want to put a star on the book?",
+        "Should the book be open?",
+        "Do you think the book needs a title?"
+      ],
+      starRedirect: [
+        "What do you think, {child}?",
+        "{child}, what would you choose?",
+        "Should we add that, {child}?",
+        "What sounds nice to you, {child}?"
       ],
       librarianDirect: [
-        "{child}, what are you drawing?",
-        "{child}, what should we add before the next game?"
+        "Should the book be open or closed, {child}?",
+        "{child}, what color should the book be?",
+        "What should we put on the book, {child}?"
       ],
       doneLines: [
-        "Nice final drawing, {child}.",
-        "That was a good last picture, {child}.",
-        "I liked drawing that with you, {child}."
+        "Nice book, {child}.",
+        "That book looks good, {child}.",
+        "I like that book drawing, {child}."
       ]
     }
   ];
@@ -217,7 +277,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
       drawingQuestionsThisRound: 0,
       quietCommentsThisRound: 0,
+      librarianCommentsThisRound: 0,
       lastGuidanceAt: 0,
+
+      doneReminderGivenThisRound: false,
+      totalDoneReminders: 0,
+      lastDoneReminderAt: 0,
 
       finalOfferStarted: false,
       finalRoundStarted: false,
@@ -263,6 +328,67 @@ document.addEventListener("DOMContentLoaded", function () {
     return choices[Math.floor(Math.random() * choices.length)];
   }
 
+  function pickRedirectLine(prompt) {
+    const redirectOptions = prompt.starRedirect || [
+      "What do you think, {child}?",
+      "{child}, what sounds good to you?",
+      "What would you pick, {child}?",
+      "Should we try that, {child}?",
+      "Which one should we choose, {child}?"
+    ];
+
+    return pickLine(redirectOptions);
+  }
+
+  function pickLibrarianCommentLine() {
+    return pickLine([
+      "That is looking good so far.",
+      "Your drawing is coming along nicely.",
+      "I like the way your picture is starting.",
+      "That is a great start.",
+      "You are doing a nice job with this drawing.",
+      "I like the colors you are using.",
+      "This is turning into a nice picture.",
+      "You are adding some good details.",
+      "That looks very creative.",
+      "You are a careful artist.",
+      "I like how your artwork is coming together.",
+      "That is a lovely drawing so far.",
+      "Your artwork is looking great.",
+      "You are a great artist.",
+      "That picture is coming along great.",
+      "I like what you are making."
+    ]);
+  }
+
+  function maybeRemindDoneButton(force = false) {
+    if (!hasDrawnThisRound) return false;
+    if (state.gameCompleted) return false;
+    if (state.doneReminderGivenThisRound) return false;
+    if (state.totalDoneReminders >= 3) return false;
+    if (state.isSpeaking || state.isListening || state.waitingForResponse) return false;
+
+    const now = Date.now();
+
+    if (!force && strokeCountThisRound < 10) return false;
+    if (!force && now - state.lastGuidanceAt < 4500) return false;
+    if (!force && now - state.lastDoneReminderAt < 25000) return false;
+
+    state.doneReminderGivenThisRound = true;
+    state.totalDoneReminders += 1;
+    state.lastDoneReminderAt = now;
+    state.lastGuidanceAt = now;
+
+    queueSpeak("star", pickLine([
+      "When you're finished, press the Done Drawing button.",
+      "{child}, when your drawing is done, you can press Done Drawing.",
+      "Whenever you're finished, the Done Drawing button will move us to the next part.",
+      "When this picture feels finished, press Done Drawing."
+    ]));
+
+    return true;
+  }
+
   function updateQuietStatus(text) {
     if (quietStatusText) {
       quietStatusText.textContent = text;
@@ -305,12 +431,6 @@ document.addEventListener("DOMContentLoaded", function () {
     return callAcceptedSound.play().catch(function () {});
   }
 
-  /*
-    Queue is only used for planned lines.
-    Response lines use speakNow directly.
-    This avoids the old deadlock where the response handler waited on the same queue
-    that was waiting for the response handler to finish.
-  */
   function queueSpeak(actor, text, options = {}) {
     speechQueue = speechQueue
       .then(() => speakNow(actor, text, options))
@@ -857,11 +977,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
     if (question.source === "librarian-direct") {
       await speakNow("librarian", pickLine([
-        "I heard you. Nice choice.",
+        "Nice choice.",
         "Good choice.",
         "Thanks for telling me.",
         "Okay. I like that idea.",
-        "I heard that."
+        "That sounds good.",
+        "That is a good idea."
       ]));
 
       await sleep(250);
@@ -870,7 +991,8 @@ document.addEventListener("DOMContentLoaded", function () {
         "Let's add that.",
         "I'll draw that with you.",
         "That works for our drawing.",
-        "Good idea. Let's keep going."
+        "Good idea. Let's keep going.",
+        "That will look nice in the picture."
       ]));
 
       return;
@@ -879,10 +1001,11 @@ document.addEventListener("DOMContentLoaded", function () {
     if (question.source === "librarian-redirect") {
       await speakNow("star", pickLine([
         "Good idea.",
-        "I heard you.",
         "Nice. Let's add that.",
         "Okay. Let's use that.",
-        "That works."
+        "That works.",
+        "That sounds good.",
+        "Let's try that."
       ]));
 
       return;
@@ -890,10 +1013,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
     await speakNow("star", pickLine([
       "Good idea.",
-      "I heard you.",
       "Nice. Let's keep drawing.",
       "Okay. Let's add that.",
-      "That sounds good."
+      "That sounds good.",
+      "Let's try that.",
+      "That will look nice."
     ]));
   }
 
@@ -914,7 +1038,6 @@ document.addEventListener("DOMContentLoaded", function () {
       return;
     }
 
-    // Silence is allowed, but the game should not feel dead.
     if (question.source === "librarian-direct") {
       await speakNow("librarian", "That's okay. We can keep drawing.");
       return;
@@ -986,6 +1109,10 @@ document.addEventListener("DOMContentLoaded", function () {
     lastPoint = getCanvasPoint(event);
 
     maybeReactToDrawingStart();
+
+    setTimeout(function () {
+      maybeRemindDoneButton();
+    }, 5500);
   }
 
   function draw(event) {
@@ -1008,6 +1135,7 @@ document.addEventListener("DOMContentLoaded", function () {
     strokeCountThisRound += 1;
 
     maybeReactDuringDrawing();
+    maybeRemindDoneButton();
   }
 
   function stopDrawing() {
@@ -1069,24 +1197,32 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function maybeReactDuringDrawing() {
-    if (strokeCountThisRound < 18) return;
-    if (state.drawingQuestionsThisRound >= 2) return;
+    if (strokeCountThisRound < 12) return;
     if (!canCharacterChimeIn()) return;
+
+    const prompt = getPrompt();
+    const guidanceCount = state.drawingQuestionsThisRound + state.librarianCommentsThisRound;
+
+    if (guidanceCount >= 2) return;
+
+    /*
+      Smooth progression:
+      - Every round: Librarian can first compliment the child's drawing.
+      - Rounds 1–3: Star handles during-drawing questions.
+      - Round 4+: Librarian direct questions happen at round start after comments.
+    */
+    if (state.librarianCommentsThisRound < 1) {
+      state.librarianCommentsThisRound += 1;
+      state.lastGuidanceAt = Date.now();
+
+      queueSpeak("librarian", pickLibrarianCommentLine());
+      return;
+    }
+
+    if (state.drawingQuestionsThisRound >= 1) return;
 
     state.drawingQuestionsThisRound += 1;
     state.lastGuidanceAt = Date.now();
-
-    const prompt = getPrompt();
-
-    if (state.roundNumber >= 4 && state.drawingQuestionsThisRound === 2) {
-      queueSpeak("librarian", pickLine(prompt.librarianDirect), {
-        expectsResponse: true,
-        askType: "one_word",
-        source: "librarian-direct",
-        responseSeconds: 5.5
-      });
-      return;
-    }
 
     queueSpeak("star", pickLine(prompt.starDuring), {
       expectsResponse: true,
@@ -1105,6 +1241,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
     state.drawingQuestionsThisRound = 0;
     state.quietCommentsThisRound = 0;
+    state.librarianCommentsThisRound = 0;
+    state.doneReminderGivenThisRound = false;
     state.lastGuidanceAt = 0;
 
     updateQuietStatus("Drawing together");
@@ -1112,9 +1250,49 @@ document.addEventListener("DOMContentLoaded", function () {
     await queueSpeak("librarian", prompt.intro);
     await sleep(250);
 
+    /*
+      Round 1:
+      Star is the only one asking the child.
+    */
+    if (state.roundNumber === 1) {
+      await queueSpeak("star", pickLine(prompt.firstQuestion), {
+        expectsResponse: true,
+        askType: "one_word",
+        source: "star",
+        responseSeconds: 5.2
+      });
+      return;
+    }
+
+    /*
+      Round 2:
+      Librarian starts becoming socially present, but only with a soft comment.
+      Star still asks the child.
+    */
+    if (state.roundNumber === 2) {
+      await queueSpeak("librarian", pickLibrarianCommentLine());
+      await sleep(200);
+
+      await queueSpeak("star", pickLine(prompt.firstQuestion), {
+        expectsResponse: true,
+        askType: "one_word",
+        source: "star",
+        responseSeconds: 5.2
+      });
+      return;
+    }
+
+    /*
+      Round 3:
+      Librarian comments first, then asks the pair/group.
+      Star redirects to the child with varied phrasing.
+    */
     if (state.roundNumber === 3) {
-      await queueSpeak("librarian", "Do you two want to add something silly to this one?");
-      await queueSpeak("star", `What do you think, ${childName}?`, {
+      await queueSpeak("librarian", pickLibrarianCommentLine());
+      await sleep(200);
+
+      await queueSpeak("librarian", pickLine(prompt.librarianRedirect));
+      await queueSpeak("star", pickRedirectLine(prompt), {
         expectsResponse: true,
         askType: "open",
         source: "librarian-redirect",
@@ -1123,21 +1301,25 @@ document.addEventListener("DOMContentLoaded", function () {
       return;
     }
 
-    if (state.roundNumber >= 4) {
-      await queueSpeak("librarian", pickLine(prompt.librarianDirect), {
-        expectsResponse: true,
-        askType: "one_word",
-        source: "librarian-direct",
-        responseSeconds: 5.6
-      });
-      return;
-    }
+    /*
+      Round 4+:
+      Librarian gives a soft comment first, then asks one simple direct question.
+      Star frames it gently so it does not feel sudden.
+    */
+    await queueSpeak("librarian", pickLibrarianCommentLine());
+    await sleep(200);
 
-    await queueSpeak("star", pickLine(prompt.firstQuestion), {
+    await queueSpeak("star", pickLine([
+      "The Librarian can ask one small question now.",
+      "{child}, the Librarian can ask you one easy question now.",
+      "You can answer the Librarian with just one word if you want."
+    ]));
+
+    await queueSpeak("librarian", pickLine(prompt.librarianDirect), {
       expectsResponse: true,
       askType: "one_word",
-      source: "star",
-      responseSeconds: 5.2
+      source: "librarian-direct",
+      responseSeconds: 5.6
     });
   }
 
@@ -1164,7 +1346,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     await speakNow("librarian", pickLine(prompt.doneLines));
 
-    if (state.roundNumber >= 4 || state.librarianDirectResponses >= 1) {
+    if (state.roundNumber >= 4) {
       await offerFinalPlayAgain();
       return;
     }
@@ -1173,8 +1355,15 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   async function askPlayAgain() {
-    await speakNow("librarian", "Do you two want to play again?");
-    await speakNow("star", `What do you think, ${childName}?`, {
+    const prompt = getPrompt();
+
+    await speakNow("librarian", pickLine([
+      "Do you two want to draw another one?",
+      "Should we try one more drawing?",
+      "Do you want to keep drawing together?"
+    ]));
+
+    await speakNow("star", pickRedirectLine(prompt), {
       expectsResponse: true,
       askType: "open",
       source: "star-redirect",
@@ -1196,7 +1385,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
     state.finalOfferStarted = true;
 
-    await speakNow("librarian", `Do you want to draw one more before we play a different game, ${childName}?`, {
+    await speakNow("librarian", pickLine([
+      "Do you want to draw one more before we play a different game, {child}?",
+      "{child}, do you want one more drawing before the next game?",
+      "Should we draw one final picture before the next game, {child}?"
+    ]), {
       expectsResponse: true,
       askType: "open",
       source: "librarian-direct",
