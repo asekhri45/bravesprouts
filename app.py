@@ -91,6 +91,51 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row
     return conn
 
+MATCHING_GAME_TARGET_ROUNDS = 12
+
+
+def ensure_matching_game_progress_columns():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("PRAGMA table_info(progress)")
+    existing_columns = {row["name"] for row in cursor.fetchall()}
+
+    columns_to_add = {
+        "matching_rounds_completed": "ALTER TABLE progress ADD COLUMN matching_rounds_completed INTEGER DEFAULT 0",
+        "matching_spoken_responses": "ALTER TABLE progress ADD COLUMN matching_spoken_responses INTEGER DEFAULT 0",
+        "matching_silent_windows": "ALTER TABLE progress ADD COLUMN matching_silent_windows INTEGER DEFAULT 0",
+        "matching_wonder_prompts_asked": "ALTER TABLE progress ADD COLUMN matching_wonder_prompts_asked INTEGER DEFAULT 0",
+        "matching_help_prompts_asked": "ALTER TABLE progress ADD COLUMN matching_help_prompts_asked INTEGER DEFAULT 0",
+        "matching_clear_prompts_asked": "ALTER TABLE progress ADD COLUMN matching_clear_prompts_asked INTEGER DEFAULT 0",
+        "matching_child_choice_responses": "ALTER TABLE progress ADD COLUMN matching_child_choice_responses INTEGER DEFAULT 0",
+        "matching_child_opinion_responses": "ALTER TABLE progress ADD COLUMN matching_child_opinion_responses INTEGER DEFAULT 0",
+        "matching_clear_child_responses": "ALTER TABLE progress ADD COLUMN matching_clear_child_responses INTEGER DEFAULT 0",
+        "matching_direct_child_question_silences": "ALTER TABLE progress ADD COLUMN matching_direct_child_question_silences INTEGER DEFAULT 0",
+        "matching_last_stage": "ALTER TABLE progress ADD COLUMN matching_last_stage INTEGER DEFAULT 0",
+        "matching_last_played_at": "ALTER TABLE progress ADD COLUMN matching_last_played_at TEXT"
+    }
+
+    for column_name, alter_sql in columns_to_add.items():
+        if column_name not in existing_columns:
+            cursor.execute(alter_sql)
+
+    conn.commit()
+    conn.close()
+
+
+def safe_matching_int(value, default=0):
+    try:
+        return max(0, int(float(value or default)))
+    except (TypeError, ValueError):
+        return default
+
+
+def safe_matching_float(value, default=0.0):
+    try:
+        return max(0.0, float(value or default))
+    except (TypeError, ValueError):
+        return default
 
 def initialize_user_progress(cursor, user_id):
     cursor.execute("""
@@ -3309,32 +3354,28 @@ def matching_game_transcribe():
             "error": str(e)
         }), 500
 
-
-@app.route("/api/matching-game/complete", methods=["POST"])
+@app.route("/api/matching-game/state", methods=["GET"])
 @csrf.exempt
 @login_required
-@limiter.limit("20 per minute")
-def matching_game_complete():
-    data = request.get_json(silent=True) or {}
+@limiter.limit("60 per minute")
+def matching_game_state():
+    ensure_matching_game_progress_columns()
 
     try:
-        activity_id = int(data.get("activity_id") or 1)
-        words_spoken = max(0, int(float(data.get("words_spoken", 0) or 0)))
-        minutes_spoken = max(0.0, float(data.get("minutes_spoken", 0) or 0))
-        active_minutes = max(0.0, float(data.get("active_minutes", 0) or 0))
-        time_spent = max(0.0, float(data.get("time_spent_on_activity", active_minutes) or active_minutes))
+        activity_id = int(request.args.get("activity_id") or 1)
     except (TypeError, ValueError):
-        return jsonify({"success": False, "error": "Invalid completion data"}), 400
+        return jsonify({"success": False, "error": "Invalid activity_id"}), 400
 
     conn = get_db_connection()
     cursor = conn.cursor()
 
     try:
         cursor.execute("""
-            SELECT activity_id, scene_id, activity_order
+            SELECT activity_id
             FROM activity
             WHERE activity_id = ? AND is_active = 1
         """, (activity_id,))
+
         activity = cursor.fetchone()
 
         if not activity:
@@ -3356,42 +3397,626 @@ def matching_game_complete():
         """, (session["user_id"], activity_id))
 
         cursor.execute("""
+            SELECT
+                COALESCE(matching_rounds_completed, 0) AS matching_rounds_completed,
+                COALESCE(matching_spoken_responses, 0) AS matching_spoken_responses,
+                COALESCE(matching_silent_windows, 0) AS matching_silent_windows,
+                COALESCE(matching_wonder_prompts_asked, 0) AS matching_wonder_prompts_asked,
+                COALESCE(matching_help_prompts_asked, 0) AS matching_help_prompts_asked,
+                COALESCE(matching_clear_prompts_asked, 0) AS matching_clear_prompts_asked,
+                COALESCE(matching_child_choice_responses, 0) AS matching_child_choice_responses,
+                COALESCE(matching_child_opinion_responses, 0) AS matching_child_opinion_responses,
+                COALESCE(matching_clear_child_responses, 0) AS matching_clear_child_responses,
+                COALESCE(matching_direct_child_question_silences, 0) AS matching_direct_child_question_silences,
+                COALESCE(matching_last_stage, 0) AS matching_last_stage
+            FROM progress
+            WHERE user_id = ? AND activity_id = ?
+        """, (session["user_id"], activity_id))
+
+        row = cursor.fetchone()
+
+        conn.commit()
+        conn.close()
+
+        saved_rounds = int(row["matching_rounds_completed"] or 0)
+        clear_child_responses = int(row["matching_clear_child_responses"] or 0)
+
+        return jsonify({
+            "success": True,
+            "target_rounds": MATCHING_GAME_TARGET_ROUNDS,
+            "state": {
+                "rounds_completed": saved_rounds,
+                "start_round_number": saved_rounds + 1,
+
+                "spoken_responses": int(row["matching_spoken_responses"] or 0),
+                "silent_windows": int(row["matching_silent_windows"] or 0),
+
+                "wonder_prompts_asked": int(row["matching_wonder_prompts_asked"] or 0),
+                "help_prompts_asked": int(row["matching_help_prompts_asked"] or 0),
+                "clear_prompts_asked": int(row["matching_clear_prompts_asked"] or 0),
+
+                "child_choice_responses": int(row["matching_child_choice_responses"] or 0),
+                "child_opinion_responses": int(row["matching_child_opinion_responses"] or 0),
+
+                # Your JS currently reads clear_child_responses.
+                "clear_child_responses": clear_child_responses,
+
+                # This alias is harmless and protects you if you later rename it in JS.
+                "child_clear_responses": clear_child_responses,
+
+                "direct_child_question_silences": int(row["matching_direct_child_question_silences"] or 0),
+                "last_stage": int(row["matching_last_stage"] or 0)
+            }
+        })
+
+    except Exception as e:
+        conn.rollback()
+        conn.close()
+        print("Matching game state error:", repr(e))
+        return jsonify({
+            "success": False,
+            "error": "Could not load matching game state"
+        }), 500
+
+@app.route("/api/matching-game/complete", methods=["POST"])
+@csrf.exempt
+@login_required
+@limiter.limit("20 per minute")
+def matching_game_complete():
+    ensure_matching_game_progress_columns()
+
+    data = request.get_json(silent=True) or {}
+
+    try:
+        activity_id = int(data.get("activity_id") or 1)
+
+        words_spoken = safe_matching_int(data.get("words_spoken", 0))
+        minutes_spoken = safe_matching_float(data.get("minutes_spoken", 0))
+        active_minutes = safe_matching_float(data.get("active_minutes", 0))
+        time_spent = safe_matching_float(
+            data.get("time_spent_on_activity", active_minutes),
+            active_minutes
+        )
+
+        rounds_completed = safe_matching_int(data.get("rounds_completed", 0))
+        spoken_responses = safe_matching_int(data.get("spoken_responses", 0))
+        silent_windows = safe_matching_int(data.get("silent_windows", 0))
+
+        wonder_prompts_asked = safe_matching_int(data.get("wonder_prompts_asked", 0))
+        help_prompts_asked = safe_matching_int(data.get("help_prompts_asked", 0))
+        clear_prompts_asked = safe_matching_int(data.get("clear_prompts_asked", 0))
+
+        child_choice_responses = safe_matching_int(data.get("child_choice_responses", 0))
+        child_opinion_responses = safe_matching_int(data.get("child_opinion_responses", 0))
+
+        # Your JS sends child_clear_responses.
+        clear_child_responses = safe_matching_int(
+            data.get("child_clear_responses", data.get("clear_child_responses", 0))
+        )
+
+        direct_child_question_silences = safe_matching_int(
+            data.get("direct_child_question_silences", 0)
+        )
+
+        final_stage = safe_matching_int(data.get("final_stage", 0))
+
+    except (TypeError, ValueError):
+        return jsonify({"success": False, "error": "Invalid completion data"}), 400
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("""
+            SELECT activity_id, scene_id, activity_order
+            FROM activity
+            WHERE activity_id = ? AND is_active = 1
+        """, (activity_id,))
+
+        activity = cursor.fetchone()
+
+        if not activity:
+            conn.close()
+            return jsonify({"success": False, "error": "Activity not found"}), 404
+
+        cursor.execute("""
+            INSERT OR IGNORE INTO progress (
+                user_id,
+                activity_id,
+                is_unlocked,
+                is_completed,
+                words_spoken,
+                minutes_spoken,
+                active_minutes,
+                time_spent_on_activity
+            )
+            VALUES (?, ?, 1, 0, 0, 0, 0, 0)
+        """, (session["user_id"], activity_id))
+
+        cursor.execute("""
+            SELECT
+                COALESCE(matching_rounds_completed, 0) AS previous_rounds_completed
+            FROM progress
+            WHERE user_id = ? AND activity_id = ?
+        """, (session["user_id"], activity_id))
+
+        previous_row = cursor.fetchone()
+        previous_rounds_completed = int(previous_row["previous_rounds_completed"] or 0) if previous_row else 0
+
+        activity_completed = rounds_completed >= MATCHING_GAME_TARGET_ROUNDS
+
+        cursor.execute("""
             UPDATE progress
             SET
-                is_completed = 1,
+                is_completed = CASE
+                    WHEN ? = 1 THEN 1
+                    ELSE COALESCE(is_completed, 0)
+                END,
+
                 words_spoken = COALESCE(words_spoken, 0) + ?,
                 minutes_spoken = COALESCE(minutes_spoken, 0) + ?,
                 active_minutes = COALESCE(active_minutes, 0) + ?,
-                time_spent_on_activity = COALESCE(time_spent_on_activity, 0) + ?
+                time_spent_on_activity = COALESCE(time_spent_on_activity, 0) + ?,
+
+                matching_rounds_completed = MAX(COALESCE(matching_rounds_completed, 0), ?),
+                matching_spoken_responses = MAX(COALESCE(matching_spoken_responses, 0), ?),
+                matching_silent_windows = MAX(COALESCE(matching_silent_windows, 0), ?),
+
+                matching_wonder_prompts_asked = MAX(COALESCE(matching_wonder_prompts_asked, 0), ?),
+                matching_help_prompts_asked = MAX(COALESCE(matching_help_prompts_asked, 0), ?),
+                matching_clear_prompts_asked = MAX(COALESCE(matching_clear_prompts_asked, 0), ?),
+
+                matching_child_choice_responses = MAX(COALESCE(matching_child_choice_responses, 0), ?),
+                matching_child_opinion_responses = MAX(COALESCE(matching_child_opinion_responses, 0), ?),
+                matching_clear_child_responses = MAX(COALESCE(matching_clear_child_responses, 0), ?),
+
+                matching_direct_child_question_silences = MAX(COALESCE(matching_direct_child_question_silences, 0), ?),
+                matching_last_stage = MAX(COALESCE(matching_last_stage, 0), ?),
+                matching_last_played_at = CURRENT_TIMESTAMP
             WHERE user_id = ? AND activity_id = ?
         """, (
+            1 if activity_completed else 0,
+
             words_spoken,
             minutes_spoken,
             active_minutes,
             time_spent,
+
+            rounds_completed,
+            spoken_responses,
+            silent_windows,
+
+            wonder_prompts_asked,
+            help_prompts_asked,
+            clear_prompts_asked,
+
+            child_choice_responses,
+            child_opinion_responses,
+            clear_child_responses,
+
+            direct_child_question_silences,
+            final_stage,
+
             session["user_id"],
             activity_id
         ))
 
-        cursor.execute("""
-            INSERT INTO session_log (
-                user_id,
+        # Only add a session log when the saved round count actually increases.
+        # This prevents duplicate logs when the child leaves right after a round was already saved.
+        if rounds_completed > previous_rounds_completed:
+            cursor.execute("""
+                INSERT INTO session_log (
+                    user_id,
+                    activity_id,
+                    words_spoken,
+                    minutes_spoken,
+                    active_minutes,
+                    completed_at
+                )
+                VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            """, (
+                session["user_id"],
                 activity_id,
                 words_spoken,
                 minutes_spoken,
+                active_minutes
+            ))
+
+        next_activity_id = None
+
+        # Only unlock the next activity after the full 12-round fade-in progression.
+        if activity_completed:
+            cursor.execute("""
+                SELECT activity_id
+                FROM activity
+                WHERE is_active = 1
+                  AND (
+                    scene_id > ?
+                    OR (scene_id = ? AND activity_order > ?)
+                  )
+                ORDER BY scene_id ASC, activity_order ASC
+                LIMIT 1
+            """, (
+                activity["scene_id"],
+                activity["scene_id"],
+                activity["activity_order"]
+            ))
+
+            next_activity = cursor.fetchone()
+
+            if next_activity:
+                next_activity_id = next_activity["activity_id"]
+
+                cursor.execute("""
+                    INSERT OR IGNORE INTO progress (
+                        user_id,
+                        activity_id,
+                        is_unlocked,
+                        is_completed,
+                        words_spoken,
+                        minutes_spoken,
+                        active_minutes,
+                        time_spent_on_activity
+                    )
+                    VALUES (?, ?, 1, 0, 0, 0, 0, 0)
+                """, (session["user_id"], next_activity_id))
+
+                cursor.execute("""
+                    UPDATE progress
+                    SET is_unlocked = 1
+                    WHERE user_id = ? AND activity_id = ?
+                """, (session["user_id"], next_activity_id))
+
+                cursor.execute("""
+                    UPDATE users
+                    SET current_activity_id = ?
+                    WHERE user_id = ?
+                """, (next_activity_id, session["user_id"]))
+
+        conn.commit()
+        conn.close()
+
+        return jsonify({
+            "success": True,
+            "rounds_completed": rounds_completed,
+            "target_rounds": MATCHING_GAME_TARGET_ROUNDS,
+            "activity_completed": activity_completed,
+            "next_activity_id": next_activity_id
+        })
+
+    except Exception as e:
+        conn.rollback()
+        conn.close()
+        print("Matching completion error:", repr(e))
+        return jsonify({
+            "success": False,
+            "error": "Could not save matching game completion"
+        }), 500
+
+MYSTERY_ANIMAL_LEVELS = [
+    {
+        "stage": "guided_choice",
+        "response_mode": "choice",
+        "description": "Ask one concrete either/or or small-choice question. Do not ask yes/no. Do not ask for hints or clues.",
+        "examples": [
+            "Is your animal big or small?",
+            "Does your animal mostly walk or swim?",
+            "Is your animal loud or quiet?"
+        ],
+        "fallback_questions": [
+            "Is your animal big or small?",
+            "Is your animal loud or quiet?",
+            "Is your animal fast or slow?",
+            "Does your animal mostly walk or swim?",
+            "Does your animal mostly walk or fly?",
+            "Does your animal live mostly on land or in water?",
+            "Is your animal usually a pet or a wild animal?",
+            "Does your animal have fur or feathers?",
+            "Does your animal have legs or fins?",
+            "Is your animal usually found at home or outside?",
+            "Is your animal bigger than a backpack or smaller than a backpack?",
+            "Does your animal move on the ground or in the air?"
+        ]
+    },
+    {
+        "stage": "guided_clue",
+        "response_mode": "choice",
+        "description": "Ask one concrete guided clue question with related choices only. Avoid broad abstract questions.",
+        "examples": [
+            "Does your animal have fur or scales?",
+            "Does your animal live on a farm or in the wild?",
+            "Does your animal have a tail or no tail?"
+        ],
+        "fallback_questions": [
+            "Does your animal have fur or scales?",
+            "Does your animal have wings or no wings?",
+            "Does your animal have a tail or no tail?",
+            "Does your animal live on a farm or in the wild?",
+            "Does your animal live in a house or outside?",
+            "Does your animal eat meat or plants?",
+            "Does your animal have four legs or fewer than four legs?",
+            "Does your animal swim in water or stay mostly on land?",
+            "Is your animal usually gentle or scary?",
+            "Is your animal real-life common or more of a zoo animal?"
+        ]
+    },
+    {
+        "stage": "tiny_hint",
+        "response_mode": "short_phrase",
+        "description": "Ask for one tiny concrete hint only after the early guided rounds.",
+        "examples": [
+            "Give me one tiny hint about what your animal looks like.",
+            "Tell me one body part your animal has.",
+            "Give me one small clue about how your animal moves."
+        ],
+        "fallback_questions": [
+            "Give me one tiny hint about what your animal looks like.",
+            "Tell me one body part your animal has.",
+            "Give me one small clue about how your animal moves.",
+            "Tell me one place your animal might be.",
+            "Tell me one thing your animal has on its body.",
+            "Give me one small clue that would help me guess."
+        ]
+    },
+    {
+        "stage": "open_hint",
+        "response_mode": "open_hint",
+        "description": "Ask for a hint or clue more openly, but still keep it simple.",
+        "examples": [
+            "Can you give me one more clue?",
+            "What is one thing I should know about your animal?",
+            "What clue should I remember before I guess?"
+        ],
+        "fallback_questions": [
+            "Can you give me one more clue?",
+            "What is one thing I should know about your animal?",
+            "What clue should I remember before I guess?",
+            "Tell me one more thing about your animal.",
+            "Give me one clue that makes your animal different from other animals.",
+            "What is one small hint that would help me make a better guess?"
+        ]
+    }
+]
+
+MYSTERY_ANIMAL_START_LEVEL_INDEX = 0
+MYSTERY_ANIMAL_REQUIRED_ROUNDS = 6
+MYSTERY_ANIMAL_NEXT_GAME_OFFER_ROUND = 6
+MYSTERY_ANIMAL_PLAY_AGAIN_INTERVAL = 2
+MYSTERY_ANIMAL_NEXT_ACTIVITY_ID = 3
+
+MYSTERY_ANIMAL_COMMON_ANIMALS = {
+    "dog", "cat", "fish", "bird", "rabbit", "frog", "horse", "duck",
+    "lion", "tiger", "bear", "monkey", "elephant", "giraffe",
+    "penguin", "turtle", "owl", "shark", "dolphin", "zebra",
+    "cow", "pig", "chicken", "panda", "koala", "seal", "otter",
+    "whale", "kangaroo", "snake", "lizard", "hamster", "mouse"
+}
+
+
+def get_mystery_animal_default_state(rounds_completed=0):
+    rounds_completed = max(0, int(rounds_completed or 0))
+
+    return {
+        "stage": "intro",
+        "response_level_index": MYSTERY_ANIMAL_START_LEVEL_INDEX,
+        "questions_asked": 0,
+        "comfortable_answer_count": 0,
+        "unclear_or_silent_count": 0,
+        "comfortable_streak": 0,
+        "unclear_streak": 0,
+        "question_history": [],
+        "known_clues": [],
+        "rejected_guesses": [],
+        "possible_guess": None,
+        "last_question": None,
+        "last_response_mode": "none",
+        "game_complete": False,
+        "rounds_completed": rounds_completed,
+        "skip_guess_once": False,
+        "guess_cooldown_questions": 0,
+        "last_acknowledgment_index": -1,
+        "clear_answer_word_counts": [],
+        "recent_question_families": [],
+        "recent_guesses": [],
+        "recent_acknowledgments": [],
+        "open_hint_questions_asked": 0
+    }
+
+
+def ensure_mystery_animal_progress_columns():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("PRAGMA table_info(progress)")
+    existing_columns = {row["name"] for row in cursor.fetchall()}
+
+    columns_to_add = {
+        "mystery_animal_rounds_completed": "ALTER TABLE progress ADD COLUMN mystery_animal_rounds_completed INTEGER DEFAULT 0",
+        "mystery_animal_last_played_at": "ALTER TABLE progress ADD COLUMN mystery_animal_last_played_at TEXT"
+    }
+
+    for column_name, alter_sql in columns_to_add.items():
+        if column_name not in existing_columns:
+            cursor.execute(alter_sql)
+
+    conn.commit()
+    conn.close()
+
+
+def get_mystery_animal_activity(cursor):
+    cursor.execute("""
+        SELECT activity_id, scene_id, activity_order
+        FROM activity
+        WHERE activity_name IN (?, ?, ?)
+          AND is_active = 1
+        ORDER BY
+            CASE activity_name
+                WHEN 'mystery_animal' THEN 1
+                WHEN 'guessing_game' THEN 2
+                WHEN 'animal_guessing_game' THEN 3
+                ELSE 4
+            END
+        LIMIT 1
+    """, (
+        "mystery_animal",
+        "guessing_game",
+        "animal_guessing_game"
+    ))
+
+    return cursor.fetchone()
+
+
+def get_saved_mystery_animal_rounds():
+    ensure_mystery_animal_progress_columns()
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    try:
+        activity = get_mystery_animal_activity(cursor)
+
+        if not activity:
+            conn.close()
+            return 0
+
+        activity_id = activity["activity_id"]
+
+        cursor.execute("""
+            INSERT OR IGNORE INTO progress (
+                user_id,
+                activity_id,
+                is_unlocked,
+                is_completed,
+                words_spoken,
+                minutes_spoken,
                 active_minutes,
-                completed_at
+                time_spent_on_activity
             )
-            VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            VALUES (?, ?, 1, 0, 0, 0, 0, 0)
+        """, (session["user_id"], activity_id))
+
+        cursor.execute("""
+            SELECT COALESCE(mystery_animal_rounds_completed, 0) AS rounds_completed
+            FROM progress
+            WHERE user_id = ? AND activity_id = ?
+        """, (session["user_id"], activity_id))
+
+        row = cursor.fetchone()
+        conn.commit()
+        conn.close()
+
+        return int(row["rounds_completed"] or 0) if row else 0
+
+    except Exception as e:
+        conn.rollback()
+        conn.close()
+        print("Could not load Mystery Animal progress:", repr(e))
+        return 0
+
+
+def save_mystery_animal_round_progress(rounds_completed):
+    ensure_mystery_animal_progress_columns()
+
+    rounds_completed = max(0, int(rounds_completed or 0))
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    try:
+        activity = get_mystery_animal_activity(cursor)
+
+        if not activity:
+            conn.close()
+            return None
+
+        activity_id = activity["activity_id"]
+
+        cursor.execute("""
+            INSERT OR IGNORE INTO progress (
+                user_id,
+                activity_id,
+                is_unlocked,
+                is_completed,
+                words_spoken,
+                minutes_spoken,
+                active_minutes,
+                time_spent_on_activity
+            )
+            VALUES (?, ?, 1, 0, 0, 0, 0, 0)
+        """, (session["user_id"], activity_id))
+
+        cursor.execute("""
+            UPDATE progress
+            SET
+                is_unlocked = 1,
+                mystery_animal_rounds_completed = MAX(
+                    COALESCE(mystery_animal_rounds_completed, 0),
+                    ?
+                ),
+                mystery_animal_last_played_at = CURRENT_TIMESTAMP
+            WHERE user_id = ? AND activity_id = ?
+        """, (rounds_completed, session["user_id"], activity_id))
+
+        conn.commit()
+        conn.close()
+
+        return activity_id
+
+    except Exception as e:
+        conn.rollback()
+        conn.close()
+        print("Could not save Mystery Animal progress:", repr(e))
+        return None
+
+
+def complete_mystery_animal_and_unlock_next_for_user(rounds_completed=None):
+    ensure_mystery_animal_progress_columns()
+
+    saved_rounds = max(0, int(rounds_completed or 0))
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    try:
+        current_activity = get_mystery_animal_activity(cursor)
+
+        if not current_activity:
+            conn.close()
+            return None
+
+        current_activity_id = current_activity["activity_id"]
+
+        cursor.execute("""
+            INSERT OR IGNORE INTO progress (
+                user_id,
+                activity_id,
+                is_unlocked,
+                is_completed,
+                words_spoken,
+                minutes_spoken,
+                active_minutes,
+                time_spent_on_activity
+            )
+            VALUES (?, ?, 1, 0, 0, 0, 0, 0)
+        """, (session["user_id"], current_activity_id))
+
+        cursor.execute("""
+            UPDATE progress
+            SET
+                is_unlocked = 1,
+                is_completed = 1,
+                mystery_animal_rounds_completed = MAX(
+                    COALESCE(mystery_animal_rounds_completed, 0),
+                    ?
+                ),
+                mystery_animal_last_played_at = CURRENT_TIMESTAMP
+            WHERE user_id = ? AND activity_id = ?
         """, (
+            max(saved_rounds, MYSTERY_ANIMAL_REQUIRED_ROUNDS),
             session["user_id"],
-            activity_id,
-            words_spoken,
-            minutes_spoken,
-            active_minutes
+            current_activity_id
         ))
 
-        # Unlock the next active activity in the user's journey order.
         cursor.execute("""
             SELECT activity_id
             FROM activity
@@ -3403,10 +4028,11 @@ def matching_game_complete():
             ORDER BY scene_id ASC, activity_order ASC
             LIMIT 1
         """, (
-            activity["scene_id"],
-            activity["scene_id"],
-            activity["activity_order"]
+            current_activity["scene_id"],
+            current_activity["scene_id"],
+            current_activity["activity_order"]
         ))
+
         next_activity = cursor.fetchone()
 
         next_activity_id = None
@@ -3443,149 +4069,26 @@ def matching_game_complete():
         conn.commit()
         conn.close()
 
-        return jsonify({
-            "success": True,
-            "next_activity_id": next_activity_id
-        })
+        return next_activity_id
 
     except Exception as e:
         conn.rollback()
         conn.close()
-        print("Matching completion error:", repr(e))
-        return jsonify({"success": False, "error": "Could not save completion"}), 500
-
-MYSTERY_ANIMAL_LEVELS = [
-    {
-        "stage": "yes_no",
-        "response_mode": "yes_no",
-        "description": "Ask a concrete yes/no question.",
-        "examples": [
-            "Does it live on land?",
-            "Can it fly?",
-            "Is it bigger than a dog?"
-        ],
-        "fallback_questions": [
-            "Does it live on land?",
-            "Does it live in water?",
-            "Can it fly?",
-            "Does it have fur?",
-            "Does it have wings?",
-            "Is it usually a pet?",
-            "Is it bigger than a dog?",
-            "Does it walk on four legs?",
-            "Could it live in a house?",
-            "Would I see it at a zoo?",
-            "Does it have a tail?",
-            "Is it smaller than your backpack?"
-        ]
-    },
-    {
-        "stage": "forced_choice",
-        "response_mode": "choice",
-        "description": "Ask a two-option question.",
-        "examples": [
-            "Is it furry or scaly or feathery?",
-            "Does it live on land or in water?",
-            "Is it small or big?"
-        ],
-        "fallback_questions": [
-            "Is it small or big?",
-            "Is it furry or scaly?",
-            "Does it live on land or in water?",
-            "Is it a pet or a wild animal?",
-            "Does it walk or swim?",
-            "Is it fast or slow?",
-            "Does it have legs or fins?",
-            "Is it soft or rough?",
-        ]
-    },
-    {
-        "stage": "one_word",
-        "response_mode": "one_word",
-        "description": "Ask for one simple word.",
-        "examples": [
-            "What color is it?",
-            "Where does it live?",
-            "What size is it?"
-        ],
-        "fallback_questions": [
-            "What color is it?",
-            "What size is it?",
-            "What does it eat?",
-            "Can you give me a hint?",
-        ]
-    },
-    {
-        "stage": "short_phrase",
-        "response_mode": "short_phrase",
-        "description": "Ask for a tiny phrase.",
-        "examples": [
-            "What does it like to eat?",
-            "What does it look like?"
-        ],
-        "fallback_questions": [
-            "What does it like to eat?",
-            "Can you give me a hint?",
-            "What does it look like?",
-            "Tell me one small clue.",
-        ]
-    },
-    {
-        "stage": "open_hint",
-        "response_mode": "open_hint",
-        "description": "Ask for any small hint the child wants to give.",
-        "examples": [
-            "Can you give me a tiny hint?",
-            "What is one fun fact about this animal?",
-            "What is your favorite thing about this animal?"
-        ],
-        "fallback_questions": [
-            "Can you give me a tiny hint?",
-            "What is one fun fact about this animal?",
-            "What is your favorite thing about this animal?"
-        ]
-    }
-]
-
-MYSTERY_ANIMAL_START_LEVEL_INDEX = 2
-MYSTERY_ANIMAL_NEXT_GAME_OFFER_ROUND = 3
-MYSTERY_ANIMAL_NEXT_ACTIVITY_ID = 3
-
-MYSTERY_ANIMAL_COMMON_ANIMALS = {
-    "dog", "cat", "fish", "bird", "rabbit", "frog", "horse", "duck",
-    "lion", "tiger", "bear", "monkey", "elephant", "giraffe",
-    "penguin", "turtle", "owl", "shark", "dolphin", "zebra",
-    "cow", "pig", "chicken", "panda", "koala", "seal", "otter",
-    "whale", "kangaroo", "snake", "lizard", "hamster", "mouse"
-}
+        print("Could not complete Mystery Animal and unlock next activity:", repr(e))
+        return None
 
 
-def get_mystery_animal_default_state(rounds_completed=0):
-    return {
-        "stage": "intro",
-        "response_level_index": MYSTERY_ANIMAL_START_LEVEL_INDEX,
-        "questions_asked": 0,
-        "comfortable_answer_count": 0,
-        "unclear_or_silent_count": 0,
-        "comfortable_streak": 0,
-        "unclear_streak": 0,
-        "question_history": [],
-        "known_clues": [],
-        "rejected_guesses": [],
-        "possible_guess": None,
-        "last_question": None,
-        "last_response_mode": "none",
-        "game_complete": False,
-        "rounds_completed": int(rounds_completed or 0),
-        "skip_guess_once": False,
-        "guess_cooldown_questions": 0,
-        "last_acknowledgment_index": -1,
-        "clear_answer_word_counts": [],
-        "recent_question_families": [],
-        "recent_guesses": [],
-        "recent_acknowledgments": [],
-        "open_hint_questions_asked": 0
-    }
+def should_mystery_animal_ask_round_choice(rounds_completed):
+    rounds_completed = int(rounds_completed or 0)
+
+    if rounds_completed >= MYSTERY_ANIMAL_REQUIRED_ROUNDS:
+        return True
+
+    return (
+        rounds_completed > 0 and
+        rounds_completed % MYSTERY_ANIMAL_PLAY_AGAIN_INTERVAL == 0
+    )
+
 
 
 def normalize_child_text(text):
@@ -3606,33 +4109,52 @@ def get_child_revealed_animal(text):
     if not words:
         return None
 
-    direct_reveal_phrases = [
-        "it's",
-        "it is",
-        "my animal is",
-        "the animal is",
-        "i picked",
-        "i chose",
-        "i was thinking of",
-        "i am thinking of",
-        "it was",
-        "it's a",
-        "it is a"
+    # Do NOT treat broad category clues as a final answer.
+    # Example: "yes, it's a type of cat" should be stored as a clue,
+    # not completed as "cat." Star must keep narrowing and later confirm.
+    broad_category_patterns = [
+        r"\b(type|kind|sort|family) of (cat|dog|fish|bird|bear|monkey)\b",
+        r"\b(cat|dog|fish|bird|bear|monkey) (type|kind|family)\b",
+        r"\bbig cat\b",
+        r"\blittle cat\b"
     ]
 
-    has_direct_reveal = any(phrase in cleaned for phrase in direct_reveal_phrases)
+    if any(re.search(pattern, cleaned) for pattern in broad_category_patterns):
+        return None
 
-    if has_direct_reveal:
+    direct_reveal_patterns = [
+        r"\bmy animal is (?:a |an |the )?([a-z -]+)\b",
+        r"\bthe animal is (?:a |an |the )?([a-z -]+)\b",
+        r"\bi picked (?:a |an |the )?([a-z -]+)\b",
+        r"\bi chose (?:a |an |the )?([a-z -]+)\b",
+        r"\bi was thinking of (?:a |an |the )?([a-z -]+)\b",
+        r"\bi am thinking of (?:a |an |the )?([a-z -]+)\b",
+        r"\bit was (?:a |an |the )?([a-z -]+)\b",
+        r"\bit is (?:a |an |the )?([a-z -]+)\b",
+        r"\bit's (?:a |an |the )?([a-z -]+)\b"
+    ]
+
+    for pattern in direct_reveal_patterns:
+        match = re.search(pattern, cleaned)
+
+        if not match:
+            continue
+
+        candidate_text = match.group(1).strip()
+        candidate_words = set(re.findall(r"[a-z']+", candidate_text))
+
         for animal in MYSTERY_ANIMAL_COMMON_ANIMALS:
-            if animal in words:
+            if animal in candidate_words:
                 return animal
 
-    # Also handle direct short answers like "dog", "a dog", or "dog dog".
-    # In Mystery Animal, if the child names a familiar animal directly,
-    # Star should accept that instead of asking for more hints.
-    if len(words) <= 4:
+    # Direct short answers like "lion" or "a dog" count as a possible final answer,
+    # but Star will still confirm it before ending the round.
+    filler_words = {"a", "an", "the", "my", "animal", "is", "it", "it's", "it is"}
+    meaningful_words = [word for word in re.findall(r"[a-z']+", cleaned) if word not in filler_words]
+
+    if len(meaningful_words) <= 2:
         for animal in MYSTERY_ANIMAL_COMMON_ANIMALS:
-            if animal in words:
+            if animal in meaningful_words:
                 return animal
 
     return None
@@ -3665,11 +4187,11 @@ def classify_mystery_animal_choice_response(text, offer_next_game=False):
 
     stop_words = {
         "stop", "done", "finish", "finished", "end", "quit", "leave",
-        "dashboard", "no", "nope", "nah"
+        "dashboard", "no", "nope", "nah", "not", "dont", "don't"
     }
 
     next_game_words = {
-        "different", "new", "next", "other", "another", "guessing"
+        "different", "next", "other"
     }
 
     same_game_words = {
@@ -3885,10 +4407,22 @@ def maybe_add_mystery_animal_acknowledgment(
 
 
 def get_mystery_animal_level(game_state):
-    index = int(game_state.get("response_level_index", MYSTERY_ANIMAL_START_LEVEL_INDEX))
+    rounds_completed = max(0, int(game_state.get("rounds_completed", 0) or 0))
+    current_round = rounds_completed + 1
+
+    if current_round <= 3:
+        index = 0
+    elif current_round == 4:
+        index = 1
+    elif current_round == 5:
+        index = 2
+    else:
+        index = 3
+
     index = max(0, min(index, len(MYSTERY_ANIMAL_LEVELS) - 1))
     game_state["response_level_index"] = index
     return MYSTERY_ANIMAL_LEVELS[index]
+
 
 
 def get_question_history_set(game_state):
@@ -3996,27 +4530,27 @@ def pick_fallback_animal_guess(game_state):
 
     animal_profiles = {
         "fish": ["water", "swim", "fins", "small", "blue"],
-        "shark": ["water", "swim", "big", "fins", "ocean"],
+        "shark": ["water", "swim", "big", "fins", "ocean", "scary"],
         "dolphin": ["water", "swim", "ocean", "smart"],
-        "whale": ["water", "big", "ocean"],
+        "whale": ["water", "big", "ocean", "huge"],
         "frog": ["water", "green", "jump", "small", "pond"],
         "duck": ["water", "fly", "wings", "pond", "yellow"],
-        "bird": ["fly", "wings", "small", "sky"],
-        "owl": ["fly", "wings", "night", "tree"],
-        "penguin": ["bird", "water", "black", "white", "cold"],
-        "dog": ["pet", "fur", "house", "tail", "four legs"],
-        "cat": ["pet", "fur", "house", "tail", "small"],
+        "bird": ["fly", "wings", "small", "sky", "feathers"],
+        "owl": ["fly", "wings", "night", "tree", "feathers"],
+        "penguin": ["bird", "water", "black", "white", "cold", "wings"],
+        "dog": ["pet", "fur", "house", "tail", "four legs", "bark"],
+        "cat": ["pet", "fur", "house", "tail", "small", "meow"],
         "rabbit": ["pet", "fur", "ears", "small", "hop"],
         "hamster": ["pet", "small", "fur", "house"],
         "horse": ["farm", "big", "tail", "run"],
         "cow": ["farm", "big", "milk"],
         "pig": ["farm", "pink", "mud"],
-        "chicken": ["farm", "wings", "small"],
-        "lion": ["zoo", "wild", "big", "fur"],
-        "tiger": ["zoo", "wild", "stripes", "big"],
+        "chicken": ["farm", "wings", "small", "feathers"],
+        "lion": ["zoo", "wild", "big", "fur", "type of cat", "big cat", "mane", "roar"],
+        "tiger": ["zoo", "wild", "stripes", "big", "type of cat", "big cat", "orange", "black"],
         "bear": ["wild", "big", "fur", "forest"],
         "monkey": ["zoo", "tree", "banana", "wild"],
-        "elephant": ["zoo", "big", "trunk"],
+        "elephant": ["zoo", "big", "trunk", "huge"],
         "giraffe": ["zoo", "big", "neck", "tall"],
         "zebra": ["zoo", "stripes", "black", "white"],
         "turtle": ["shell", "water", "slow", "small"],
@@ -4044,6 +4578,8 @@ def pick_fallback_animal_guess(game_state):
         if isinstance(item, dict)
     ).lower()
 
+    broad_cat_clue = bool(re.search(r"\b(type|kind|sort|family) of cat\b|\bbig cat\b", clue_text))
+
     candidates = []
 
     for animal, keywords in animal_profiles.items():
@@ -4051,11 +4587,19 @@ def pick_fallback_animal_guess(game_state):
             continue
 
         score = 0
+
         for keyword in keywords:
             if keyword in clue_text:
                 score += 2
 
-        if animal in clue_text:
+        # Do not reward guessing "cat" just because the child said "type of cat."
+        # That clue should point to lion/tiger-style animals, not the literal answer cat.
+        if broad_cat_clue:
+            if animal in {"lion", "tiger"}:
+                score += 4
+            if animal == "cat":
+                score -= 6
+        elif re.search(rf"\b{re.escape(animal)}\b", clue_text):
             score += 5
 
         if animal in recent:
@@ -4081,59 +4625,9 @@ def pick_fallback_animal_guess(game_state):
 
     return guess
 
-
 def unlock_mystery_animal_next_game_for_user():
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-
-        cursor.execute("""
-            SELECT activity_id
-            FROM activity
-            WHERE activity_id = ?
-              AND is_active = 1
-        """, (MYSTERY_ANIMAL_NEXT_ACTIVITY_ID,))
-
-        activity = cursor.fetchone()
-
-        if not activity:
-            conn.close()
-            return False
-
-        cursor.execute("""
-            INSERT OR IGNORE INTO progress (
-                user_id,
-                activity_id,
-                is_unlocked,
-                is_completed,
-                words_spoken,
-                minutes_spoken,
-                active_minutes,
-                time_spent_on_activity
-            )
-            VALUES (?, ?, 1, 0, 0, 0, 0, 0)
-        """, (session["user_id"], MYSTERY_ANIMAL_NEXT_ACTIVITY_ID))
-
-        cursor.execute("""
-            UPDATE progress
-            SET is_unlocked = 1
-            WHERE user_id = ? AND activity_id = ?
-        """, (session["user_id"], MYSTERY_ANIMAL_NEXT_ACTIVITY_ID))
-
-        cursor.execute("""
-            UPDATE users
-            SET current_activity_id = ?
-            WHERE user_id = ?
-        """, (MYSTERY_ANIMAL_NEXT_ACTIVITY_ID, session["user_id"]))
-
-        conn.commit()
-        conn.close()
-
-        return True
-
-    except Exception as e:
-        print("Could not unlock next Mystery Animal game:", repr(e))
-        return False
+    rounds_completed = get_saved_mystery_animal_rounds()
+    return complete_mystery_animal_and_unlock_next_for_user(rounds_completed) is not None
 
 
 def apply_mystery_animal_comfort_update(game_state, event_type, child_response, previous_response_mode):
@@ -4316,23 +4810,116 @@ def mystery_animal_message():
     child_name = session.get("child_name", "there")
     child_name = re.sub(r"[^A-Za-z' -]", "", str(child_name)).strip() or "there"
 
+    def start_new_mystery_round(rounds_completed, message, event_label="replay", pause_ms=1800):
+        new_game_state = get_mystery_animal_default_state(rounds_completed=rounds_completed)
+
+        return make_mystery_animal_audio_response(
+            message=message,
+            stage="intro",
+            response_mode="none",
+            expects_response=False,
+            game_complete=False,
+            game_state=new_game_state,
+            history=[],
+            event_type=event_label,
+            child_response=child_response,
+            next_event="first_question",
+            pause_before_next_ms=pause_ms
+        )
+
+    def end_mystery_call(message, game_state, history, event_label="stop", unlock_next=False):
+        next_url = url_for("dashboard")
+        rounds_completed = int(game_state.get("rounds_completed", 0))
+
+        if unlock_next:
+            complete_mystery_animal_and_unlock_next_for_user(rounds_completed)
+        else:
+            save_mystery_animal_round_progress(rounds_completed)
+
+        return make_mystery_animal_audio_response(
+            message=message,
+            stage="session_done",
+            response_mode="none",
+            expects_response=False,
+            game_complete=unlock_next,
+            game_state=game_state,
+            history=history,
+            event_type=event_label,
+            child_response=child_response,
+            next_url=next_url,
+            redirect_after_ms=1700,
+            session_done=True
+        )
+
+    def finish_mystery_round(base_message, game_state, history, event_label):
+        rounds_completed = int(game_state.get("rounds_completed", 0))
+        save_mystery_animal_round_progress(rounds_completed)
+
+        if not should_mystery_animal_ask_round_choice(rounds_completed):
+            message = (
+                f"{base_message} "
+                "Let's play another round. Think of a new animal in your head."
+            )
+
+            return start_new_mystery_round(
+                rounds_completed=rounds_completed,
+                message=message,
+                event_label=event_label,
+                pause_ms=1900
+            )
+
+        if rounds_completed >= MYSTERY_ANIMAL_REQUIRED_ROUNDS:
+            message = (
+                f"{base_message} "
+                "Alright, I think we're done for today, but we can still play again if you want. "
+                f"{child_name}, do you want to play again, or do you want to end here?"
+            )
+        else:
+            message = (
+                f"{base_message} "
+                f"{child_name}, do you want to play another round, or do you want to end early for today?"
+            )
+
+        return make_mystery_animal_audio_response(
+            message=message,
+            stage="round_choice",
+            response_mode="round_choice",
+            expects_response=True,
+            game_complete=False,
+            game_state=game_state,
+            history=history,
+            event_type=event_label,
+            child_response=child_response
+        )
+
     if event_type in {"intro", "restart"}:
         session.pop("mystery_animal_history", None)
         session.pop("mystery_animal_state", None)
+
+        saved_rounds = get_saved_mystery_animal_rounds()
         history = []
-        game_state = get_mystery_animal_default_state(rounds_completed=0)
+        game_state = get_mystery_animal_default_state(rounds_completed=saved_rounds)
         child_response = ""
         previous_response_mode = "none"
-    else:
-        history = session.get("mystery_animal_history", [])
-        game_state = session.get("mystery_animal_state", get_mystery_animal_default_state())
 
-    if event_type in {"intro", "restart"}:
-        message = (
-            "Hi, I'm Star. We're going to play Mystery Animal. "
-            "Think of any animal in your head. Take a second. "
-            "I'll ask little questions to guess it."
-        )
+        if saved_rounds >= MYSTERY_ANIMAL_REQUIRED_ROUNDS:
+            message = (
+                "Hi, I'm Star. Welcome back to Mystery Animal. "
+                "We finished our main rounds, but we can still play again if you want. "
+                "Think of a new animal in your head."
+            )
+        elif saved_rounds > 0:
+            message = (
+                "Hi, I'm Star. Welcome back to Mystery Animal. "
+                "We'll keep going from where you left off. "
+                "Think of a new animal in your head."
+            )
+        else:
+            message = (
+                "Hi, I'm Star. We're going to play Mystery Animal. "
+                "Think of any animal in your head. Take a second. "
+                "I'll ask little questions to guess it."
+            )
 
         try:
             return make_mystery_animal_audio_response(
@@ -4356,39 +4943,31 @@ def mystery_animal_message():
                 "error": "Could not generate Star intro"
             }), 500
 
-    # Handle the child response to the end-of-round verbal choice before normal game logic.
+    history = session.get("mystery_animal_history", [])
+    game_state = session.get("mystery_animal_state", get_mystery_animal_default_state())
+
+    # Handle the child response to the every-two-round choice before normal game logic.
     if previous_response_mode == "round_choice" and event_type in {"child_answer", "no_response"}:
         rounds_completed = int(game_state.get("rounds_completed", 0))
-        offer_next_game = rounds_completed >= MYSTERY_ANIMAL_NEXT_GAME_OFFER_ROUND
+        ready_to_unlock_next = rounds_completed >= MYSTERY_ANIMAL_REQUIRED_ROUNDS
 
         if event_type == "no_response":
-            choice = "unclear"
+            choice = "stop" if ready_to_unlock_next else "same_game"
         else:
             choice = classify_mystery_animal_choice_response(
                 child_response,
-                offer_next_game=offer_next_game
+                offer_next_game=ready_to_unlock_next
             )
 
         if choice == "same_game":
-            new_game_state = get_mystery_animal_default_state(rounds_completed=rounds_completed)
-
-            message = (
-                "Okay. Let's play another round. Think of a new animal in your head."
-            )
+            message = "Okay. Let's play another round. Think of a new animal in your head."
 
             try:
-                return make_mystery_animal_audio_response(
+                return start_new_mystery_round(
+                    rounds_completed=rounds_completed,
                     message=message,
-                    stage="intro",
-                    response_mode="none",
-                    expects_response=False,
-                    game_complete=False,
-                    game_state=new_game_state,
-                    history=[],
-                    event_type="replay",
-                    child_response=child_response,
-                    next_event="first_question",
-                    pause_before_next_ms=1800
+                    event_label="replay",
+                    pause_ms=1800
                 )
 
             except Exception as e:
@@ -4398,72 +4977,73 @@ def mystery_animal_message():
                     "error": "Could not generate Star replay intro"
                 }), 500
 
-        if choice == "next_game" and offer_next_game:
-            unlock_mystery_animal_next_game_for_user()
-
-            next_url = url_for("open_activity", activity_id=TOY_TRIVIA_NEXT_ACTIVITY_ID)
-
-            message = "Okay, I'll call you right back so we can play the next animal game. See you soon."
-
-            try:
-                return make_mystery_animal_audio_response(
-                    message=message,
-                    stage="transition_next_game",
-                    response_mode="none",
-                    expects_response=False,
-                    game_complete=False,
-                    game_state=game_state,
-                    history=history,
-                    event_type="next_game",
-                    child_response=child_response,
-                    next_url=next_url,
-                    redirect_after_ms=1700,
-                    session_done=True
+        if choice in {"stop", "next_game"}:
+            if ready_to_unlock_next:
+                message = (
+                    "Okay. Great work today. We can end here. "
+                    "Bye-bye. See you later."
                 )
 
-            except Exception as e:
-                print("Mystery Animal next-game TTS error:", e)
-                return jsonify({
-                    "success": False,
-                    "error": "Could not move to the next game"
-                }), 500
+                try:
+                    return end_mystery_call(
+                        message=message,
+                        game_state=game_state,
+                        history=history,
+                        event_label="complete_and_stop",
+                        unlock_next=True
+                    )
 
-        if choice == "stop":
+                except Exception as e:
+                    print("Mystery Animal complete-and-stop TTS error:", e)
+                    return jsonify({
+                        "success": False,
+                        "error": "Could not finish Mystery Animal"
+                    }), 500
+
             message = (
-                "Okay. We can stop here. "
-                "Thanks for playing Mystery Animal with me."
+                "Okay. We can end here for now. "
+                "Your spot is saved. Bye-bye. See you later."
             )
 
             try:
-                return make_mystery_animal_audio_response(
+                return end_mystery_call(
                     message=message,
-                    stage="session_done",
-                    response_mode="none",
-                    expects_response=False,
-                    game_complete=False,
                     game_state=game_state,
                     history=history,
-                    event_type="stop",
-                    child_response=child_response,
-                    session_done=True
+                    event_label="early_stop",
+                    unlock_next=False
                 )
 
             except Exception as e:
-                print("Mystery Animal stop TTS error:", e)
+                print("Mystery Animal early-stop TTS error:", e)
                 return jsonify({
                     "success": False,
                     "error": "Could not end the game"
                 }), 500
 
-        if offer_next_game:
+        if ready_to_unlock_next:
             message = (
-                "That's okay. We can play this game again, try a slightly different animal game, "
-                "or stop here. You can tell me what you want."
+                "That's okay. You can say play again, or you can say end here."
             )
         else:
             message = (
-                "That's okay. Do you want to play another round?"
+                "That's okay. We can play another round together."
             )
+
+            try:
+                return start_new_mystery_round(
+                    rounds_completed=rounds_completed,
+                    message=message,
+                    event_label="choice_unclear_continue",
+                    pause_ms=1500
+                )
+
+            except Exception as e:
+                print("Mystery Animal unclear-choice replay error:", e)
+                return jsonify({
+                    "success": False,
+                    "error": "Could not continue the game"
+                }), 500
 
         try:
             return make_mystery_animal_audio_response(
@@ -4488,41 +5068,55 @@ def mystery_animal_message():
     revealed_animal = get_child_revealed_animal(child_response)
 
     if event_type == "child_answer" and revealed_animal:
-        rounds_completed = int(game_state.get("rounds_completed", 0)) + 1
-        game_state["rounds_completed"] = rounds_completed
-        game_state["stage"] = "round_choice"
-        game_state["last_response_mode"] = "round_choice"
+        # Even if the child names an animal directly, Star should confirm the guess
+        # before marking the round complete. This prevents accidental false completions.
+        game_state["stage"] = "guess"
+        game_state["last_response_mode"] = "guess_confirmation"
+        game_state["possible_guess"] = revealed_animal
         game_state["game_complete"] = False
 
-        offer_next_game = rounds_completed >= MYSTERY_ANIMAL_NEXT_GAME_OFFER_ROUND
+        message = f"I think I know now. Is it a {revealed_animal}?"
+        question_text = f"Is it a {revealed_animal}?"
 
-        if offer_next_game:
-            message = (
-                f"Oh, it's a {revealed_animal}. I got it now. "
-                "We can play another round, try a slightly different animal game, "
-                "or stop here. What do you want to do?"
-            )
-        else:
-            message = (
-                f"Oh, it's a {revealed_animal}. I got it now. "
-                "Do you want to play another round?"
-            )
+        game_state["last_question"] = question_text
+        game_state.setdefault("question_history", []).append({
+            "question": question_text,
+            "stage": "guess",
+            "response_mode": "guess_confirmation"
+        })
+        game_state["questions_asked"] = int(game_state.get("questions_asked", 0)) + 1
+
+        history.append({
+            "event_type": "direct_reveal_confirmation",
+            "child_response": child_response,
+            "star": message,
+            "stage": "guess",
+            "response_mode": "guess_confirmation",
+            "game_complete": False
+        })
+
+        session["mystery_animal_history"] = history[-20:]
+        session["mystery_animal_state"] = game_state
+        session.modified = True
 
         try:
-            return make_mystery_animal_audio_response(
-                message=message,
-                stage="round_choice",
-                response_mode="round_choice",
-                expects_response=True,
-                game_complete=False,
-                game_state=game_state,
-                history=history,
-                event_type="direct_reveal",
-                child_response=child_response
-            )
+            audio_bytes = generate_star_voice_elevenlabs(message)
+            audio_base64 = base64.b64encode(audio_bytes).decode("utf-8")
+
+            return jsonify({
+                "success": True,
+                "message": message,
+                "audio": f"data:audio/mpeg;base64,{audio_base64}",
+                "stage": "guess",
+                "expects_response": True,
+                "response_mode": "guess_confirmation",
+                "game_complete": False,
+                "session_done": False,
+                "game_state": game_state
+            })
 
         except Exception as e:
-            print("Mystery Animal direct reveal TTS error:", e)
+            print("Mystery Animal direct reveal confirmation TTS error:", e)
             return jsonify({
                 "success": False,
                 "error": "Could not generate Star response"
@@ -4537,30 +5131,18 @@ def mystery_animal_message():
 
     # Correct guess flow: no modal/card. Star verbally asks what the child wants next.
     if game_state.get("stage") == "round_choice":
-        rounds_completed = int(game_state.get("rounds_completed", 0))
-        offer_next_game = rounds_completed >= MYSTERY_ANIMAL_NEXT_GAME_OFFER_ROUND
-
-        if offer_next_game:
-            message = (
-                "I got it. We can play this game again, try a slightly different animal game, "
-                "or stop here. What do you want to do?"
-            )
+        confirmed_guess = normalize_child_text(game_state.get("possible_guess", ""))
+        if confirmed_guess:
+            base_message = f"Okay, it was a {confirmed_guess}. I got it."
         else:
-            message = (
-                "I got it. Do you want to play another round?"
-            )
+            base_message = "Okay, I got it."
 
         try:
-            return make_mystery_animal_audio_response(
-                message=message,
-                stage="round_choice",
-                response_mode="round_choice",
-                expects_response=True,
-                game_complete=False,
+            return finish_mystery_round(
+                base_message=base_message,
                 game_state=game_state,
                 history=history,
-                event_type="round_choice",
-                child_response=child_response
+                event_label="round_choice"
             )
 
         except Exception as e:
@@ -4578,6 +5160,7 @@ def mystery_animal_message():
 
     guess_cooldown_questions = int(game_state.get("guess_cooldown_questions", 0))
     comfortable_count = int(game_state.get("comfortable_answer_count", 0))
+    current_round_number = int(game_state.get("rounds_completed", 0)) + 1
 
     last_answer_word_count = len(re.findall(r"[A-Za-z']+", child_response))
     total_clue_words = sum(
@@ -4587,21 +5170,24 @@ def mystery_animal_message():
     )
     open_hint_questions_asked = int(game_state.get("open_hint_questions_asked", 0))
 
+    # Guess only after enough narrowing. A broad clue like "type of cat"
+    # is useful, but it is not enough to finish or guess the literal word "cat."
     should_guess = (
         not bool(game_state.get("skip_guess_once", False))
         and guess_cooldown_questions <= 0
         and (
-            (len(known_clues) >= 3 and questions_asked >= 3)
-            or (len(known_clues) >= 2 and total_clue_words >= 5)
-            or (previous_response_mode == "open_hint" and len(known_clues) >= 2 and last_answer_word_count >= 2)
-            or (open_hint_questions_asked >= 1 and len(known_clues) >= 2 and last_answer_word_count >= 1)
-            or questions_asked >= 5
+            (len(known_clues) >= 4 and questions_asked >= 4)
+            or (len(known_clues) >= 3 and total_clue_words >= 8 and questions_asked >= 4)
+            or (previous_response_mode == "open_hint" and len(known_clues) >= 3 and last_answer_word_count >= 2)
+            or (open_hint_questions_asked >= 1 and len(known_clues) >= 3 and last_answer_word_count >= 2)
+            or questions_asked >= 6
         )
-    ) and not bool(game_state.get("skip_guess_once", False)) and guess_cooldown_questions <= 0
+    )
 
     should_invite_open_hint = (
+        current_round_number >= 5 and
         comfortable_count >= 3 and
-        int(game_state.get("response_level_index", MYSTERY_ANIMAL_START_LEVEL_INDEX)) >= 3 and
+        int(game_state.get("response_level_index", MYSTERY_ANIMAL_START_LEVEL_INDEX)) >= 2 and
         not should_guess
     )
 
@@ -4626,6 +5212,10 @@ Hard rules:
 - Use the clues already given.
 - Do not jump into open-ended questions unless the required response level says to.
 - Keep Star's line to 1-2 short sentences.
+- In rounds 1 through 3, do not ask yes/no questions and do not ask for hints or clues.
+- In rounds 1 through 3, ask guided-choice questions with simple answer options.
+- In round 4, keep questions concrete and guided.
+- In rounds 5 and 6, small hints and clues are okay.
 
 Acknowledging child responses:
 - When the child gives a clear answer or hint, acknowledge the clue before asking the next question.
@@ -4655,16 +5245,6 @@ Silence and no-response handling:
 - Do not call attention to the child being silent.
 - Gently move on with a different low-pressure question.
 - Use calm acceptance first, then continue the game.
-- Good examples:
-  - "That's okay. I'll ask a different one."
-  - "No problem. I have another question."
-  - "That's okay, we can keep going."
-  - "No worries. Let me ask this one."
-- Bad examples:
-  - "Let me ask it in a simpler way."
-  - "That might have been too hard."
-  - "Can you answer this time?"
-  - "I didn't hear you."
 
 Calm voice style:
 - Star should sound warm, gentle, steady, and quietly playful.
@@ -4674,12 +5254,9 @@ Calm voice style:
 - Do not say "Wow", "Amazing", "Awesome", or "Ooo".
 - Treat answers as helpful clues, not performances.
 - Do not overuse praise.
-- Prefer calm lines like:
-  - "Hmm, that helps."
-  - "Okay, let me think."
-  - "I have a small question."
-  - "That gives me a clue."
-  - "Let me ask this one."
+
+Current round number:
+{current_round_number}
 
 Required response level:
 Stage: {level["stage"]}
@@ -4695,15 +5272,17 @@ Guessing rule:
 - Do not ask what sound the animal makes.
 - Avoid asking the child to make animal noises.
 - Vary your wording and question type. Do not ask questions in the same order every round.
-- Avoid starting guesses with "Hmm" too often.
-- When guessing, ask it as a yes/no question, like "Is it a frog?"
+- When guessing, ask it as a confirmation question, like "Is it a frog?"
+- Never say "I know what it is" unless the child has already confirmed yes to your exact guess.
+- A category clue is not a final answer. If the child says "type of cat", do not guess "cat" just because the word cat appeared.
+- If the child says yes to a broad category question, store that as a clue and ask another narrowing question.
 
 Output JSON only:
 {{
   "message": "Star's spoken line",
-  "stage": "intro | yes_no | forced_choice | one_word | short_phrase | open_hint | guess | support | complete",
+  "stage": "intro | guided_choice | guided_clue | tiny_hint | open_hint | guess | support | complete",
   "expects_response": true,
-  "response_mode": "none | yes_no | choice | one_word | short_phrase | open_hint | guess_confirmation",
+  "response_mode": "none | choice | one_word | short_phrase | open_hint | guess_confirmation",
   "is_question": true,
   "question_text": "the exact question Star asked, or null",
   "game_complete": false,
@@ -4776,6 +5355,20 @@ Remember:
         try:
             parsed = json.loads(raw)
         except Exception:
+            parsed = {
+                "message": fallback["message"],
+                "stage": fallback["stage"],
+                "expects_response": True,
+                "response_mode": fallback["response_mode"],
+                "is_question": True,
+                "question_text": fallback["question_text"],
+                "game_complete": False,
+                "possible_guess": None
+            }
+
+        force_fallback_question = current_round_number <= 4 and not should_guess
+
+        if force_fallback_question:
             parsed = {
                 "message": fallback["message"],
                 "stage": fallback["stage"],

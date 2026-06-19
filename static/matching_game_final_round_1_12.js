@@ -38,14 +38,6 @@ document.addEventListener("DOMContentLoaded", function () {
     "Hey. I'm Star. I'll be here while you and your grown-up find matches. Let me share my screen."
   ];
 
-  const returningIntroLines = [
-  "Okay, I'll keep you company while you guys play the matching game again. Let me share my screen.",
-  "Okay, I'm here to keep you company while you two keep playing matching cards. Let me share my screen.",
-  "Welcome back. I'll hang out while you guys keep playing the matching game. Let me share my screen.",
-  "Okay, let's keep going. I'll be here while you two play matching cards again. Let me share my screen.",
-  "Welcome back. I'll keep you company while you guys continue the matching game. Let me share my screen."
-];
-
   const gameInstructionLine =
     "Let’s play matching cards. Flip two cards, try to find a pair, and take turns with your grown-up.";
 
@@ -566,9 +558,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const stage = getStarStage();
 
     if (stage < 1) return false;
-
-    // I-wonder prompts are soft observations, so they should still happen even without mic access.
-    if (starState.micDenied && questionLevel !== "wonder") return false;
+    if (starState.micDenied) return false;
 
     // Rounds 1-3 are intentionally only comments.
     if (starState.roundNumber <= 3) return false;
@@ -805,14 +795,9 @@ document.addEventListener("DOMContentLoaded", function () {
     return null;
   }
 
-  function registerNonListeningWonderPrompt() {
-    starState.wonderPromptsAsked += 1;
-    starState.questionsThisRound += 1;
-    starState.lastDirectChildQuestionRound = starState.roundNumber;
-  }
-
   function isVerbalAsk(askType) {
     return (
+      askType === "wonder_observation" ||
       askType === "help_question" ||
       askType === "clear_question" ||
       askType === "choice" ||
@@ -851,12 +836,10 @@ document.addEventListener("DOMContentLoaded", function () {
       const data = await response.json();
 
       if (data.success && data.audio) {
-  await playStarAudio(data.audio, {
-    volume: options.volume || 0.86
-  });
-} else {
-  await sleep(700);
-}
+        await playStarAudio(data.audio);
+      } else {
+        await sleep(700);
+      }
     } catch (error) {
       console.error("Star TTS error:", error);
       await sleep(700);
@@ -907,28 +890,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
     if (eventType === "match_found") {
       // Star comments on every match for the entire game.
-      // This compliment/comment always happens before any I-wonder, help, or clear prompt.
       await speakStarLine(getMatchLine(context));
 
       if (question) {
         await sleep(350);
-
-        if (question.askType === "wonder_observation") {
-          // I-wonders are comfort-building observations, not questions.
-          // Do not turn on the mic, do not wait, and do not treat silence as a missed response.
-          registerNonListeningWonderPrompt();
-
-          await speakStarLine(question.message, {
-            expectsResponse: false,
-            askType: question.askType,
-            cardName: context.cardName || "",
-              firstCard: context.firstCard || "",
-            secondCard: context.secondCard || "",
-            volume: 1.0
-          });
-
-          return;
-        }
 
         await speakStarLine(question.message, {
           expectsResponse: true,
@@ -937,6 +902,7 @@ document.addEventListener("DOMContentLoaded", function () {
           firstCard: context.firstCard || "",
           secondCard: context.secondCard || "",
           responseSeconds:
+            question.askType === "wonder_observation" ||
             question.askType === "help_question" ||
             question.askType === "clear_question"
               ? 6
@@ -949,21 +915,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
     if (eventType === "no_match") {
       if (question) {
-        if (question.askType === "wonder_observation") {
-          // I-wonders are comfort-building observations, not questions.
-          registerNonListeningWonderPrompt();
-
-          await speakStarLine(question.message, {
-            expectsResponse: false,
-            askType: question.askType,
-            cardName: context.cardName || "",
-            firstCard: context.firstCard || "",
-            secondCard: context.secondCard || ""
-          });
-
-          return;
-        }
-
         await speakStarLine(question.message, {
           expectsResponse: true,
           askType: question.askType,
@@ -971,6 +922,7 @@ document.addEventListener("DOMContentLoaded", function () {
           firstCard: context.firstCard || "",
           secondCard: context.secondCard || "",
           responseSeconds:
+            question.askType === "wonder_observation" ||
             question.askType === "help_question" ||
             question.askType === "clear_question"
               ? 6
@@ -995,7 +947,7 @@ document.addEventListener("DOMContentLoaded", function () {
     return document.getElementById("starMouth");
   }
 
-  function playStarAudio(audioSrc, options = {}) {
+  function playStarAudio(audioSrc) {
     return new Promise(resolve => {
       if (!audioSrc) {
         resolve();
@@ -1008,7 +960,7 @@ document.addEventListener("DOMContentLoaded", function () {
       }
 
       starAudio = new Audio(audioSrc);
-      starAudio.volume = options.volume || 0.86;
+      starAudio.volume = 0.86;
       starAudio.playbackRate = 0.94;
 
       let resolved = false;
@@ -1461,6 +1413,7 @@ document.addEventListener("DOMContentLoaded", function () {
       question?.intent === "play_again";
 
     const isDirectChildQuestion =
+      question?.askType === "wonder_observation" ||
       question?.askType === "help_question" ||
       question?.askType === "clear_question" ||
       question?.askType === "choice" ||
@@ -1518,7 +1471,7 @@ document.addEventListener("DOMContentLoaded", function () {
     starState.spokenWords += words;
     starState.longestResponseWords = Math.max(starState.longestResponseWords, words);
 
-    if (question?.askType === "help_question") {
+    if (question?.askType === "wonder_observation" || question?.askType === "help_question") {
       starState.concreteChildResponses += 1;
       starState.nextChildPromptOverride = null;
       addComfort(5);
@@ -1584,6 +1537,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const color = getColorFromTranscript(transcript);
 
     if (
+      question?.askType === "wonder_observation" ||
       question?.askType === "help_question" ||
       question?.askType === "clear_question"
     ) {
@@ -2101,7 +2055,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     starIntroScreen.classList.remove("hidden");
 
-    const introLine = getCallIntroLine();
+    const introLine = introLines[Math.floor(Math.random() * introLines.length)];
 
     requestAnimationFrame(function () {
       incomingCallScreen.classList.add("hide");
@@ -2115,16 +2069,6 @@ document.addEventListener("DOMContentLoaded", function () {
       playIntroLine(introLine);
     }, 900);
   }
-
-function getCallIntroLine() {
-  const isReturningSession = starState.roundNumber > 1 || starState.roundsCompleted > 0;
-
-  if (isReturningSession) {
-    return returningIntroLines[Math.floor(Math.random() * returningIntroLines.length)];
-  }
-
-  return introLines[Math.floor(Math.random() * introLines.length)];
-}
 
   function cleanupMedia() {
     stopResponseWindow();
