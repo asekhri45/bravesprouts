@@ -698,11 +698,11 @@ document.addEventListener("DOMContentLoaded", function () {
       return {
         askType: "help_question",
         message: pickCalmLine("help_question_match", [
-          "Can you help me look at the {card} card? What color do you notice, {child}?",
-          "I missed part of that picture. What color do you see on the {card} card, {child}?",
-          "I can't see the {card} card clearly. What color do you see, {child}?",
-          "Help me look closely at the {card} card. What color stands out, {child}?",
-          "I need help looking at that {card} picture. What color should I look at first, {child}?"
+          "Can you help me look at the {card} card? What color do you notice?",
+          "I missed part of that picture. What color do you see on the {card} card?",
+          "I can't see the {card} card clearly. What color do you see?",
+          "Help me look closely at the {card} card. What color stands out?",
+          "I need help looking at that {card} picture. What color should I look at first?"
         ], context)
       };
     }
@@ -710,10 +710,9 @@ document.addEventListener("DOMContentLoaded", function () {
     return {
       askType: "help_question",
       message: pickCalmLine("help_question_no_match", [
-        "Can you help me remember one card? Was one of those the {first} card, {child}?",
-        "I missed the first card. Was it the {first} card or the {second} card, {child}?",
-        "Help me remember. Did we see the {first} card or the {second} card, {child}?",
-        "I am trying to remember those two cards. Which one should I look for first, {child}?"
+        "Can you help me remember one card? Was one of those the {first} card?",
+        "I missed the first card. Was it the {first} card or the {second} card?",
+        "Help me remember. Did we see the {first} card or the {second} card first?",
       ], context)
     };
   }

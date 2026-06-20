@@ -893,6 +893,79 @@ def delete_account():
     session.clear()
     return redirect("/login")
 
+@app.route("/restart-activity", methods=["POST"])
+@csrf.exempt
+@login_required
+def restart_activity():
+    ensure_matching_game_progress_columns()
+    ensure_mystery_animal_progress_columns()
+
+    data = request.get_json(silent=True) or {}
+    activity_id = data.get("activity_id")
+
+    if not activity_id:
+        return jsonify({"success": False, "error": "Missing activity_id"}), 400
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT is_unlocked
+        FROM progress
+        WHERE user_id = ? AND activity_id = ?
+    """, (session["user_id"], activity_id))
+
+    progress_row = cursor.fetchone()
+
+    if not progress_row:
+        conn.close()
+        return jsonify({"success": False, "error": "Activity not found"}), 404
+
+    if not progress_row["is_unlocked"]:
+        conn.close()
+        return jsonify({"success": False, "error": "Activity is locked"}), 403
+
+    cursor.execute("""
+        UPDATE progress
+        SET
+            is_completed = 0,
+
+            matching_rounds_completed = 0,
+            matching_spoken_responses = 0,
+            matching_silent_windows = 0,
+            matching_wonder_prompts_asked = 0,
+            matching_help_prompts_asked = 0,
+            matching_clear_prompts_asked = 0,
+            matching_child_choice_responses = 0,
+            matching_child_opinion_responses = 0,
+            matching_clear_child_responses = 0,
+            matching_direct_child_question_silences = 0,
+            matching_last_stage = 0,
+            matching_last_played_at = NULL,
+
+            mystery_animal_rounds_completed = 0,
+            mystery_animal_last_played_at = NULL
+        WHERE user_id = ? AND activity_id = ?
+    """, (session["user_id"], activity_id))
+
+    cursor.execute("""
+        UPDATE users
+        SET current_activity_id = ?
+        WHERE user_id = ?
+    """, (activity_id, session["user_id"]))
+
+    conn.commit()
+    conn.close()
+
+    session.pop("mystery_animal_history", None)
+    session.pop("mystery_animal_state", None)
+    session.modified = True
+
+    return jsonify({
+        "success": True,
+        "restart_activity": True,
+        "activity_id": activity_id
+    })
 
 @app.route("/set-current", methods=["POST"])
 @csrf.exempt
@@ -3843,9 +3916,9 @@ MYSTERY_ANIMAL_LEVELS = [
 ]
 
 MYSTERY_ANIMAL_START_LEVEL_INDEX = 0
-MYSTERY_ANIMAL_REQUIRED_ROUNDS = 6
-MYSTERY_ANIMAL_NEXT_GAME_OFFER_ROUND = 6
-MYSTERY_ANIMAL_PLAY_AGAIN_INTERVAL = 2
+MYSTERY_ANIMAL_REQUIRED_ROUNDS = 9
+MYSTERY_ANIMAL_NEXT_GAME_OFFER_ROUND = 9
+MYSTERY_ANIMAL_PLAY_AGAIN_INTERVAL = 9
 MYSTERY_ANIMAL_NEXT_ACTIVITY_ID = 3
 
 MYSTERY_ANIMAL_COMMON_ANIMALS = {
@@ -3853,7 +3926,8 @@ MYSTERY_ANIMAL_COMMON_ANIMALS = {
     "lion", "tiger", "bear", "monkey", "elephant", "giraffe",
     "penguin", "turtle", "owl", "shark", "dolphin", "zebra",
     "cow", "pig", "chicken", "panda", "koala", "seal", "otter",
-    "whale", "kangaroo", "snake", "lizard", "hamster", "mouse"
+    "whale", "kangaroo", "wallaby", "hare", "jackrabbit",
+    "snake", "lizard", "hamster", "mouse"
 }
 
 
@@ -3869,10 +3943,15 @@ def get_mystery_animal_default_state(rounds_completed=0):
         "comfortable_streak": 0,
         "unclear_streak": 0,
         "question_history": [],
+        "qa_history": [],
         "known_clues": [],
+        "asked_question_keys": [],
+        "current_round_question_keys": [],
         "rejected_guesses": [],
         "possible_guess": None,
         "last_question": None,
+        "last_question_key": None,
+        "pending_question_key": None,
         "last_response_mode": "none",
         "game_complete": False,
         "rounds_completed": rounds_completed,
@@ -4144,14 +4223,7 @@ def complete_mystery_animal_and_unlock_next_for_user(rounds_completed=None):
 
 def should_mystery_animal_ask_round_choice(rounds_completed):
     rounds_completed = int(rounds_completed or 0)
-
-    if rounds_completed >= MYSTERY_ANIMAL_REQUIRED_ROUNDS:
-        return True
-
-    return (
-        rounds_completed > 0 and
-        rounds_completed % MYSTERY_ANIMAL_PLAY_AGAIN_INTERVAL == 0
-    )
+    return rounds_completed >= MYSTERY_ANIMAL_REQUIRED_ROUNDS
 
 
 
@@ -4470,16 +4542,163 @@ def maybe_add_mystery_animal_acknowledgment(
     return f"{acknowledgment} {message}"
 
 
+MYSTERY_ANIMAL_STRUCTURED_QUESTIONS = {
+    "simple": [
+        {
+            "key": "size_backpack",
+            "question": "Is it bigger than a backpack, or smaller than a backpack?",
+            "stage": "guided_choice",
+            "response_mode": "choice"
+        },
+        {
+            "key": "land_water_air",
+            "question": "Does it mostly live on land, in water, or in the air?",
+            "stage": "guided_choice",
+            "response_mode": "choice"
+        },
+        {
+            "key": "pet_wild",
+            "question": "Is it usually a pet, or a wild animal?",
+            "stage": "guided_choice",
+            "response_mode": "choice"
+        },
+        {
+            "key": "legs_count",
+            "question": "Does it have no legs, two legs, four legs, or lots of legs?",
+            "stage": "guided_choice",
+            "response_mode": "choice"
+        },
+        {
+            "key": "body_covering",
+            "question": "Does it have fur, feathers, scales, or smooth skin?",
+            "stage": "guided_choice",
+            "response_mode": "choice"
+        },
+        {
+            "key": "movement_simple",
+            "question": "Does it mostly walk, swim, fly, crawl, or jump?",
+            "stage": "guided_choice",
+            "response_mode": "choice"
+        }
+    ],
+    "details": [
+        {
+            "key": "main_color",
+            "question": "What is one main color of your animal?",
+            "stage": "guided_clue",
+            "response_mode": "one_word"
+        },
+        {
+            "key": "usual_place",
+            "question": "Where would I usually find this animal?",
+            "stage": "guided_clue",
+            "response_mode": "short_phrase"
+        },
+        {
+            "key": "food",
+            "question": "What kind of food does it eat?",
+            "stage": "guided_clue",
+            "response_mode": "short_phrase"
+        },
+        {
+            "key": "special_body_part",
+            "question": "What is one body part your animal has that might help me guess?",
+            "stage": "tiny_hint",
+            "response_mode": "short_phrase"
+        },
+        {
+            "key": "movement_detail",
+            "question": "How does it move most of the time?",
+            "stage": "guided_clue",
+            "response_mode": "short_phrase"
+        },
+        {
+            "key": "animal_size_detail",
+            "question": "About how big is it compared with something you know?",
+            "stage": "guided_clue",
+            "response_mode": "short_phrase"
+        }
+    ],
+    "hints": [
+        {
+            "key": "important_hint",
+            "question": "What is something important I should know about your animal?",
+            "stage": "open_hint",
+            "response_mode": "open_hint"
+        },
+        {
+            "key": "different_feature",
+            "question": "What makes your animal different from other animals?",
+            "stage": "open_hint",
+            "response_mode": "open_hint"
+        },
+        {
+            "key": "best_clue",
+            "question": "Can you give me one clue that would help me make a better guess?",
+            "stage": "open_hint",
+            "response_mode": "open_hint"
+        },
+        {
+            "key": "remember_hint",
+            "question": "What clue should I remember before I guess?",
+            "stage": "open_hint",
+            "response_mode": "open_hint"
+        },
+        {
+            "key": "help_me_figure_out",
+            "question": "Can you help me figure it out with one more hint?",
+            "stage": "open_hint",
+            "response_mode": "open_hint"
+        }
+    ]
+}
+
+
+def get_mystery_animal_round_band(game_state):
+    round_number = int(game_state.get("rounds_completed", 0) or 0) + 1
+
+    if round_number <= 3:
+        return "simple"
+    if round_number <= 6:
+        return "details"
+    return "hints"
+
+
+def pick_structured_mystery_animal_question(game_state, event_type="child_answer"):
+    import random
+
+    band = get_mystery_animal_round_band(game_state)
+    asked_this_round = set(game_state.get("current_round_question_keys", []))
+    asked_all = set(game_state.get("asked_question_keys", []))
+    questions = list(MYSTERY_ANIMAL_STRUCTURED_QUESTIONS.get(band, []))
+
+    available = [item for item in questions if item["key"] not in asked_this_round]
+
+    if not available:
+        available = [item for item in questions if item["key"] not in asked_all]
+
+    if not available:
+        last_key = game_state.get("last_question_key")
+        available = [item for item in questions if item["key"] != last_key] or questions
+
+    if event_type == "no_response" and len(available) > 1:
+        last_key = game_state.get("last_question_key")
+        available = [item for item in available if item["key"] != last_key] or available
+
+    chosen = random.choice(available)
+    key = chosen["key"]
+
+    game_state["pending_question_key"] = key
+
+    return chosen
+
 def get_mystery_animal_level(game_state):
-    rounds_completed = max(0, int(game_state.get("rounds_completed", 0) or 0))
-    current_round = rounds_completed + 1
+    current_round = int(game_state.get("rounds_completed", 0) or 0) + 1
 
     if current_round <= 3:
         index = 0
-    elif current_round == 4:
+    elif current_round <= 6:
         index = 1
-    elif current_round == 5:
-        index = 2
     else:
         index = 3
 
@@ -4565,8 +4784,10 @@ def get_fallback_mystery_animal_question(level, game_state=None, event_type="chi
     if game_state is None:
         game_state = {}
 
-    stage = level["stage"]
-    question_text = choose_non_repeating_question(level, game_state)
+    structured_question = pick_structured_mystery_animal_question(game_state, event_type)
+    question_text = structured_question["question"]
+    stage = structured_question.get("stage", level["stage"])
+    response_mode = structured_question.get("response_mode", level["response_mode"])
 
     if event_type == "no_response":
         calm_prefixes = [
@@ -4584,42 +4805,142 @@ def get_fallback_mystery_animal_question(level, game_state=None, event_type="chi
     return {
         "message": message,
         "stage": stage,
-        "response_mode": level["response_mode"],
-        "question_text": question_text
+        "response_mode": response_mode,
+        "question_text": question_text,
+        "question_key": structured_question.get("key")
     }
+
+
+
+def get_mystery_animal_clue_tags(game_state):
+    """
+    Convert the current round's Q/A history into simple tags/constraints.
+    This prevents the guesser from treating a question like
+    "bigger or smaller than a backpack" as both bigger AND smaller.
+    """
+    tags = set()
+    qa_items = game_state.get("qa_history") or game_state.get("known_clues", [])
+
+    for item in qa_items:
+        if not isinstance(item, dict):
+            continue
+
+        key = normalize_child_text(item.get("question_key", "")).lower()
+        question = normalize_child_text(item.get("question", "")).lower()
+        answer = normalize_child_text(item.get("answer", "")).lower()
+        combined = f"{question} {answer}".lower()
+
+        words = set(re.findall(r"[a-z']+", answer))
+
+        if key == "size_backpack" or "backpack" in question:
+            if any(word in words for word in {"big", "bigger", "large", "larger", "huge"}):
+                tags.add("big")
+            if any(word in words for word in {"small", "smaller", "little", "tiny"}):
+                tags.add("small")
+
+        if key == "land_water_air" or "land, in water, or in the air" in question:
+            if "water" in words or "ocean" in words or "pond" in words:
+                tags.add("water")
+            if "air" in words or "sky" in words:
+                tags.add("air")
+            if "land" in words or "ground" in words:
+                tags.add("land")
+
+        if key == "pet_wild" or "pet" in question or "wild" in question:
+            if "wild" in words:
+                tags.add("wild")
+            if "pet" in words:
+                tags.add("pet")
+
+        if key == "body_covering" or any(word in question for word in ["fur", "feathers", "scales", "smooth skin"]):
+            if "fur" in words or "furry" in words:
+                tags.add("fur")
+            if "feather" in answer or "feathers" in words:
+                tags.add("feathers")
+            if "scale" in answer or "scales" in words or "scaly" in words:
+                tags.add("scales")
+            if "smooth" in words or "skin" in words:
+                tags.add("smooth_skin")
+
+        if key in {"movement_simple", "movement_detail"} or any(word in question for word in ["walk", "swim", "fly", "crawl", "jump", "move"]):
+            if any(word in words for word in {"jump", "jumps", "jumping", "hop", "hops", "hopping"}):
+                tags.add("jump")
+            if any(word in words for word in {"fly", "flies", "flying"}):
+                tags.add("fly")
+            if any(word in words for word in {"swim", "swims", "swimming"}):
+                tags.add("swim")
+            if any(word in words for word in {"walk", "walks", "walking", "run", "runs", "running"}):
+                tags.add("walk")
+            if any(word in words for word in {"crawl", "crawls", "crawling", "slither", "slithers"}):
+                tags.add("crawl")
+
+        if key == "legs_count" or "legs" in question:
+            if "no" in words or "zero" in words:
+                tags.add("no_legs")
+            if "two" in words or "2" in answer:
+                tags.add("two_legs")
+            if "four" in words or "4" in answer:
+                tags.add("four_legs")
+            if "lots" in words or "many" in words:
+                tags.add("many_legs")
+
+        # Catch useful clues even if they came from a more open-ended answer.
+        if any(phrase in combined for phrase in ["has fur", "with fur", "furry"]):
+            tags.add("fur")
+        if any(phrase in combined for phrase in ["has feathers", "with feathers"]):
+            tags.add("feathers")
+        if any(phrase in combined for phrase in ["has scales", "with scales", "scaly"]):
+            tags.add("scales")
+        if any(word in combined for word in ["jumps", "jumping", "hops", "hopping"]):
+            tags.add("jump")
+        if "bigger than a backpack" in combined or "larger than a backpack" in combined:
+            tags.add("big")
+        if "smaller than a backpack" in combined:
+            tags.add("small")
+
+    return tags
 
 
 def pick_fallback_animal_guess(game_state):
     import random
 
     animal_profiles = {
-        "fish": ["water", "swim", "fins", "small", "blue"],
-        "shark": ["water", "swim", "big", "fins", "ocean", "scary"],
-        "dolphin": ["water", "swim", "ocean", "smart"],
-        "whale": ["water", "big", "ocean", "huge"],
-        "frog": ["water", "green", "jump", "small", "pond"],
-        "duck": ["water", "fly", "wings", "pond", "yellow"],
-        "bird": ["fly", "wings", "small", "sky", "feathers"],
-        "owl": ["fly", "wings", "night", "tree", "feathers"],
-        "penguin": ["bird", "water", "black", "white", "cold", "wings"],
-        "dog": ["pet", "fur", "house", "tail", "four legs", "bark"],
-        "cat": ["pet", "fur", "house", "tail", "small", "meow"],
-        "rabbit": ["pet", "fur", "ears", "small", "hop"],
-        "hamster": ["pet", "small", "fur", "house"],
-        "horse": ["farm", "big", "tail", "run"],
-        "cow": ["farm", "big", "milk"],
-        "pig": ["farm", "pink", "mud"],
-        "chicken": ["farm", "wings", "small", "feathers"],
-        "lion": ["zoo", "wild", "big", "fur", "type of cat", "big cat", "mane", "roar"],
-        "tiger": ["zoo", "wild", "stripes", "big", "type of cat", "big cat", "orange", "black"],
-        "bear": ["wild", "big", "fur", "forest"],
-        "monkey": ["zoo", "tree", "banana", "wild"],
-        "elephant": ["zoo", "big", "trunk", "huge"],
-        "giraffe": ["zoo", "big", "neck", "tall"],
-        "zebra": ["zoo", "stripes", "black", "white"],
-        "turtle": ["shell", "water", "slow", "small"],
-        "snake": ["scaly", "no legs", "wild"],
-        "lizard": ["scaly", "small", "tail"]
+        "kangaroo": {"wild", "land", "fur", "big", "jump", "two_legs", "tail", "mammal"},
+        "wallaby": {"wild", "land", "fur", "small", "jump", "two_legs", "tail", "mammal"},
+        "hare": {"wild", "land", "fur", "small", "jump", "four_legs", "ears", "mammal"},
+        "jackrabbit": {"wild", "land", "fur", "small", "jump", "four_legs", "ears", "mammal"},
+        "rabbit": {"pet", "wild", "land", "fur", "small", "jump", "four_legs", "ears", "mammal"},
+        "frog": {"wild", "land", "water", "smooth_skin", "small", "jump", "swim", "four_legs", "pond"},
+        "dog": {"pet", "land", "fur", "small", "big", "walk", "four_legs", "tail", "mammal"},
+        "cat": {"pet", "land", "fur", "small", "walk", "jump", "four_legs", "tail", "mammal"},
+        "horse": {"wild", "farm", "land", "fur", "big", "walk", "four_legs", "tail", "mammal"},
+        "cow": {"farm", "land", "fur", "big", "walk", "four_legs", "tail", "mammal"},
+        "lion": {"wild", "land", "fur", "big", "walk", "four_legs", "tail", "mammal"},
+        "tiger": {"wild", "land", "fur", "big", "walk", "four_legs", "tail", "mammal"},
+        "bear": {"wild", "land", "fur", "big", "walk", "four_legs", "mammal"},
+        "monkey": {"wild", "land", "fur", "small", "jump", "walk", "tail", "mammal"},
+        "elephant": {"wild", "land", "smooth_skin", "big", "walk", "four_legs", "mammal"},
+        "giraffe": {"wild", "land", "fur", "big", "walk", "four_legs", "mammal"},
+        "zebra": {"wild", "land", "fur", "big", "walk", "four_legs", "mammal"},
+        "panda": {"wild", "land", "fur", "big", "walk", "four_legs", "mammal"},
+        "koala": {"wild", "land", "fur", "small", "walk", "mammal"},
+        "fish": {"pet", "wild", "water", "scales", "small", "swim", "no_legs", "fins"},
+        "shark": {"wild", "water", "smooth_skin", "big", "swim", "no_legs", "fins"},
+        "dolphin": {"wild", "water", "smooth_skin", "big", "swim", "no_legs", "mammal"},
+        "whale": {"wild", "water", "smooth_skin", "big", "swim", "no_legs", "mammal"},
+        "duck": {"wild", "water", "land", "air", "feathers", "small", "walk", "swim", "fly", "two_legs"},
+        "bird": {"wild", "air", "land", "feathers", "small", "fly", "two_legs"},
+        "owl": {"wild", "air", "land", "feathers", "small", "fly", "two_legs"},
+        "penguin": {"wild", "water", "land", "feathers", "small", "swim", "walk", "two_legs"},
+        "chicken": {"farm", "land", "feathers", "small", "walk", "two_legs"},
+        "turtle": {"wild", "water", "land", "scales", "small", "swim", "walk", "four_legs", "shell"},
+        "snake": {"wild", "land", "scales", "small", "crawl", "no_legs"},
+        "lizard": {"wild", "land", "scales", "small", "crawl", "four_legs"},
+        "hamster": {"pet", "land", "fur", "small", "walk", "four_legs", "mammal"},
+        "mouse": {"wild", "pet", "land", "fur", "small", "walk", "four_legs", "mammal"},
+        "seal": {"wild", "water", "smooth_skin", "big", "swim", "mammal"},
+        "otter": {"wild", "water", "fur", "small", "swim", "walk", "mammal"},
+        "pig": {"farm", "land", "smooth_skin", "big", "walk", "four_legs", "mammal"},
     }
 
     rejected = {
@@ -4635,59 +4956,182 @@ def pick_fallback_animal_guess(game_state):
     }
 
     possible_guess = str(game_state.get("possible_guess") or "").lower().strip()
+    clue_tags = get_mystery_animal_clue_tags(game_state)
 
     clue_text = " ".join(
-        str(item.get("answer", ""))
-        for item in game_state.get("known_clues", [])
+        f"{item.get('question', '')} {item.get('answer', '')}"
+        for item in (game_state.get("qa_history") or game_state.get("known_clues", []))
         if isinstance(item, dict)
     ).lower()
 
-    broad_cat_clue = bool(re.search(r"\b(type|kind|sort|family) of cat\b|\bbig cat\b", clue_text))
+    # Extra safety for free-form clue text.
+    if "wild" in clue_text:
+        clue_tags.add("wild")
+    if "pet" in clue_text:
+        clue_tags.add("pet")
+    if "fur" in clue_text or "furry" in clue_text:
+        clue_tags.add("fur")
+    if "feather" in clue_text:
+        clue_tags.add("feathers")
+    if "scale" in clue_text or "scaly" in clue_text:
+        clue_tags.add("scales")
+    if any(word in clue_text for word in ["jump", "jumps", "jumping", "hop", "hops", "hopping"]):
+        clue_tags.add("jump")
+    if any(word in clue_text for word in ["swim", "swims", "swimming"]):
+        clue_tags.add("swim")
+    if any(word in clue_text for word in ["fly", "flies", "flying"]):
+        clue_tags.add("fly")
+
+    required_tags = {
+        tag for tag in clue_tags
+        if tag in {
+            "big", "small", "water", "air", "land", "wild", "pet",
+            "fur", "feathers", "scales", "smooth_skin",
+            "jump", "fly", "swim", "walk", "crawl",
+            "no_legs", "two_legs", "four_legs", "many_legs"
+        }
+    }
 
     candidates = []
 
-    for animal, keywords in animal_profiles.items():
+    for animal, tags in animal_profiles.items():
         if animal in rejected or animal == possible_guess:
             continue
 
         score = 0
+        impossible = False
 
-        for keyword in keywords:
-            if keyword in clue_text:
-                score += 2
+        for tag in required_tags:
+            if tag in tags:
+                score += 5
+            else:
+                # Hard contradictions: these should never happen.
+                if tag in {"fur", "feathers", "scales", "smooth_skin"}:
+                    impossible = True
+                elif tag in {"jump", "fly", "swim", "crawl"}:
+                    impossible = True
+                elif tag in {"water", "air"}:
+                    impossible = True
+                elif tag == "big" and "small" in tags and "big" not in tags:
+                    score -= 8
+                elif tag == "small" and "big" in tags and "small" not in tags:
+                    score -= 6
+                elif tag in {"no_legs", "two_legs", "four_legs", "many_legs"}:
+                    score -= 8
+                else:
+                    score -= 2
 
-        # Do not reward guessing "cat" just because the child said "type of cat."
-        # That clue should point to lion/tiger-style animals, not the literal answer cat.
-        if broad_cat_clue:
-            if animal in {"lion", "tiger"}:
-                score += 4
-            if animal == "cat":
-                score -= 6
-        elif re.search(rf"\b{re.escape(animal)}\b", clue_text):
-            score += 5
+        # Kangaroo-style clues should be treated as very strong evidence.
+        if {"big", "fur", "wild", "jump"}.issubset(clue_tags):
+            if animal == "kangaroo":
+                score += 25
+            elif animal in {"wallaby", "hare", "jackrabbit", "rabbit", "frog"}:
+                score += 8
+            else:
+                score -= 12
+
+        # If the child says fur, fish/duck/bird-type guesses should be impossible.
+        if "fur" in clue_tags and animal in {"fish", "duck", "bird", "owl", "penguin", "chicken", "shark", "turtle", "snake", "lizard"}:
+            impossible = True
+
+        # If the child says jump/hop as the main movement, water-only/flying-only guesses are bad.
+        if "jump" in clue_tags and animal in {"fish", "shark", "dolphin", "whale", "duck", "bird", "owl", "penguin"}:
+            impossible = True
 
         if animal in recent:
-            score -= 3
+            score -= 4
 
-        candidates.append((score, animal))
+        if not impossible:
+            candidates.append((score, animal))
 
     if not candidates:
-        return "dog"
+        # Final safety fallback: use a common mammal instead of random fish/duck-style guesses.
+        return "kangaroo" if {"big", "fur", "wild", "jump"}.issubset(clue_tags) else "dog"
 
     best_score = max(score for score, _ in candidates)
+    best = [animal for score, animal in candidates if score == best_score]
 
-    if best_score > 0:
-        best = [animal for score, animal in candidates if score == best_score]
-    else:
-        # No clue match yet. Pick randomly instead of always starting with dog.
-        best = [animal for score, animal in candidates if animal not in recent]
-        if not best:
-            best = [animal for _, animal in candidates]
+    if not best:
+        best = [animal for _, animal in candidates]
 
     guess = random.choice(best)
     game_state["recent_guesses"] = (list(game_state.get("recent_guesses", [])) + [guess])[-5:]
 
     return guess
+
+def mystery_animal_guess_contradicts_clues(guess, game_state):
+    guess = normalize_child_text(guess).lower()
+    clue_tags = get_mystery_animal_clue_tags(game_state)
+
+    clue_text = " ".join(
+        f"{item.get('question', '')} {item.get('answer', '')}"
+        for item in (game_state.get("qa_history") or game_state.get("known_clues", []))
+        if isinstance(item, dict)
+    ).lower()
+
+    if not guess:
+        return False
+
+    if "fur" in clue_text or "furry" in clue_text:
+        clue_tags.add("fur")
+    if "feather" in clue_text:
+        clue_tags.add("feathers")
+    if "scale" in clue_text or "scaly" in clue_text:
+        clue_tags.add("scales")
+    if any(word in clue_text for word in ["jump", "jumps", "jumping", "hop", "hops", "hopping"]):
+        clue_tags.add("jump")
+    if any(word in clue_text for word in ["fly", "flies", "flying", "wings"]):
+        clue_tags.add("fly")
+    if any(word in clue_text for word in ["water", "ocean", "pond", "swim", "swims", "fins"]):
+        clue_tags.add("water")
+    if "bigger than a backpack" in clue_text or "larger than a backpack" in clue_text:
+        clue_tags.add("big")
+
+    fur_animals = {
+        "dog", "cat", "rabbit", "hare", "jackrabbit", "kangaroo", "wallaby",
+        "horse", "cow", "lion", "tiger", "bear", "monkey", "giraffe", "zebra",
+        "panda", "koala", "hamster", "mouse", "otter"
+    }
+
+    feather_animals = {"duck", "bird", "owl", "penguin", "chicken"}
+    scale_animals = {"fish", "shark", "turtle", "snake", "lizard"}
+    jump_animals = {"kangaroo", "wallaby", "rabbit", "hare", "jackrabbit", "frog", "cat", "monkey"}
+    flying_animals = {"bird", "owl", "duck"}
+    water_animals = {"fish", "shark", "dolphin", "whale", "frog", "duck", "turtle", "penguin", "seal", "otter"}
+    big_animals = {"kangaroo", "horse", "cow", "lion", "tiger", "bear", "elephant", "giraffe", "zebra", "whale", "shark", "panda"}
+
+    if "fur" in clue_tags and guess not in fur_animals:
+        return True
+
+    if "feathers" in clue_tags and guess not in feather_animals:
+        return True
+
+    if "scales" in clue_tags and guess not in scale_animals:
+        return True
+
+    if "jump" in clue_tags and guess not in jump_animals:
+        return True
+
+    if "fly" in clue_tags and guess not in flying_animals:
+        return True
+
+    if "water" in clue_tags and guess not in water_animals:
+        return True
+
+    if "big" in clue_tags and guess not in big_animals:
+        # Do not let "bigger than a backpack" produce fish/duck/rabbit-style guesses.
+        return True
+
+    if "no_legs" in clue_tags and guess not in {"snake", "fish", "shark", "dolphin", "whale"}:
+        return True
+
+    # Specific regression test from your bad playthrough:
+    # bigger than backpack + fur + wild + jumps should point to kangaroo/wallaby-like animals,
+    # never duck/fish.
+    if {"big", "fur", "wild", "jump"}.issubset(clue_tags):
+        return guess not in {"kangaroo", "wallaby"}
+
+    return False
 
 def unlock_mystery_animal_next_game_for_user():
     rounds_completed = get_saved_mystery_animal_rounds()
@@ -4747,12 +5191,20 @@ def apply_mystery_animal_comfort_update(game_state, event_type, child_response, 
         game_state["clear_answer_word_counts"] = game_state["clear_answer_word_counts"][-8:]
 
         last_question = game_state.get("last_question")
+        last_question_key = game_state.get("last_question_key")
 
         if last_question and previous_stage != "guess":
-            game_state.setdefault("known_clues", []).append({
+            qa_item = {
+                "question_key": last_question_key,
                 "question": last_question,
-                "answer": child_response[:100]
-            })
+                "answer": child_response[:140]
+            }
+
+            game_state.setdefault("known_clues", []).append(qa_item)
+            game_state["known_clues"] = game_state["known_clues"][-16:]
+
+            game_state.setdefault("qa_history", []).append(qa_item)
+            game_state["qa_history"] = game_state["qa_history"][-16:]
 
         current_index = int(game_state.get("response_level_index", MYSTERY_ANIMAL_START_LEVEL_INDEX))
         comfortable_count = int(game_state.get("comfortable_answer_count", 0))
@@ -4935,7 +5387,7 @@ def mystery_animal_message():
         if rounds_completed >= MYSTERY_ANIMAL_REQUIRED_ROUNDS:
             message = (
                 f"{base_message} "
-                "Alright, I think we're done for today, but we can still play again if you want. "
+                "That finishes our nine Mystery Animal rounds for today. "
                 f"{child_name}, do you want to play again, or do you want to end here?"
             )
         else:
@@ -5143,7 +5595,9 @@ def mystery_animal_message():
         question_text = f"Is it a {revealed_animal}?"
 
         game_state["last_question"] = question_text
+        game_state["last_question_key"] = "direct_reveal_confirmation"
         game_state.setdefault("question_history", []).append({
+            "question_key": "direct_reveal_confirmation",
             "question": question_text,
             "stage": "guess",
             "response_mode": "guess_confirmation"
@@ -5276,10 +5730,10 @@ Hard rules:
 - Use the clues already given.
 - Do not jump into open-ended questions unless the required response level says to.
 - Keep Star's line to 1-2 short sentences.
-- In rounds 1 through 3, do not ask yes/no questions and do not ask for hints or clues.
-- In rounds 1 through 3, ask guided-choice questions with simple answer options.
-- In round 4, keep questions concrete and guided.
-- In rounds 5 and 6, small hints and clues are okay.
+- In rounds 1 through 3, ask simple guided-choice questions with clear answer options.
+- In rounds 1 through 3, avoid open-ended hints.
+- In rounds 4 through 6, ask clear concrete detail questions. These may ask for one word or a short phrase.
+- In rounds 7 through 9, you may ask more open hint questions, but keep them gentle and simple.
 
 Acknowledging child responses:
 - When the child gives a clear answer or hint, acknowledge the clue before asking the next question.
@@ -5367,8 +5821,14 @@ Recent history:
 Known clues:
 {known_clues}
 
+Question-answer history for the current animal:
+{game_state.get("qa_history", [])}
+
 Question history:
 {game_state.get("question_history", [])}
+
+Question keys already asked this round:
+{game_state.get("current_round_question_keys", [])}
 
 Rejected guesses:
 {game_state.get("rejected_guesses", [])}
@@ -5387,7 +5847,10 @@ If the child directly names the animal, like "dog", "it's a dog", or "my animal 
 If event_type is child_answer and the child gave a clear answer:
 - Acknowledge the clue first.
 - Do not praise speaking itself.
+- Use the full question-answer history before choosing the next question or guess.
+- Do not ask for the same clue again unless the child was silent or unclear.
 - Then ask one useful next question or make one guess if should_guess is true.
+- If should_guess is true, the guess must fit every previous answer. For example, if the child said it flies or has wings, do not guess giraffe, cow, horse, elephant, zebra, lion, tiger, or bear.
 
 If event_type is no_response:
 - Start with a calm accepting phrase like "That's okay" or "No problem."
@@ -5504,6 +5967,9 @@ Remember:
         if stage != "guess":
             if stage == "open_hint" and should_invite_open_hint:
                 response_mode = "open_hint"
+            elif parsed.get("question_text") == fallback.get("question_text"):
+                stage = fallback["stage"]
+                response_mode = fallback["response_mode"]
             else:
                 stage = level["stage"]
                 response_mode = level["response_mode"]
@@ -5542,12 +6008,22 @@ Remember:
             response_mode = "guess_confirmation"
 
             if possible_guess:
-                game_state["possible_guess"] = normalize_child_text(possible_guess)
+                normalized_guess = normalize_child_text(possible_guess).lower()
+                if mystery_animal_guess_contradicts_clues(normalized_guess, game_state):
+                    normalized_guess = pick_fallback_animal_guess(game_state)
+                    message = f"I have a guess. Is it a {normalized_guess}?"
+                    question_text = f"Is it a {normalized_guess}?"
+                game_state["possible_guess"] = normalized_guess
             else:
                 guess_match = re.search(r"is it (?:a |an )?([A-Za-z -]+)\??", message.lower())
 
                 if guess_match:
-                    game_state["possible_guess"] = guess_match.group(1).strip()
+                    normalized_guess = guess_match.group(1).strip().lower()
+                    if mystery_animal_guess_contradicts_clues(normalized_guess, game_state):
+                        normalized_guess = pick_fallback_animal_guess(game_state)
+                        message = f"I have a guess. Is it a {normalized_guess}?"
+                        question_text = f"Is it a {normalized_guess}?"
+                    game_state["possible_guess"] = normalized_guess
 
         game_state["stage"] = stage
         game_state["last_response_mode"] = response_mode
@@ -5564,8 +6040,23 @@ Remember:
                 )
 
         if parsed.get("is_question") and question_text:
+            if question_text == fallback.get("question_text"):
+                question_key = game_state.get("pending_question_key") or get_question_family(question_text)
+            else:
+                question_key = get_question_family(question_text)
+
             game_state["last_question"] = normalize_child_text(question_text)
+            game_state["last_question_key"] = question_key
+            game_state["pending_question_key"] = None
+
+            if stage != "guess":
+                game_state.setdefault("current_round_question_keys", []).append(question_key)
+                game_state["current_round_question_keys"] = game_state["current_round_question_keys"][-16:]
+                game_state.setdefault("asked_question_keys", []).append(question_key)
+                game_state["asked_question_keys"] = game_state["asked_question_keys"][-30:]
+
             game_state.setdefault("question_history", []).append({
+                "question_key": question_key,
                 "question": normalize_child_text(question_text),
                 "stage": stage,
                 "response_mode": response_mode
