@@ -1,0 +1,42 @@
+{% extends "dashboard_layout.html" %}
+
+{% block title %}User Overview{% endblock %}
+
+{% block dashboard_content %}
+<div class="admin-overview-page">
+  <h1>User Overview</h1>
+  <p>Private beta user progress dashboard.</p>
+
+  <table class="admin-user-table">
+    <thead>
+      <tr>
+        <th>Parent Name</th>
+        <th>Parent Email</th>
+        <th>Child Name</th>
+        <th>Child Age</th>
+        <th>Unlocked</th>
+        <th>Completed</th>
+        <th>Words Spoken</th>
+        <th>Active Minutes</th>
+        <th>Last Active</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      {% for user in users %}
+      <tr>
+        <td>{{ user.parent_name }}</td>
+        <td>{{ user.email }}</td>
+        <td>{{ user.child_name or "Not added" }}</td>
+        <td>{{ user.child_age or "Not added" }}</td>
+        <td>{{ user.unlocked_activities }}/{{ user.total_activities }}</td>
+        <td>{{ user.completed_activities }}/{{ user.total_activities }}</td>
+        <td>{{ user.total_words_spoken }}</td>
+        <td>{{ "%.1f"|format(user.total_active_minutes or 0) }}</td>
+        <td>{{ user.last_active or "No sessions yet" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

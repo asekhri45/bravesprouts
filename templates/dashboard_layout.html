@@ -51,6 +51,15 @@
     <img src="{{ url_for('static', filename='images/' + ('settings_selected.png' if active_page == 'settings' else 'settings_unselected.png')) }}" class="sidebar-icon">
     <span>Settings</span>
   </a>
+
+
+{% if session.get("is_admin") %}
+<a href="{{ url_for('admin_user_overview') }}" class="sidebar-item {% if active_page == 'admin_user_overview' %}active{% endif %}">
+  <img src="{{ url_for('static', filename='images/' + ('settings_selected.png' if active_page == 'admin_user_overview' else 'settings_unselected.png')) }}" class="sidebar-icon">
+  <span>User Overview</span>
+</a>
+{% endif %}
+
 </nav>
 
     <div class="sidebar-image-widget">

@@ -22,6 +22,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
   const cardBack = "/static/images/card-back.png";
 
+  const developerThingy = false;
+
   const cardItems = [
     { name: "cat", image: "/static/images/card-cat.png" },
     { name: "dog", image: "/static/images/card-dog.png" },
@@ -1705,38 +1707,39 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   async function handleCardClick() {
-    if (lockBoard || !roundInProgress) return;
-    if (this.classList.contains("flipped")) return;
-    if (this.classList.contains("matched")) return;
+  if (lockBoard || !roundInProgress) return;
+  if (firstCard && secondCard) return; // prevents 3rd fast flip
+  if (this.classList.contains("flipped")) return;
+  if (this.classList.contains("matched")) return;
 
-    lockBoard = true;
+  lockBoard = true;
 
-    this.classList.add("flipped");
-    this.setAttribute("aria-label", `${this.dataset.name} card`);
+  this.classList.add("flipped");
+  this.setAttribute("aria-label", `${this.dataset.name} card`);
 
-    starState.cardFlips += 1;
+  starState.cardFlips += 1;
 
-    const actingPlayer = currentTurn;
+  const actingPlayer = currentTurn;
 
-    if (actingPlayer === "child") {
-      starState.childFlips += 1;
-    }
-
-    if (actingPlayer === "parent") {
-      starState.parentFlips += 1;
-    }
-
-    if (!firstCard) {
-      firstCard = this;
-      lockBoard = false;
-      return;
-    }
-
-    secondCard = this;
-    starState.turnsTaken += 1;
-
-    await checkForMatch(actingPlayer);
+  if (actingPlayer === "child") {
+    starState.childFlips += 1;
   }
+
+  if (actingPlayer === "parent") {
+    starState.parentFlips += 1;
+  }
+
+  if (!firstCard) {
+    firstCard = this;
+    lockBoard = false;
+    return;
+  }
+
+  secondCard = this;
+  starState.turnsTaken += 1;
+
+  await checkForMatch(actingPlayer);
+}
 
   async function checkForMatch(actingPlayer) {
     const isMatch = firstCard.dataset.name === secondCard.dataset.name;
@@ -2117,13 +2120,116 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
 function getCallIntroLine() {
-  const isReturningSession = starState.roundNumber > 1 || starState.roundsCompleted > 0;
+  const isEarlyStage = starState.roundNumber <= 3;
 
-  if (isReturningSession) {
-    return returningIntroLines[Math.floor(Math.random() * returningIntroLines.length)];
+  if (isEarlyStage) {
+    return introLines[Math.floor(Math.random() * introLines.length)];
   }
 
-  return introLines[Math.floor(Math.random() * introLines.length)];
+  return returningIntroLines[Math.floor(Math.random() * returningIntroLines.length)];
+}
+
+function resetStagePromptState() {
+  starState.questionsThisRound = 0;
+  starState.lastDirectChildQuestionRound = 0;
+  starState.directQuestionBackoffUntilRound = 0;
+  starState.questionCooldownUntil = 0;
+  starState.nextChildPromptOverride = null;
+  starState.playAgainSilenceHandled = false;
+  starState.playAgainStartedByVoice = false;
+}
+
+async function jumpToMatchingRound(targetRound) {
+  if (starState.isEnding || nextRoundStarting) return;
+
+  stopResponseWindow();
+  stopMouthAnimation();
+
+  if (starAudio) {
+    starAudio.pause();
+    starAudio.currentTime = 0;
+  }
+
+  hideCompleteModalCompletely();
+
+  roundInProgress = false;
+  nextRoundStarting = false;
+  lockBoard = true;
+
+  /*
+    startNextRound() adds 1 to roundNumber.
+    So to land on targetRound, set roundNumber to targetRound - 1 first.
+  */
+  starState.roundNumber = targetRound - 1;
+  starState.roundsCompleted = Math.max(0, targetRound - 1);
+
+  resetStagePromptState();
+  updateStage();
+  updateRoundDisplay();
+
+  await saveCompletion({ allowDuplicateRoundSave: true });
+
+  startNextRound({ skipIntroLine: false });
+}
+
+function skipToNextMatchingStage() {
+  if (starState.roundNumber <= 3) {
+    jumpToMatchingRound(4);
+  } else if (starState.roundNumber <= 6) {
+    jumpToMatchingRound(7);
+  } else if (starState.roundNumber <= 9) {
+    jumpToMatchingRound(10);
+  } else {
+    jumpToMatchingRound(13);
+  }
+}
+
+function goBackMatchingStage() {
+  if (starState.roundNumber >= 10) {
+    jumpToMatchingRound(7);
+  } else if (starState.roundNumber >= 7) {
+    jumpToMatchingRound(4);
+  } else if (starState.roundNumber >= 4) {
+    jumpToMatchingRound(1);
+  }
+}
+
+function createDemoStageButtons() {
+  const buttonWrap = document.createElement("div");
+  buttonWrap.style.position = "fixed";
+  buttonWrap.style.right = "24px";
+  buttonWrap.style.bottom = "24px";
+  buttonWrap.style.zIndex = "9999";
+  buttonWrap.style.display = "flex";
+  buttonWrap.style.gap = "10px";
+
+  const backButton = document.createElement("button");
+  backButton.type = "button";
+  backButton.textContent = "Previous Stage";
+
+  const skipButton = document.createElement("button");
+  skipButton.type = "button";
+  skipButton.textContent = "Skip Stage";
+
+  [backButton, skipButton].forEach(function (button) {
+    button.style.padding = "12px 16px";
+    button.style.borderRadius = "999px";
+    button.style.border = "none";
+    button.style.color = "white";
+    button.style.fontWeight = "700";
+    button.style.cursor = "pointer";
+    button.style.boxShadow = "0 8px 20px rgba(0,0,0,0.18)";
+  });
+
+  backButton.style.background = "#4b5563";
+  skipButton.style.background = "#7f51f2";
+
+  backButton.addEventListener("click", goBackMatchingStage);
+  skipButton.addEventListener("click", skipToNextMatchingStage);
+
+  buttonWrap.appendChild(backButton);
+  buttonWrap.appendChild(skipButton);
+  document.body.appendChild(buttonWrap);
 }
 
   function cleanupMedia() {
@@ -2136,10 +2242,13 @@ function getCallIntroLine() {
   }
 
   renderCards();
-  updateRoundDisplay();
-  setTurn("child");
-  hideCompleteModalCompletely();
-  setupDashboardExitHandlers();
+updateRoundDisplay();
+setTurn("child");
+hideCompleteModalCompletely();
+setupDashboardExitHandlers();
+if (developerThingy) {
+  createDemoStageButtons();
+}
 
   setTimeout(startRingtone, 400);
 

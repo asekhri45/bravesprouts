@@ -1123,3 +1123,33 @@ body {
     padding-top: 66px;
   }
 }
+
+.admin-overview-page {
+  padding: 32px;
+}
+
+.admin-user-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 24px;
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.admin-user-table th,
+.admin-user-table td {
+  padding: 14px 16px;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+  font-size: 14px;
+}
+
+.admin-user-table th {
+  background: #f7f4ff;
+  font-weight: 700;
+}
+
+.admin-user-table tr:hover {
+  background: #faf8ff;
+}

@@ -308,6 +308,13 @@ def signup():
 
     return render_template("signup.html")
 
+def admin_required(f):
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        if not session.get("is_admin"):
+            return redirect(url_for("admin_login"))
+        return f(*args, **kwargs)
+    return wrapper
 
 def login_required(f):
     @wraps(f)
@@ -412,6 +419,63 @@ def parent_pin_gate():
         return render_template("parent_pin.html", error="Incorrect PIN. Try again.")
 
     return render_template("parent_pin.html", error=None)
+
+@app.route("/admin/login", methods=["GET", "POST"])
+@limiter.limit("10 per minute")
+@csrf.exempt
+def admin_login():
+    if request.method == "POST":
+        email = request.form.get("email", "").strip().lower()
+        password = request.form.get("password", "")
+
+        admin_email = os.getenv("ADMIN_EMAIL", "").strip().lower()
+        admin_password = os.getenv("ADMIN_PASSWORD", "")
+
+        if email == admin_email and password == admin_password:
+            session.clear()
+            session["is_admin"] = True
+            session.permanent = True
+            return redirect(url_for("admin_user_overview"))
+
+        return render_template("admin_login.html", error="* Incorrect admin email or password")
+
+    return render_template("admin_login.html")
+
+
+@app.route("/admin/user-overview")
+@admin_required
+def admin_user_overview():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT
+            u.user_id,
+            u.parent_name,
+            u.email,
+            u.child_name,
+            u.child_age,
+            COUNT(p.activity_id) AS total_activities,
+            SUM(CASE WHEN p.is_unlocked = 1 THEN 1 ELSE 0 END) AS unlocked_activities,
+            SUM(CASE WHEN p.is_completed = 1 THEN 1 ELSE 0 END) AS completed_activities,
+            COALESCE(SUM(p.words_spoken), 0) AS total_words_spoken,
+            COALESCE(SUM(p.active_minutes), 0) AS total_active_minutes,
+            MAX(sl.completed_at) AS last_active
+        FROM users u
+        LEFT JOIN progress p ON u.user_id = p.user_id
+        LEFT JOIN session_log sl ON u.user_id = sl.user_id
+        GROUP BY u.user_id
+        ORDER BY last_active DESC
+    """)
+
+    users = cursor.fetchall()
+    conn.close()
+
+    return render_template(
+        "admin_user_overview.html",
+        users=users,
+        active_page="admin_user_overview"
+    )
 
 @app.route("/dashboard")
 @login_required
