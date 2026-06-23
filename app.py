@@ -456,7 +456,6 @@ def admin_login():
 
 
 @app.route("/admin/user-overview")
-@admin_required
 def admin_user_overview():
     conn = get_db_connection()
     cursor = conn.cursor()
