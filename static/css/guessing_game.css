@@ -558,3 +558,33 @@ body {
     height: 0vmax;
   }
 }
+
+.guess-round-card {
+  position: fixed;
+  top: 30px;
+  right: 44px;
+  z-index: 80;
+  min-width: 150px;
+  padding: 13px 18px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 2px solid rgba(255, 255, 255, 0.52);
+  box-shadow: 0 12px 28px rgba(35, 31, 53, 0.12);
+  backdrop-filter: blur(14px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.guess-round-card span {
+  color: #5b516e;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.guess-round-card strong {
+  color: var(--purple-dark);
+  font-size: 17px;
+  font-weight: 1000;
+}

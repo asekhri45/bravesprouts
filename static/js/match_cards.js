@@ -851,13 +851,21 @@ document.addEventListener("DOMContentLoaded", function () {
 
       const data = await response.json();
 
-      if (data.success && data.audio) {
-  await playStarAudio(data.audio, {
-    volume: options.volume || 0.86
-  });
-} else {
-  await sleep(700);
-}
+      if (data.success && Array.isArray(data.audio_parts) && data.audio_parts.length) {
+        await playStarAudioSequence(data.audio_parts, {
+          volume: options.volume || 0.86
+        });
+      } else if (data.success && data.audio_url) {
+        await playStarAudio(data.audio_url, {
+          volume: options.volume || 0.86
+        });
+      } else if (data.success && data.audio) {
+        await playStarAudio(data.audio, {
+          volume: options.volume || 0.86
+        });
+      } else {
+        await sleep(700);
+      }
     } catch (error) {
       console.error("Star TTS error:", error);
       await sleep(700);
@@ -898,6 +906,66 @@ document.addEventListener("DOMContentLoaded", function () {
       }
 
       await startResponseWindow(starState.currentQuestion, options.responseSeconds || null);
+    }
+  }
+
+
+  function preloadStarAudio(src) {
+    return new Promise(resolve => {
+      if (!src) {
+        resolve(null);
+        return;
+      }
+
+      const audio = new Audio(src);
+      audio.preload = "auto";
+
+      let resolved = false;
+      let fallbackTimer = null;
+
+      function finish() {
+        if (resolved) return;
+        resolved = true;
+
+        if (fallbackTimer) {
+          clearTimeout(fallbackTimer);
+          fallbackTimer = null;
+        }
+
+        resolve(audio);
+      }
+
+      audio.addEventListener("canplaythrough", finish, { once: true });
+      audio.addEventListener("loadeddata", finish, { once: true });
+      audio.addEventListener("error", finish, { once: true });
+
+      fallbackTimer = setTimeout(finish, 900);
+
+      try {
+        audio.load();
+      } catch (error) {
+        finish();
+      }
+    });
+  }
+
+  async function playStarAudioSequence(audioParts, options = {}) {
+    const parts = (audioParts || []).filter(Boolean);
+
+    if (!parts.length) {
+      return;
+    }
+
+    // Warm the browser cache for all parts before Star starts talking.
+    // This reduces the pause before name-callout lines like "Great job, Aarav!"
+    await Promise.all(parts.map(preloadStarAudio));
+
+    for (let i = 0; i < parts.length; i++) {
+      await playStarAudio(parts[i], options);
+
+      if (i < parts.length - 1) {
+        await sleep(60);
+      }
     }
   }
 

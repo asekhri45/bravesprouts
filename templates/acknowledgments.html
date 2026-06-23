@@ -1,0 +1,138 @@
+{% extends "dashboard_layout.html" %}
+
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/acknowledgments.css') }}?v=1">
+{% endblock %}
+
+{% block title %}Acknowledgments{% endblock %}
+
+{% block dashboard_content %}
+
+<section class="thanks-page">
+
+  <section class="thanks-hero">
+    <div class="thanks-hero-copy">
+      <h1>With Gratitude</h1>
+      <p class="thanks-subtitle">The people who helped shape BraveSprouts.</p>
+
+      <p class="thanks-intro">
+        BraveSprouts has been shaped by the generosity of therapists, psychologists,
+        educators, parents, and families who shared their expertise, experiences, and
+        feedback throughout development. Their insights have helped improve activities,
+        resources, and the overall experience for children and families.
+      </p>
+    </div>
+
+    <img
+      src="{{ url_for('static', filename='images/thanks_hero_star.png') }}"
+      class="thanks-hero-art"
+      alt="Happy BraveSprouts star"
+    >
+  </section>
+
+  <section class="thanks-section">
+    <h2>Clinical &amp; Professional Contributors</h2>
+    <p class="thanks-section-subtitle">
+      These professionals provided valuable feedback and guidance during development.
+    </p>
+
+    <div class="contributor-list">
+
+      <article class="contributor-card">
+        <div class="contributor-photo-wrap">
+          <img
+            src="{{ url_for('static', filename='images/contributor_caroline_harvey.png') }}"
+            class="contributor-photo"
+            alt="Dr. Caroline Harvey"
+          >
+        </div>
+
+        <div class="contributor-main">
+          <div class="contributor-top">
+            <div>
+              <h3>Dr. Caroline Harvey</h3>
+              <p class="contributor-title">Clinical Psychologist</p>
+            </div>
+
+            <span class="feedback-pill">✧ Provided Feedback</span>
+          </div>
+
+          <p class="contributor-bio">
+            Dr. Caroline Harvey is a licensed clinical psychologist in New York, New Jersey, Connecticut, and Florida. She specializes in treating youth with selective mutism, ADHD, oppositional behaviors, and other childhood anxiety disorders, utilizing evidence-based approaches including PCIT, CBT, SPACE, and Parent Management Training.
+
+She is committed to collaborating with schools, psychiatrists, and other service providers to best support children across all settings.
+          </p>
+
+          <div class="contribution-row">
+            <div>
+              <h4>Contribution to BraveSprouts</h4>
+              <p>
+                Provided feedback on activity design and approaches for supporting children with selective mutism through games.
+              </p>
+            </div>
+
+            <a href="https://www.harveyfamilypsychology.com/" class="visit-button" target="_blank" rel="noopener">
+              Visit Website ↗
+            </a>
+          </div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="thanks-info-row">
+    <img
+      src="{{ url_for('static', filename='images/thanks_families.png') }}"
+      alt=""
+      class="thanks-circle-art"
+    >
+
+    <div>
+      <h2>Families &amp; Beta Testers</h2>
+      <p>
+        A heartfelt thank you to the families who participated in early testing and
+        shared their experiences, suggestions, and encouragement throughout development.
+      </p>
+      <p>
+        Your feedback continues to help shape BraveSprouts into a better resource for
+        future families. 💚
+      </p>
+    </div>
+  </section>
+
+  <section class="thanks-info-row">
+    <img
+      src="{{ url_for('static', filename='images/thanks_sprout.png') }}"
+      alt=""
+      class="thanks-circle-art"
+    >
+
+    <div>
+      <h2>Inspiration</h2>
+      <p>
+        BraveSprouts was inspired by my younger sister’s experience with selective mutism
+        and the belief that every child deserves opportunities to practice communication
+        in a safe, encouraging environment.
+      </p>
+      <p class="purple-note">
+        Their courage and determination motivate every improvement made to this platform. 💜
+      </p>
+    </div>
+  </section>
+
+  <section class="final-thanks-card">
+    <div>
+      <h2>Thank you. <span>💜</span></h2>
+      <p>Together, we can help children grow braver one conversation at a time.</p>
+    </div>
+
+    <img
+      src="{{ url_for('static', filename='images/thanks_footer_star.png') }}"
+      alt=""
+      class="final-thanks-art"
+    >
+  </section>
+</section>
+
+{% endblock %}

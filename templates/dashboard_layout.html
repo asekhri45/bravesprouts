@@ -47,6 +47,11 @@
     <span>Ask BraveSprouts</span>
   </a>
 
+  <a href="{{ url_for('acknowledgments') }}" class="sidebar-item {% if active_page == 'acknowledgments' %}active{% endif %}">
+  <img src="{{ url_for('static', filename='images/' + ('acknowledgments_selected.png' if active_page == 'acknowledgments' else 'acknowledgments_unselected.png')) }}" class="sidebar-icon">
+  <span>Acknowledgments</span>
+  </a>
+
   <a href="{{ url_for('settings') }}" class="sidebar-item sidebar-settings {% if active_page == 'settings' %}active{% endif %}">
     <img src="{{ url_for('static', filename='images/' + ('settings_selected.png' if active_page == 'settings' else 'settings_unselected.png')) }}" class="sidebar-icon">
     <span>Settings</span>

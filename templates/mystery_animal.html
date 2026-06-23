@@ -2,15 +2,19 @@
 
 {% block head %}
 {{ super() }}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/mystery_animal.css') }}?v=7">
-<script src="{{ url_for('static', filename='js/mystery_animal.js') }}?v=7" defer></script>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/mystery_animal.css') }}?v=11">
+<script src="{{ url_for('static', filename='js/mystery_animal.js') }}?v=11" defer></script>
 {% endblock %}
 
 {% block title %}Mystery Animal{% endblock %}
 
 {% block content %}
 
-<div class="animal-page">
+<div
+  class="animal-page"
+  data-activity-id="{{ activity.activity_id if activity else 2 }}"
+  data-child-name="{{ child|e }}"
+>
 
   <div class="incoming-call-screen" id="incomingCallScreen">
     <div class="incoming-bg"></div>
@@ -77,6 +81,11 @@
     </div>
 
     <div class="animal-response-panel hide" id="animalResponsePanel" aria-label="Optional response buttons"></div>
+
+    <div class="animal-round-card" id="roundCard" aria-live="polite">
+      <span>Round</span>
+      <strong id="roundNumber">1 of 9</strong>
+    </div>
 
   </main>
 

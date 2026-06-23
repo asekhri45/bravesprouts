@@ -9,6 +9,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const hangupBtn = document.getElementById("hangupBtn");
   const guessStatus = document.getElementById("guessStatus");
   const guessResponsePanel = document.getElementById("guessResponsePanel");
+  const guessRoundNumber = document.getElementById("guessRoundNumber");
 
   let starAudio = null;
   let audioContext = null;
@@ -50,6 +51,7 @@ document.addEventListener("DOMContentLoaded", function () {
   let lastLiveTranscript = "";
   let lastCleanTranscript = "";
   let thinkingRestartCount = 0;
+  let silentRetryCount = 0;
 
   let thinkingFillerTimer = null;
   let thinkingFillerInterval = null;
@@ -81,6 +83,15 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
+  function updateRoundDisplay(gameState) {
+    if (!guessRoundNumber || !gameState) return;
+
+    const completed = Number(gameState.rounds_completed || 0);
+    const currentRound = Math.min(Math.max(completed + 1, 1), 3);
+
+    guessRoundNumber.textContent = String(currentRound);
+  }
+
   function setListeningUI(active) {
     if (!guessPage) return;
 
@@ -95,22 +106,22 @@ document.addEventListener("DOMContentLoaded", function () {
   function getLiveHardCapDuration() {
     const extraThinkingTime = Math.min(thinkingRestartCount * 2500, 5000);
 
-    if (((currentResponseMode === "round_choice" || currentResponseMode === "round_choice_voice") || currentResponseMode === "round_choice_voice")) return 16000 + extraThinkingTime;
-    return 19000 + extraThinkingTime;
+    if (((currentResponseMode === "round_choice" || currentResponseMode === "round_choice_voice") || currentResponseMode === "round_choice_voice")) return 18000 + extraThinkingTime;
+    return 24000 + extraThinkingTime;
   }
 
   function getBackupListeningDuration() {
     const extraThinkingTime = Math.min(thinkingRestartCount * 2500, 5000);
 
-    if (((currentResponseMode === "round_choice" || currentResponseMode === "round_choice_voice") || currentResponseMode === "round_choice_voice")) return 12000 + extraThinkingTime;
-    return 15000 + extraThinkingTime;
+    if (((currentResponseMode === "round_choice" || currentResponseMode === "round_choice_voice") || currentResponseMode === "round_choice_voice")) return 14000 + extraThinkingTime;
+    return 21000 + extraThinkingTime;
   }
 
   function getBackupSilenceAfterSpeechDuration() {
     const extraThinkingPause = Math.min(thinkingRestartCount * 500, 1000);
 
-    if (((currentResponseMode === "round_choice" || currentResponseMode === "round_choice_voice") || currentResponseMode === "round_choice_voice")) return 1900 + extraThinkingPause;
-    return 2300 + extraThinkingPause;
+    if (((currentResponseMode === "round_choice" || currentResponseMode === "round_choice_voice") || currentResponseMode === "round_choice_voice")) return 2200 + extraThinkingPause;
+    return 2900 + extraThinkingPause;
   }
 
   function getBackupMinimumRecordingDuration() {
@@ -124,10 +135,10 @@ document.addEventListener("DOMContentLoaded", function () {
       return 650;
     }
 
-    if (isLikelyDirectGuess(cleanedTranscript)) return 500;
-    if (isLikelyShortQuestion(cleanedTranscript)) return 800;
+    if (isLikelyDirectGuess(cleanedTranscript)) return 650;
+    if (isLikelyShortQuestion(cleanedTranscript)) return 1150;
 
-    return 950;
+    return 1400;
   }
 
   function normalizeTranscriptText(text) {
@@ -406,6 +417,10 @@ document.addEventListener("DOMContentLoaded", function () {
   async function requestStarMessage(eventType, childResponse = "") {
     if (waitingForStarResponse || sessionDone) return;
 
+    if (eventType === "child_answer") {
+      silentRetryCount = 0;
+    }
+
     waitingForStarResponse = true;
     hideResponseButtons();
     setListeningUI(false);
@@ -445,6 +460,7 @@ document.addEventListener("DOMContentLoaded", function () {
       currentResponseMode = data.response_mode || "none";
       currentStage = data.stage || "intro";
       offerNextGame = Boolean(data.offer_next_game);
+      updateRoundDisplay(data.game_state);
 
       const expectsResponse = Boolean(data.expects_response) && !data.session_done;
       const nextEvent = data.next_event || null;
@@ -616,7 +632,18 @@ document.addEventListener("DOMContentLoaded", function () {
       }
 
       stopLiveSpeechRecognition(true);
+
+      if (silentRetryCount < 1 && currentResponseMode !== "round_choice_voice" && currentResponseMode !== "round_choice") {
+        silentRetryCount += 1;
+        setStatus("I’m listening.");
+        setTimeout(function () {
+          startListeningForChild();
+        }, 250);
+        return;
+      }
+
       resetThinkingState();
+      silentRetryCount = 0;
       requestStarMessage("no_response", "");
     }, getLiveHardCapDuration());
 
@@ -738,7 +765,17 @@ document.addEventListener("DOMContentLoaded", function () {
         const audioBlob = new Blob(audioChunks, { type: "audio/webm" });
 
         if (!audioBlob.size || !speechDetected) {
+          if (silentRetryCount < 1 && currentResponseMode !== "round_choice_voice" && currentResponseMode !== "round_choice") {
+            silentRetryCount += 1;
+            setStatus("I’m listening.");
+            setTimeout(function () {
+              startListeningForChild();
+            }, 250);
+            return;
+          }
+
           resetThinkingState();
+          silentRetryCount = 0;
           await requestStarMessage("no_response", "");
           return;
         }
@@ -926,6 +963,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
       if (!response.ok || !data.success) {
         resetThinkingState();
+        silentRetryCount = 0;
         await requestStarMessage("no_response", "");
         return;
       }
@@ -934,6 +972,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
       if (!transcript) {
         resetThinkingState();
+        silentRetryCount = 0;
         await requestStarMessage("no_response", "");
         return;
       }
@@ -1136,6 +1175,7 @@ document.addEventListener("DOMContentLoaded", function () {
     offerNextGame = false;
     sessionDone = false;
     gameActive = true;
+    updateRoundDisplay({ rounds_completed: 0 });
 
     setTimeout(function () {
       requestStarMessage("restart");
@@ -1162,6 +1202,7 @@ document.addEventListener("DOMContentLoaded", function () {
     sessionDone = false;
     gameActive = true;
     resetThinkingState();
+    updateRoundDisplay({ rounds_completed: 0 });
 
     setTimeout(function () {
       requestStarMessage("intro");
