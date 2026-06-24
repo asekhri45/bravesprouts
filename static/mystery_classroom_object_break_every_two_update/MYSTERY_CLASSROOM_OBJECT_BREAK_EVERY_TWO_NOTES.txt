@@ -1,0 +1,16 @@
+Mystery Classroom Object: Break Every Two Rounds Patch
+
+Base: polished OpenAI rounds 4-9 version.
+
+Changed behavior:
+- After completed activity rounds 2, 4, 6, and 8, Teacher asks:
+  "Do you want to continue playing, or do you want to take a break for now?"
+- If the child says continue/yes/keep playing, the game starts the next round.
+- If the child says break/pause/stop/end/take a break, the game saves progress and redirects to the dashboard.
+- The redirect uses the existing call-ending-transition black iris fade in the CSS/JS.
+- The final round 9 behavior is preserved.
+
+Frontend:
+- JS unchanged.
+- CSS unchanged.
+- HTML unchanged.

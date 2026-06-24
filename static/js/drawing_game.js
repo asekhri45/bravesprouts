@@ -35,7 +35,7 @@ document.addEventListener("DOMContentLoaded", function () {
     - Star is the familiar safety partner.
     - The Teacher uses the existing "librarian" backend/voice/assets internally.
     - Four scenes build gradually: flower garden, house, tree, school.
-    - Each scene is one round. Each round has four drawing parts.
+    - Each scene has four drawing parts, but the social progression stays in 12 Match-Cards-style rounds.
     - Speech is encouraged, never required. Silence never blocks the activity.
   */
 
@@ -48,7 +48,7 @@ document.addEventListener("DOMContentLoaded", function () {
     "#0ea5e9": "sky blue",
     "#14b8a6": "teal",
     "#16a34a": "green",
-    "#84cc16": "light green",
+    "#84cc16": "lime green",
     "#facc15": "yellow",
     "#f97316": "orange",
     "#ef4444": "red",
@@ -78,17 +78,16 @@ document.addEventListener("DOMContentLoaded", function () {
 
   const drawingScenes = [
     {
-      id: "flower_garden",
-      name: "Flower Garden",
-      sceneIntro: "Let's make a flower garden together.",
-      newSceneLine: "First, let's make a flower garden.",
-      completeLine: "The flower garden is finished.",
+      id: "flower_scene",
+      name: "Flower Scene",
+      sceneIntro: "First, let's make an outdoor scene.",
+      newSceneLine: "First, let's make an outdoor scene.",
+      completeLine: "The outdoor picture is finished.",
       stages: [
         {
           id: "flower",
-          spokenName: "flower",
-          title: "Draw a flower",
-          text: "Draw one simple flower first.",
+          title: "Draw one pink flower",
+          text: "Start with one pink flower.",
           partText: "Part 1 of 4",
           palette: [COLORS.pink, COLORS.yellow, COLORS.green],
           colorIdeas: {
@@ -96,789 +95,381 @@ document.addEventListener("DOMContentLoaded", function () {
             [COLORS.pink]: "the petals",
             [COLORS.yellow]: "the middle of the flower"
           },
+          colorSuggestion: "Use any colors you want. Pink can be a nice flower color.",
           starLead: [
-            "Let's draw the flower first. You can use pink, yellow, or green.",
-            "We'll start with one flower. You can put it anywhere on the page.",
-            "First, let's make the flower. You can start with the stem, middle, or petals."
+            "Let's start with one pink flower.",
+            "First, make one pink flower anywhere on the page.",
+            "Start with one pink flower first."
           ],
           starChoice: [
-            "You can choose any flower part first.",
-            "Start with whichever part feels easiest.",
-            "I'll stay here while you make the flower."
+            "You can choose the stem, the petals, or the middle first.",
+            "Pick any part of the flower to start.",
+            "Start with whichever flower part feels easiest."
           ],
           teacherComment: [
-            "I will watch while you and Star make the flower, {child}.",
-            "I like seeing how you and Star start the flower, {child}.",
-            "This is a nice first part for a garden, {child}."
+            "That is a nice first part for the picture.",
+            "A flower is a good place to start.",
+            "I like starting with one clear flower."
           ],
           teacherWonder: [
-            "I wonder what color this flower will be, {child}.",
-            "Maybe the flower will have a bright middle, {child}.",
-            "I wonder if this flower will have a tall stem, {child}."
+            "I wonder what color this flower will be.",
+            "Maybe this flower will have a bright middle.",
+            "I wonder if this flower will have a tall stem."
           ],
           teacherToStar: [
-            "Star, do you think the flower should have petals first?",
-            "Star, do you think the stem should be tall or short?",
-            "Star, what color might fit the flower?"
+            "Star, I wonder which part of the flower will come first.",
+            "Star, maybe the flower could start with petals.",
+            "Star, the flower might need a stem too."
           ],
           teacherDirect: [
-            "{child}, what color should the flower be?",
-            "{child}, should the flower have big petals or little petals?",
-            "What should we add to the flower first, {child}?"
+            "What color should the flower be?",
+            "Should the flower have big petals or little petals?",
+            "What should go on the flower first?"
           ],
           donePraise: [
-            "That flower looks sweet, {child}.",
-            "Nice flower, {child}.",
-            "I like that flower, {child}."
+            "Great job. That flower looks sweet.",
+            "Nice flower. You are a great artist.",
+            "Good job. I like that flower."
           ]
         },
         {
           id: "grass",
-          spokenName: "grass",
           title: "Add grass",
-          text: "Add grass under or around the flower.",
+          text: "Give the flower somewhere to grow.",
           partText: "Part 2 of 4",
           palette: [COLORS.green, COLORS.lime],
           colorIdeas: {
             [COLORS.green]: "darker grass",
-            [COLORS.lime]: "light green grass"
+            [COLORS.lime]: "lighter grass"
           },
+          colorSuggestion: "For the grass, dark green can make deeper grass and light green can make brighter grass.",
           starLead: [
-            "Now let's add grass. The flower needs somewhere to grow.",
-            "Next, we can put grass under the flower.",
-            "Let's give the flower some grass around it."
+            "Now add grass under the flower.",
+            "Next, put some grass near the flower.",
+            "Now give the flower some grass."
           ],
           starChoice: [
-            "You can make a little grass or a lot of grass.",
-            "The grass can go anywhere near the flower.",
-            "I'll stay with you while you add the grass."
+            "The grass can be small, or it can go across the bottom.",
+            "You can put the grass under the flower.",
+            "Choose where the grass should go."
           ],
           teacherComment: [
-            "Grass is a good next part for the flower, {child}.",
-            "I like that the flower is getting a place to grow, {child}.",
-            "This is starting to look like a garden, {child}."
+            "Grass helps the flower look like it is outside.",
+            "That is a good next part for the flower.",
+            "The flower has somewhere to grow now."
           ],
           teacherWonder: [
-            "I wonder if the grass will be light green or dark green, {child}.",
-            "Maybe the grass can go right under the flower, {child}.",
-            "I wonder how much grass this flower needs, {child}."
+            "I wonder if the grass will be light or dark green.",
+            "Maybe the grass can go under the flower.",
+            "I wonder how much grass this picture needs."
           ],
           teacherToStar: [
-            "Star, do you think the grass should go under the flower?",
-            "Star, should the grass be small or go across the page?",
-            "Star, where should the grass go?"
+            "Star, I wonder where the grass should go.",
+            "Star, maybe the grass could go under the flower.",
+            "Star, light green and dark green could both work here."
           ],
           teacherDirect: [
-            "{child}, should the grass be little or big?",
-            "Where should the grass go, {child}?",
-            "{child}, should the grass go across the picture?"
+            "Should the grass be little or big?",
+            "Where should the grass go?",
+            "Should the grass go across the picture?"
           ],
           donePraise: [
-            "The flower has grass now, {child}.",
-            "Nice grass, {child}.",
-            "That makes the flower look like it is growing, {child}."
+            "Great job. The grass looks nice.",
+            "Good job adding grass.",
+            "The flower has grass now. Nice work."
           ]
         },
         {
           id: "sun",
-          spokenName: "sun",
-          title: "Add a sun",
-          text: "Add a sun near the flower garden.",
+          title: "Add the sun",
+          text: "Add sunshine to the picture.",
           partText: "Part 3 of 4",
           palette: [COLORS.yellow, COLORS.orange],
           colorIdeas: {
             [COLORS.yellow]: "the sun",
-            [COLORS.orange]: "warm sun rays"
+            [COLORS.orange]: "sun rays"
           },
+          colorSuggestion: "For the sun, yellow can work well for the circle and orange can work well for the rays.",
           starLead: [
-            "Now let's add the sun. Flowers like sunshine.",
-            "Next, we can draw a sun for the flower.",
-            "Let's put a sunny part in the garden."
+            "Now add a sun.",
+            "Next, put a sun somewhere in the picture.",
+            "Now the flower can have sunshine."
           ],
           starChoice: [
-            "You can make the sun big or small.",
-            "The sun can go wherever you want.",
-            "I'll stay here while you add the sun."
+            "The sun can be big or small.",
+            "You can put the sun in any open spot.",
+            "Choose where the sun should go."
           ],
           teacherComment: [
-            "A sun is a nice idea for the garden, {child}.",
-            "Flowers do like sunshine, {child}.",
-            "The picture is getting bright, {child}."
+            "Sunshine is a nice part for this picture.",
+            "A sun will make the picture feel brighter.",
+            "That is a bright next part."
           ],
           teacherWonder: [
-            "I wonder if the sun will be yellow or orange, {child}.",
-            "Maybe the sun can have little rays, {child}.",
-            "I wonder where the sun will go, {child}."
+            "I wonder if the sun will have rays.",
+            "Maybe the sun can sit near the top.",
+            "I wonder if this sun will be big."
           ],
           teacherToStar: [
-            "Star, do you think the sun should be big or small?",
-            "Star, should the sun have rays?",
-            "Star, where might the sun fit?"
+            "Star, I wonder where the sun should go.",
+            "Star, maybe the sun could have rays.",
+            "Star, yellow and orange could both work here."
           ],
           teacherDirect: [
-            "{child}, should the sun be big or small?",
-            "Where should the sun go, {child}?",
-            "{child}, should the sun have rays?"
+            "Should the sun be big or small?",
+            "Where should the sun go?",
+            "Should the sun have rays?"
           ],
           donePraise: [
-            "That sun makes the garden bright, {child}.",
-            "Nice sun, {child}.",
-            "I like the sunshine in the picture, {child}."
+            "Great job. That sun looks bright.",
+            "Nice sun. Your picture is looking great.",
+            "Good job adding sunshine."
           ]
         },
         {
           id: "butterfly",
-          spokenName: "butterfly",
           title: "Add a butterfly",
-          text: "Add a simple butterfly near the flower.",
+          text: "Finish the picture with a simple butterfly.",
           partText: "Part 4 of 4",
           palette: [COLORS.purple, COLORS.blue, COLORS.pink, COLORS.yellow],
           colorIdeas: {
             [COLORS.purple]: "butterfly wings",
             [COLORS.blue]: "butterfly wings",
-            [COLORS.pink]: "a colorful butterfly",
-            [COLORS.yellow]: "a bright butterfly"
+            [COLORS.pink]: "butterfly wings",
+            [COLORS.yellow]: "small butterfly details"
           },
+          colorSuggestion: "For the butterfly, purple, blue, or pink can work well for wings, and yellow can work well for little details.",
           starLead: [
-            "For the last part, let's add a butterfly near the flower.",
-            "Now we can add a little butterfly by the flower.",
-            "Let's finish the garden with a butterfly."
+            "Let's finish this picture with a butterfly.",
+            "Now add a small butterfly somewhere near the flower.",
+            "One more part: add a butterfly."
           ],
           starChoice: [
-            "You can make the butterfly any color here.",
-            "The butterfly can be near the flower.",
-            "I'll stay with you while you add the butterfly."
+            "The butterfly can go near the flower.",
+            "You can make the butterfly any size.",
+            "Choose where the butterfly should go."
           ],
           teacherComment: [
-            "A butterfly is a sweet final part, {child}.",
-            "I like butterflies near flowers, {child}.",
-            "That will make the garden feel friendly, {child}."
+            "A butterfly is a sweet final part.",
+            "That will make the picture feel friendly.",
+            "I like that final detail."
           ],
           teacherWonder: [
-            "I wonder what color the butterfly will be, {child}.",
-            "Maybe the butterfly will have bright wings, {child}.",
-            "I wonder if the butterfly will be close to the flower, {child}."
+            "I wonder what color the butterfly will be.",
+            "Maybe the butterfly can fly near the flower.",
+            "I wonder if the butterfly will have bright wings."
           ],
           teacherToStar: [
-            "Star, do you think the butterfly should be close to the flower?",
-            "Star, what color could the butterfly be?",
-            "Star, should the butterfly have big wings or little wings?"
+            "Star, I wonder where the butterfly should go.",
+            "Star, maybe the butterfly could be near the flower.",
+            "Star, the butterfly could have colorful wings."
           ],
           teacherDirect: [
-            "{child}, what color should the butterfly be?",
-            "{child}, should the butterfly be near the flower?",
-            "Should the butterfly have big wings or little wings, {child}?"
+            "What color should the butterfly be?",
+            "Where should the butterfly go?",
+            "Should the butterfly be big or small?"
           ],
           donePraise: [
-            "The butterfly looks nice near the flower, {child}.",
-            "Nice butterfly, {child}.",
-            "That butterfly makes the garden feel finished, {child}."
+            "Great job. The butterfly looks nice.",
+            "Good job. This flower picture looks great.",
+            "Nice work. You made a lovely picture."
           ]
         }
       ]
     },
     {
-      id: "house_yard",
+      id: "house_scene",
       name: "House Scene",
-      sceneIntro: "Let's make a house scene together.",
-      newSceneLine: "Now let's make a house scene.",
-      completeLine: "The house scene is finished.",
+      sceneIntro: "Now let's make a house picture.",
+      newSceneLine: "Now let's make a house picture.",
+      completeLine: "The house picture is finished.",
       stages: [
         {
           id: "house",
-          spokenName: "house",
           title: "Draw a house",
-          text: "Draw a simple complete house.",
+          text: "Start with one complete house.",
           partText: "Part 1 of 4",
           palette: [COLORS.red, COLORS.brown, COLORS.blue],
           colorIdeas: {
             [COLORS.red]: "the roof or door",
-            [COLORS.brown]: "the house walls",
+            [COLORS.brown]: "the walls or door",
             [COLORS.blue]: "the windows"
           },
-          starLead: [
-            "Let's start this scene with a house. You can make the whole house your way.",
-            "First, let's draw a house. It can be simple.",
-            "We'll make a house first, with any shape you want."
-          ],
-          starChoice: [
-            "You can start with the roof, walls, door, or windows.",
-            "Start with the part of the house that feels easiest.",
-            "I'll stay here while you make the house."
-          ],
-          teacherComment: [
-            "I like starting with the whole house, {child}.",
-            "A house is a clear first part for this scene, {child}.",
-            "I will watch while you and Star make the house, {child}."
-          ],
-          teacherWonder: [
-            "I wonder what color the house will be, {child}.",
-            "Maybe this house will have a bright door, {child}.",
-            "I wonder if the house will have windows, {child}."
-          ],
-          teacherToStar: [
-            "Star, do you think the house should have a red roof?",
-            "Star, should the house have one window or two?",
-            "Star, where might the door go?"
-          ],
-          teacherDirect: [
-            "{child}, what color should the house be?",
-            "{child}, should the house have a door?",
-            "Where should the windows go, {child}?"
-          ],
-          donePraise: [
-            "That house looks good, {child}.",
-            "Nice house, {child}.",
-            "I like the house you made, {child}."
-          ]
+          colorSuggestion: "For the house, red can work well for a roof or door, brown can work well for walls, and blue can work well for windows.",
+          starLead: ["Start with one house.", "First, draw a complete house.", "Make the house first."],
+          starChoice: ["The house can be big or small.", "You can choose where the door and windows go.", "Start with whichever house part feels easiest."],
+          teacherComment: ["A house is a nice next picture.", "That is a clear thing to draw.", "I like starting with the main house."],
+          teacherWonder: ["I wonder what color the house will be.", "Maybe the house will have windows.", "I wonder where the door will go."],
+          teacherToStar: ["Star, I wonder what part of the house will come first.", "Star, maybe the house could have blue windows.", "Star, the house might need a door."],
+          teacherDirect: ["What color should the house be?", "Where should the door go?", "Should the house be big or small?"],
+          donePraise: ["Great job. That house looks good.", "Nice house. You are doing a great job.", "Good job making the house."]
         },
         {
           id: "yard",
-          spokenName: "grass",
-          title: "Add grass",
+          title: "Add a yard",
           text: "Add grass around the house.",
           partText: "Part 2 of 4",
           palette: [COLORS.green, COLORS.lime],
-          colorIdeas: {
-            [COLORS.green]: "the yard",
-            [COLORS.lime]: "light green grass"
-          },
-          starLead: [
-            "Now let's add grass around the house.",
-            "The house can have a yard now.",
-            "Let's give the house some grass."
-          ],
-          starChoice: [
-            "You can put grass under or around the house.",
-            "The yard can be small or big.",
-            "I'll stay with you while you add the grass."
-          ],
-          teacherComment: [
-            "A yard is a good next part, {child}.",
-            "The house is getting a place outside, {child}.",
-            "That grass can make the house feel cozy, {child}."
-          ],
-          teacherWonder: [
-            "I wonder if the yard will be light green or dark green, {child}.",
-            "Maybe the grass can go around the house, {child}.",
-            "I wonder how big the yard will be, {child}."
-          ],
-          teacherToStar: [
-            "Star, should the yard go under the house?",
-            "Star, do you think the grass should be light or dark green?",
-            "Star, where should the yard go?"
-          ],
-          teacherDirect: [
-            "{child}, should the yard be little or big?",
-            "Where should the grass go, {child}?",
-            "{child}, should the grass go around the house?"
-          ],
-          donePraise: [
-            "The house has grass now, {child}.",
-            "Nice yard, {child}.",
-            "That makes the house feel outside, {child}."
-          ]
+          colorIdeas: {[COLORS.green]: "darker grass", [COLORS.lime]: "lighter grass"},
+          colorSuggestion: "For the yard, dark green can make deeper grass and light green can make brighter grass.",
+          starLead: ["Now add a yard around the house.", "Next, add grass near the house.", "Now the house can have a yard."],
+          starChoice: ["The yard can go under the house.", "You can make a little yard or a big yard.", "Choose where the grass should go."],
+          teacherComment: ["A yard helps the house feel outside.", "That is a nice next part.", "The house has somewhere to sit now."],
+          teacherWonder: ["I wonder if the yard will be light or dark green.", "Maybe the yard can go across the bottom.", "I wonder how much grass the house needs."],
+          teacherToStar: ["Star, I wonder where the yard should go.", "Star, maybe the grass could go under the house.", "Star, both greens could work here."],
+          teacherDirect: ["Should the yard be little or big?", "Where should the grass go?", "Should the yard go across the picture?"],
+          donePraise: ["Great job adding the yard.", "Nice work. The house has grass now.", "Good job. The yard looks nice."]
         },
         {
           id: "sun",
-          spokenName: "sun",
-          title: "Add a sun",
-          text: "Add a sun for the house scene.",
+          title: "Add the sun",
+          text: "Add sunshine to the house picture.",
           partText: "Part 3 of 4",
           palette: [COLORS.yellow, COLORS.orange],
-          colorIdeas: {
-            [COLORS.yellow]: "the sun",
-            [COLORS.orange]: "sun rays"
-          },
-          starLead: [
-            "Now let's add a sun for the house.",
-            "The house scene can have sunshine now.",
-            "Let's put a sun somewhere in the picture."
-          ],
-          starChoice: [
-            "You can make the sun big or small.",
-            "The sun can go wherever you want.",
-            "I'll stay here while you add it."
-          ],
-          teacherComment: [
-            "A sunny house scene sounds nice, {child}.",
-            "The sun will brighten the house, {child}.",
-            "I like adding sunshine here, {child}."
-          ],
-          teacherWonder: [
-            "I wonder where the sun will go, {child}.",
-            "Maybe the sun will have orange rays, {child}.",
-            "I wonder if the sun will be big or small, {child}."
-          ],
-          teacherToStar: [
-            "Star, do you think the sun should be big or small?",
-            "Star, should the sun be near the house?",
-            "Star, should the sun have rays?"
-          ],
-          teacherDirect: [
-            "{child}, where should the sun go?",
-            "Should the sun be big or small, {child}?",
-            "{child}, should the sun have rays?"
-          ],
-          donePraise: [
-            "The house has sunshine now, {child}.",
-            "Nice sun, {child}.",
-            "That sun looks warm, {child}."
-          ]
+          colorIdeas: {[COLORS.yellow]: "the sun", [COLORS.orange]: "sun rays"},
+          colorSuggestion: "For the sun, yellow can work well for the circle and orange can work well for the rays.",
+          starLead: ["Now add a sun.", "Next, add sunshine above the house.", "The house can have a sun now."],
+          starChoice: ["The sun can go in any open spot.", "The sun can be big or small.", "Choose where the sun should go."],
+          teacherComment: ["A sun brightens the house picture.", "That is a nice sunny part.", "The picture is getting brighter."],
+          teacherWonder: ["I wonder if the sun will have rays.", "Maybe the sun can go near the top.", "I wonder if the sun will be yellow or orange."],
+          teacherToStar: ["Star, I wonder where the sun should go.", "Star, maybe the sun could have rays.", "Star, yellow and orange could both work here."],
+          teacherDirect: ["Where should the sun go?", "Should the sun have rays?", "Should the sun be big or small?"],
+          donePraise: ["Great job. That sun looks bright.", "Nice work adding sunshine.", "Good job. The house picture looks brighter now."]
         },
         {
           id: "tree",
-          spokenName: "tree",
           title: "Add a tree",
-          text: "Add a simple tree near the house.",
+          text: "Finish the house picture with a tree.",
           partText: "Part 4 of 4",
           palette: [COLORS.brown, COLORS.green, COLORS.lime],
-          colorIdeas: {
-            [COLORS.brown]: "the tree trunk",
-            [COLORS.green]: "tree leaves",
-            [COLORS.lime]: "light green leaves"
-          },
-          starLead: [
-            "For the last part, let's add a tree near the house.",
-            "Now we can put a tree by the house.",
-            "Let's finish the house scene with a tree."
-          ],
-          starChoice: [
-            "You can make the tree tall or small.",
-            "The tree can go near the house or far away.",
-            "I'll stay with you while you add the tree."
-          ],
-          teacherComment: [
-            "A tree is a nice final part for the yard, {child}.",
-            "I like trees near houses, {child}.",
-            "That will make the scene feel fuller, {child}."
-          ],
-          teacherWonder: [
-            "I wonder if the tree will be tall or short, {child}.",
-            "Maybe the tree will have lots of leaves, {child}.",
-            "I wonder where the tree will go, {child}."
-          ],
-          teacherToStar: [
-            "Star, should the tree go next to the house?",
-            "Star, should the tree be tall or short?",
-            "Star, do you think the tree needs lots of leaves?"
-          ],
-          teacherDirect: [
-            "{child}, should the tree be tall or short?",
-            "Where should the tree go, {child}?",
-            "{child}, should the tree have lots of leaves?"
-          ],
-          donePraise: [
-            "The tree looks nice by the house, {child}.",
-            "Nice tree, {child}.",
-            "That tree finishes the house scene, {child}."
-          ]
+          colorIdeas: {[COLORS.brown]: "the tree trunk", [COLORS.green]: "tree leaves", [COLORS.lime]: "lighter leaves"},
+          colorSuggestion: "For the tree, brown can work well for the trunk, and green or light green can work well for leaves.",
+          starLead: ["Let's finish this picture with a tree.", "Now add a tree near the house.", "One more part: add a tree."],
+          starChoice: ["The tree can go beside the house.", "You can make the tree tall or short.", "Choose where the tree should go."],
+          teacherComment: ["A tree is a nice final part.", "That will make the house picture feel complete.", "I like that final detail."],
+          teacherWonder: ["I wonder if the tree will be tall.", "Maybe the tree can go beside the house.", "I wonder how many leaves it will have."],
+          teacherToStar: ["Star, I wonder where the tree should go.", "Star, maybe the tree could go beside the house.", "Star, brown and green could both help here."],
+          teacherDirect: ["Where should the tree go?", "Should the tree be tall or short?", "What color should the leaves be?"],
+          donePraise: ["Great job. The tree looks nice.", "Good job. The house picture looks complete.", "Nice work. You made a great house picture."]
         }
       ]
     },
     {
-      id: "tree_park",
+      id: "tree_scene",
       name: "Tree Scene",
-      sceneIntro: "Let's make a tree scene together.",
-      newSceneLine: "Now let's make a tree scene.",
-      completeLine: "The tree scene is finished.",
+      sceneIntro: "Now let's make a tree picture.",
+      newSceneLine: "Now let's make a tree picture.",
+      completeLine: "The tree picture is finished.",
       stages: [
         {
-          id: "tree",
-          spokenName: "tree",
-          title: "Draw a tree",
-          text: "Draw one complete tree first.",
-          partText: "Part 1 of 4",
-          palette: [COLORS.brown, COLORS.green, COLORS.lime],
-          colorIdeas: {
-            [COLORS.brown]: "the trunk or branches",
-            [COLORS.green]: "leaves",
-            [COLORS.lime]: "light green leaves"
-          },
-          starLead: [
-            "Let's start with one full tree. You can draw the trunk and leaves your way.",
-            "First, let's draw a tree. It can be simple.",
-            "We'll make one tree first, with a trunk and leaves."
-          ],
-          starChoice: [
-            "You can start with the trunk or the leaves.",
-            "Start with whichever tree part feels easiest.",
-            "I'll stay here while you make the tree."
-          ],
-          teacherComment: [
-            "I like starting with the whole tree, {child}.",
-            "A tree is a nice first part for this scene, {child}.",
-            "I will watch while you and Star make the tree, {child}."
-          ],
-          teacherWonder: [
-            "I wonder if the tree will be tall or short, {child}.",
-            "Maybe this tree will have lots of leaves, {child}.",
-            "I wonder what color the leaves will be, {child}."
-          ],
-          teacherToStar: [
-            "Star, do you think the tree should be tall or short?",
-            "Star, should the tree have lots of leaves?",
-            "Star, should the trunk be big or small?"
-          ],
-          teacherDirect: [
-            "{child}, should the tree be tall or short?",
-            "{child}, should the tree have lots of leaves?",
-            "What should we draw first on the tree, {child}?"
-          ],
-          donePraise: [
-            "That tree looks good, {child}.",
-            "Nice tree, {child}.",
-            "I like the tree you made, {child}."
-          ]
+          id: "tree", title: "Draw a tree", text: "Start with one complete tree.", partText: "Part 1 of 4", palette: [COLORS.brown, COLORS.green, COLORS.lime],
+          colorIdeas: {[COLORS.brown]: "the tree trunk", [COLORS.green]: "tree leaves", [COLORS.lime]: "lighter leaves"},
+          colorSuggestion: "For the tree, brown can work well for the trunk, and green or light green can work well for leaves.",
+          starLead: ["Start with one tree.", "First, draw a complete tree.", "Make the tree first."],
+          starChoice: ["The tree can be tall or short.", "You can start with the trunk or the leaves.", "Start with whichever tree part feels easiest."],
+          teacherComment: ["A tree is a good main part.", "That is a nice thing to draw.", "I like starting with the whole tree."],
+          teacherWonder: ["I wonder if the tree will be tall.", "Maybe the tree will have lots of leaves.", "I wonder where the trunk will go."],
+          teacherToStar: ["Star, I wonder what part of the tree will come first.", "Star, maybe the tree could have lots of leaves.", "Star, the tree might need a trunk too."],
+          teacherDirect: ["Should the tree be tall or short?", "What color should the leaves be?", "Where should the trunk go?"],
+          donePraise: ["Great job. That tree looks good.", "Nice tree. You are a great artist.", "Good job making the tree."]
         },
         {
-          id: "grass",
-          spokenName: "grass",
-          title: "Add grass",
-          text: "Add grass under or around the tree.",
-          partText: "Part 2 of 4",
-          palette: [COLORS.green, COLORS.lime],
-          colorIdeas: {
-            [COLORS.green]: "grass",
-            [COLORS.lime]: "light green grass"
-          },
-          starLead: [
-            "Now let's add grass under the tree.",
-            "The tree can have grass around it now.",
-            "Let's give the tree some ground."
-          ],
-          starChoice: [
-            "The grass can be small or go across the page.",
-            "You can put the grass anywhere under the tree.",
-            "I'll stay with you while you add the grass."
-          ],
-          teacherComment: [
-            "Grass fits nicely with a tree, {child}.",
-            "The tree is getting a place to grow, {child}.",
-            "That grass will help the scene, {child}."
-          ],
-          teacherWonder: [
-            "I wonder if the grass will be light or dark green, {child}.",
-            "Maybe the grass can sit under the tree, {child}.",
-            "I wonder how much grass the tree needs, {child}."
-          ],
-          teacherToStar: [
-            "Star, should the grass go under the tree?",
-            "Star, do you think the grass should be light or dark green?",
-            "Star, where should the grass go?"
-          ],
-          teacherDirect: [
-            "Where should the grass go, {child}?",
-            "{child}, should the grass be little or big?",
-            "Should the grass go under the tree, {child}?"
-          ],
-          donePraise: [
-            "The tree has grass now, {child}.",
-            "Nice grass, {child}.",
-            "That makes the tree look like it is growing, {child}."
-          ]
+          id: "grass", title: "Add grass", text: "Add grass under the tree.", partText: "Part 2 of 4", palette: [COLORS.green, COLORS.lime],
+          colorIdeas: {[COLORS.green]: "darker grass", [COLORS.lime]: "lighter grass"},
+          colorSuggestion: "For the grass, dark green can make deeper grass and light green can make brighter grass.",
+          starLead: ["Now add grass under the tree.", "Next, put some grass near the tree.", "Now the tree can have grass."],
+          starChoice: ["The grass can go under the tree.", "You can make a little grass or a lot of grass.", "Choose where the grass should go."],
+          teacherComment: ["Grass is a good next part for the tree.", "The tree has somewhere to grow now.", "That makes the tree feel outside."],
+          teacherWonder: ["I wonder if the grass will be light or dark green.", "Maybe the grass can go under the tree.", "I wonder how much grass the tree needs."],
+          teacherToStar: ["Star, I wonder where the grass should go.", "Star, maybe the grass could go under the tree.", "Star, both greens could work here."],
+          teacherDirect: ["Should the grass be little or big?", "Where should the grass go?", "Should the grass go across the picture?"],
+          donePraise: ["Great job adding grass.", "Nice grass. The tree picture is looking good.", "Good job. The grass looks nice."]
         },
         {
-          id: "sun",
-          spokenName: "sun",
-          title: "Add a sun",
-          text: "Add a sun near the tree.",
-          partText: "Part 3 of 4",
-          palette: [COLORS.yellow, COLORS.orange],
-          colorIdeas: {
-            [COLORS.yellow]: "the sun",
-            [COLORS.orange]: "sun rays"
-          },
-          starLead: [
-            "Now let's add a sun for the tree.",
-            "The tree can have sunshine now.",
-            "Let's put a sun somewhere near the tree."
-          ],
-          starChoice: [
-            "You can make the sun big or small.",
-            "The sun can go wherever you want.",
-            "I'll stay here while you add the sun."
-          ],
-          teacherComment: [
-            "Sunshine is nice for a tree, {child}.",
-            "The tree scene is getting bright, {child}.",
-            "I like adding a sun here, {child}."
-          ],
-          teacherWonder: [
-            "I wonder where the sun will go, {child}.",
-            "Maybe the sun can have orange rays, {child}.",
-            "I wonder if the sun will be big or small, {child}."
-          ],
-          teacherToStar: [
-            "Star, do you think the sun should be big or small?",
-            "Star, should the sun be near the tree?",
-            "Star, should the sun have rays?"
-          ],
-          teacherDirect: [
-            "Where should the sun go, {child}?",
-            "{child}, should the sun be big or small?",
-            "Should the sun have rays, {child}?"
-          ],
-          donePraise: [
-            "The tree has sunshine now, {child}.",
-            "Nice sun, {child}.",
-            "That sun looks warm, {child}."
-          ]
+          id: "sun", title: "Add the sun", text: "Add sunshine to the tree picture.", partText: "Part 3 of 4", palette: [COLORS.yellow, COLORS.orange],
+          colorIdeas: {[COLORS.yellow]: "the sun", [COLORS.orange]: "sun rays"},
+          colorSuggestion: "For the sun, yellow can work well for the circle and orange can work well for the rays.",
+          starLead: ["Now add a sun.", "Next, add sunshine near the tree.", "The tree can have a sun now."],
+          starChoice: ["The sun can go in any open spot.", "The sun can be big or small.", "Choose where the sun should go."],
+          teacherComment: ["A sun is a bright next part.", "That will make the tree picture feel warm.", "The picture is getting brighter."],
+          teacherWonder: ["I wonder if the sun will have rays.", "Maybe the sun can go near the top.", "I wonder if the sun will be yellow or orange."],
+          teacherToStar: ["Star, I wonder where the sun should go.", "Star, maybe the sun could have rays.", "Star, yellow and orange could both work here."],
+          teacherDirect: ["Where should the sun go?", "Should the sun have rays?", "Should the sun be big or small?"],
+          donePraise: ["Great job. That sun looks bright.", "Nice work adding the sun.", "Good job. The tree picture looks brighter now."]
         },
         {
-          id: "birds",
-          spokenName: "birds",
-          title: "Add birds",
-          text: "Add simple birds near the tree.",
-          partText: "Part 4 of 4",
-          palette: [COLORS.black, COLORS.blue, COLORS.gray],
-          colorIdeas: {
-            [COLORS.black]: "little bird shapes",
-            [COLORS.blue]: "blue birds",
-            [COLORS.gray]: "soft gray birds"
-          },
-          starLead: [
-            "For the last part, let's add a few simple birds near the tree.",
-            "Now we can draw little birds by the tree.",
-            "Let's finish the tree scene with birds."
-          ],
-          starChoice: [
-            "Birds can be very simple, even little curved lines.",
-            "You can put the birds anywhere near the tree.",
-            "I'll stay with you while you add the birds."
-          ],
-          teacherComment: [
-            "Birds are a nice final part near a tree, {child}.",
-            "I like birds around trees, {child}.",
-            "That will make the tree scene feel alive, {child}."
-          ],
-          teacherWonder: [
-            "I wonder where the birds will go, {child}.",
-            "Maybe the birds will be small, {child}.",
-            "I wonder how many birds there will be, {child}."
-          ],
-          teacherToStar: [
-            "Star, should the birds be close to the tree?",
-            "Star, do you think the birds should be small?",
-            "Star, where could the birds go?"
-          ],
-          teacherDirect: [
-            "{child}, where should the birds go?",
-            "{child}, should the birds be big or small?",
-            "How many birds should we add, {child}?"
-          ],
-          donePraise: [
-            "The birds look nice near the tree, {child}.",
-            "Nice birds, {child}.",
-            "That finishes the tree scene, {child}."
-          ]
+          id: "bird", title: "Add a bird", text: "Finish the tree picture with a small bird.", partText: "Part 4 of 4", palette: [COLORS.blue, COLORS.red, COLORS.yellow],
+          colorIdeas: {[COLORS.blue]: "bird wings", [COLORS.red]: "the bird body", [COLORS.yellow]: "the beak"},
+          colorSuggestion: "For the bird, blue can work well for wings, red can work well for the body, and yellow can work well for the beak.",
+          starLead: ["Let's finish this picture with a bird.", "Now add a small bird near the tree.", "One more part: add a bird."],
+          starChoice: ["The bird can sit near the tree or fly nearby.", "You can make the bird small.", "Choose where the bird should go."],
+          teacherComment: ["A bird is a nice final part.", "That will make the tree picture feel friendly.", "I like that final detail."],
+          teacherWonder: ["I wonder where the bird will go.", "Maybe the bird can sit near the tree.", "I wonder what color the bird will be."],
+          teacherToStar: ["Star, I wonder where the bird should go.", "Star, maybe the bird could sit near the tree.", "Star, blue, red, and yellow could all help here."],
+          teacherDirect: ["Where should the bird go?", "What color should the bird be?", "Should the bird be flying or sitting?"],
+          donePraise: ["Great job. The bird looks nice.", "Good job. The tree picture looks complete.", "Nice work. You made a great tree picture."]
         }
       ]
     },
     {
       id: "school_scene",
       name: "School Scene",
-      sceneIntro: "Let's make a school scene together.",
-      newSceneLine: "Now let's make a school scene.",
-      completeLine: "The school scene is finished.",
+      sceneIntro: "Now let's make a school picture.",
+      newSceneLine: "Now let's make a school picture.",
+      completeLine: "The school picture is finished.",
       stages: [
         {
-          id: "school",
-          spokenName: "school",
-          title: "Draw a school",
-          text: "Draw a simple complete school building.",
-          partText: "Part 1 of 4",
-          palette: [COLORS.red, COLORS.brown, COLORS.blue],
-          colorIdeas: {
-            [COLORS.red]: "the school roof or door",
-            [COLORS.brown]: "the school building",
-            [COLORS.blue]: "school windows"
-          },
-          starLead: [
-            "Let's start this scene with a school. It can be a simple building.",
-            "First, let's draw a school. You can make it your way.",
-            "We'll make a school first, with a door or windows if you want."
-          ],
-          starChoice: [
-            "You can start with the building, door, roof, or windows.",
-            "Start with whichever school part feels easiest.",
-            "I'll stay here while you make the school."
-          ],
-          teacherComment: [
-            "I like starting with the school building, {child}.",
-            "This is a nice first part for a school scene, {child}.",
-            "I will watch while you and Star make the school, {child}."
-          ],
-          teacherWonder: [
-            "I wonder what color the school will be, {child}.",
-            "Maybe the school will have windows, {child}.",
-            "I wonder where the door will go, {child}."
-          ],
-          teacherToStar: [
-            "Star, do you think the school should have a door?",
-            "Star, should the school have windows?",
-            "Star, where might the school door go?"
-          ],
-          teacherDirect: [
-            "{child}, what color should the school be?",
-            "{child}, should the school have windows?",
-            "Where should the door go, {child}?"
-          ],
-          donePraise: [
-            "That school looks nice, {child}.",
-            "Nice school building, {child}.",
-            "I like the school you made, {child}."
-          ]
+          id: "school", title: "Draw a school", text: "Start with one school building.", partText: "Part 1 of 4", palette: [COLORS.red, COLORS.brown, COLORS.blue, COLORS.gray],
+          colorIdeas: {[COLORS.red]: "the roof or door", [COLORS.brown]: "the school walls or door", [COLORS.blue]: "the windows", [COLORS.gray]: "the sidewalk or roof"},
+          colorSuggestion: "For the school, red can work well for a roof or door, brown can work well for walls, blue can work well for windows, and gray can work well for a sidewalk or roof.",
+          starLead: ["Start with one school building.", "First, draw the school.", "Make the school building first."],
+          starChoice: ["The school can be big or small.", "You can choose where the door and windows go.", "Start with whichever school part feels easiest."],
+          teacherComment: ["A school is a good final picture.", "That is a nice main part.", "I like starting with the school building."],
+          teacherWonder: ["I wonder what color the school will be.", "Maybe the school will have windows.", "I wonder where the door will go."],
+          teacherToStar: ["Star, I wonder what part of the school will come first.", "Star, maybe the school could have blue windows.", "Star, the school might need a door."],
+          teacherDirect: ["What color should the school be?", "Where should the school door go?", "Should the school be big or small?"],
+          donePraise: ["Great job. That school looks good.", "Nice school. You are doing a great job.", "Good job making the school."]
         },
         {
-          id: "school_grass",
-          spokenName: "grass",
-          title: "Add grass",
-          text: "Add grass outside the school.",
-          partText: "Part 2 of 4",
-          palette: [COLORS.green, COLORS.lime],
-          colorIdeas: {
-            [COLORS.green]: "the school grass",
-            [COLORS.lime]: "light green grass"
-          },
-          starLead: [
-            "Now let's add grass outside the school.",
-            "The school can have grass around it now.",
-            "Let's give the school some outside space."
-          ],
-          starChoice: [
-            "You can put the grass under or around the school.",
-            "The grass can be small or go across the page.",
-            "I'll stay with you while you add the grass."
-          ],
-          teacherComment: [
-            "Grass outside the school is a good next part, {child}.",
-            "The school is getting a place outside, {child}.",
-            "I like the school scene growing, {child}."
-          ],
-          teacherWonder: [
-            "I wonder if the grass will be light green or dark green, {child}.",
-            "Maybe the grass can go in front of the school, {child}.",
-            "I wonder how much grass the school needs, {child}."
-          ],
-          teacherToStar: [
-            "Star, should the grass go in front of the school?",
-            "Star, do you think the grass should be light or dark green?",
-            "Star, where should the grass go?"
-          ],
-          teacherDirect: [
-            "Where should the grass go, {child}?",
-            "{child}, should the grass be little or big?",
-            "Should the grass go in front of the school, {child}?"
-          ],
-          donePraise: [
-            "The school has grass now, {child}.",
-            "Nice grass, {child}.",
-            "That makes the school scene feel outside, {child}."
-          ]
+          id: "grass", title: "Add grass", text: "Add grass outside the school.", partText: "Part 2 of 4", palette: [COLORS.green, COLORS.lime],
+          colorIdeas: {[COLORS.green]: "darker grass", [COLORS.lime]: "lighter grass"},
+          colorSuggestion: "For the grass, dark green can make deeper grass and light green can make brighter grass.",
+          starLead: ["Now add grass outside the school.", "Next, put grass near the school.", "Now the school can have grass outside."],
+          starChoice: ["The grass can go near the school.", "You can make a little grass or a lot of grass.", "Choose where the grass should go."],
+          teacherComment: ["Grass makes the school picture feel outside.", "That is a nice next part.", "The school has space outside now."],
+          teacherWonder: ["I wonder if the grass will be light or dark green.", "Maybe the grass can go outside the school.", "I wonder how much grass the school needs."],
+          teacherToStar: ["Star, I wonder where the grass should go.", "Star, maybe the grass could go outside the school.", "Star, both greens could work here."],
+          teacherDirect: ["Should the grass be little or big?", "Where should the grass go?", "Should the grass go across the picture?"],
+          donePraise: ["Great job adding grass.", "Nice grass. The school picture is looking good.", "Good job. The grass looks nice."]
         },
         {
-          id: "school_sun",
-          spokenName: "sun",
-          title: "Add a sun",
-          text: "Add a sun near the school.",
-          partText: "Part 3 of 4",
-          palette: [COLORS.yellow, COLORS.orange],
-          colorIdeas: {
-            [COLORS.yellow]: "the sun",
-            [COLORS.orange]: "sun rays"
-          },
-          starLead: [
-            "Now let's add a sun for the school scene.",
-            "The school can have sunshine now.",
-            "Let's put a sun somewhere near the school."
-          ],
-          starChoice: [
-            "You can make the sun big or small.",
-            "The sun can go wherever you want.",
-            "I'll stay here while you add the sun."
-          ],
-          teacherComment: [
-            "A sunny school scene feels cheerful, {child}.",
-            "The school is getting bright, {child}.",
-            "I like adding sunshine here, {child}."
-          ],
-          teacherWonder: [
-            "I wonder where the sun will go, {child}.",
-            "Maybe the sun can have orange rays, {child}.",
-            "I wonder if the sun will be big or small, {child}."
-          ],
-          teacherToStar: [
-            "Star, do you think the sun should be near the school?",
-            "Star, should the sun be big or small?",
-            "Star, should the sun have rays?"
-          ],
-          teacherDirect: [
-            "Where should the sun go, {child}?",
-            "Should the sun be big or small, {child}?",
-            "{child}, should the sun have rays?"
-          ],
-          donePraise: [
-            "The school has sunshine now, {child}.",
-            "Nice sun, {child}.",
-            "That sun makes the school scene bright, {child}."
-          ]
+          id: "sun", title: "Add the sun", text: "Add sunshine to the school picture.", partText: "Part 3 of 4", palette: [COLORS.yellow, COLORS.orange],
+          colorIdeas: {[COLORS.yellow]: "the sun", [COLORS.orange]: "sun rays"},
+          colorSuggestion: "For the sun, yellow can work well for the circle and orange can work well for the rays.",
+          starLead: ["Now add a sun.", "Next, add sunshine near the school.", "The school can have a sun now."],
+          starChoice: ["The sun can go in any open spot.", "The sun can be big or small.", "Choose where the sun should go."],
+          teacherComment: ["A sun is a bright next part.", "That will make the school picture feel warm.", "The picture is getting brighter."],
+          teacherWonder: ["I wonder if the sun will have rays.", "Maybe the sun can go near the top.", "I wonder if the sun will be yellow or orange."],
+          teacherToStar: ["Star, I wonder where the sun should go.", "Star, maybe the sun could have rays.", "Star, yellow and orange could both work here."],
+          teacherDirect: ["Where should the sun go?", "Should the sun have rays?", "Should the sun be big or small?"],
+          donePraise: ["Great job. That sun looks bright.", "Nice work adding the sun.", "Good job. The school picture looks brighter now."]
         },
         {
-          id: "children",
-          spokenName: "children outside the school",
-          title: "Add children",
-          text: "Add simple children outside the school.",
-          partText: "Part 4 of 4",
-          palette: [COLORS.blue, COLORS.pink, COLORS.purple, COLORS.green, COLORS.red, COLORS.brown, COLORS.black],
-          colorIdeas: {
-            [COLORS.blue]: "clothes for a child",
-            [COLORS.pink]: "clothes for a child",
-            [COLORS.purple]: "clothes for a child",
-            [COLORS.green]: "clothes or grass details",
-            [COLORS.red]: "clothes for a child",
-            [COLORS.brown]: "hair or shoes",
-            [COLORS.black]: "hair, shoes, or outlines"
-          },
-          starLead: [
-            "For the last part, let's add a few children outside the school.",
-            "Now we can draw simple children near the school.",
-            "Let's finish the school scene with children outside."
-          ],
-          starChoice: [
-            "The children can be simple stick figures if you want.",
-            "You can put them near the school door or on the grass.",
-            "I'll stay with you while you add the children."
-          ],
-          teacherComment: [
-            "Children outside the school make sense for this scene, {child}.",
-            "I like seeing the school feel friendly, {child}.",
-            "That is a nice final part for the school, {child}."
-          ],
-          teacherWonder: [
-            "I wonder where the children will stand, {child}.",
-            "Maybe the children can be playing outside, {child}.",
-            "I wonder what colors their clothes will be, {child}."
-          ],
-          teacherToStar: [
-            "Star, should the children stand near the door?",
-            "Star, do you think the children should be on the grass?",
-            "Star, what colors could their clothes be?"
-          ],
-          teacherDirect: [
-            "{child}, where should the children stand?",
-            "{child}, what color clothes should they have?",
-            "Should the children be near the school or on the grass, {child}?"
-          ],
-          donePraise: [
-            "The children look nice outside the school, {child}.",
-            "Nice children, {child}.",
-            "That finishes the school scene, {child}."
-          ]
+          id: "children", title: "Add children", text: "Finish the school picture with children outside.", partText: "Part 4 of 4", palette: [COLORS.red, COLORS.blue, COLORS.pink, COLORS.purple, COLORS.yellow],
+          colorIdeas: {[COLORS.red]: "a child's shirt", [COLORS.blue]: "a child's shirt or pants", [COLORS.pink]: "a child's shirt", [COLORS.purple]: "a child's shirt", [COLORS.yellow]: "hair or a shirt"},
+          colorSuggestion: "For the children, red, blue, pink, purple, or yellow can work well for clothes or small details.",
+          starLead: ["Let's finish this picture with children outside the school.", "Now add some children near the school.", "One more part: add children outside."],
+          starChoice: ["The children can be simple stick figures.", "You can put the children outside the school.", "Choose where the children should go."],
+          teacherComment: ["Children outside make the school picture feel friendly.", "That is a nice final part.", "I like that final detail."],
+          teacherWonder: ["I wonder where the children will stand.", "Maybe the children can be outside the school.", "I wonder what colors their clothes will be."],
+          teacherToStar: ["Star, I wonder where the children should go.", "Star, maybe the children could stand outside the school.", "Star, those colors could work for clothes."],
+          teacherDirect: ["Where should the children go?", "What colors should their clothes be?", "Should the children be next to the school?"],
+          donePraise: ["Great job. The children look nice.", "Good job. The school picture looks complete.", "Nice work. You made a great school picture."]
         }
       ]
     }
   ];
+
   let state = freshState();
 
   let currentTool = "pen";
@@ -909,12 +500,29 @@ document.addEventListener("DOMContentLoaded", function () {
 
   let speechQueue = Promise.resolve();
   let stageCheckTimer = null;
+  let passiveDoneTimer = null;
+  let passiveDoneEnabled = false;
+  let passiveMediaRecorder = null;
+  let passiveRecordingChunks = [];
+  let passiveRecordingTimer = null;
+  let passiveRestartTimer = null;
+  let passiveIgnoreNextStop = false;
+  let passiveTranscribing = false;
+
+  // Primary always-listening path for Chrome/Edge.
+  // This gives immediate text events instead of waiting for short audio chunks
+  // to finish uploading/transcribing. MediaRecorder remains as a fallback.
+  let passiveSpeechRecognition = null;
+  let passiveSpeechRestartTimer = null;
+  let passiveSpeechManuallyStopped = false;
+  let passiveLastDetectedText = "";
+  let passiveLastDetectedAt = 0;
+
+  const PASSIVE_DONE_CHUNK_MS = 2300;
   let colorReactionTimer = null;
-  let doneSpeechRecognition = null;
-  let doneListenerRestartTimer = null;
-  let doneListenerStageToken = null;
-  let doneListenerActive = false;
-  let doneDetectedLocked = false;
+  let canvasSaveTimer = null;
+  let savedCanvasDataToRestore = "";
+  let restoredCanvasData = false;
 
   const ringtone = new Audio("/static/images/ringtone.mp3");
   ringtone.loop = true;
@@ -953,20 +561,27 @@ document.addEventListener("DOMContentLoaded", function () {
       recentLines: [],
       recentColorLines: [],
       totalColorSelections: 0,
-      teacherLinesSpoken: 0,
+      totalStrokeCount: 0,
       teacherNameMentions: 0,
+      teacherColorLineCount: 0,
+      sceneChoiceAsked: false,
+      sideQuestionSceneIndex: -1,
+      lastSpontaneousQuestionAt: 0,
+      lastDoneHeardAt: 0,
+      pendingDoneConfirmation: false,
+      teacherSupportForStarCount: 0,
 
       stageStartedAt: 0,
       drawingCommentsThisStage: 0,
       colorCommentsThisStage: 0,
       doneChecksThisStage: 0,
+      doneRemindersThisStage: 0,
       noSpeechDoneChecksThisStage: 0,
       lastGuidanceAt: 0,
       lastColorCommentAt: 0,
+      lastColorCommentedColor: null,
+      sameColorCommentStreak: 0,
       stageAdvanceLocked: false,
-      doneListenerStartedAt: 0,
-      doneListenerSupported: false,
-      stageReminderCount: 0,
 
       finalCompletionStarted: false,
       gameCompleted: false,
@@ -991,51 +606,6 @@ document.addEventListener("DOMContentLoaded", function () {
       .replace(/\boh my\b/gi, "")
       .replace(/\s+/g, " ")
       .trim();
-  }
-
-  function removeChildNameFromLine(line) {
-    if (!childName || childName.toLowerCase() === "there") return line;
-
-    const escaped = childName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
-    return String(line || "")
-      .replace(new RegExp(`^${escaped},\\s*`, "i"), "")
-      .replace(new RegExp(`,\\s*${escaped}(?=[.?!])`, "gi"), "")
-      .replace(new RegExp(`,\\s*${escaped}\\b`, "gi"), "")
-      .replace(new RegExp(`\\b${escaped},\\s*`, "gi"), "")
-      .replace(/\s+/g, " ")
-      .replace(/\s+([.?!])/g, "$1")
-      .trim();
-  }
-
-  function balanceTeacherNameUse(line) {
-    if (!line || !childName || childName.toLowerCase() === "there") return line;
-
-    const escaped = childName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const hasName = new RegExp(`\\b${escaped}\\b`, "i").test(line);
-
-    if (!hasName) return line;
-
-    state.teacherLinesSpoken += 1;
-
-    const shouldKeepName = state.teacherNameMentions === 0 || state.teacherLinesSpoken % 4 === 0;
-
-    if (shouldKeepName) {
-      state.teacherNameMentions += 1;
-      return line;
-    }
-
-    return removeChildNameFromLine(line);
-  }
-
-  function prepareLineForActor(actor, text) {
-    let line = String(text || "");
-
-    if (actor === TEACHER_ACTOR) {
-      line = balanceTeacherNameUse(line);
-    }
-
-    return cleanLine(line);
   }
 
   function rememberLine(line) {
@@ -1071,24 +641,14 @@ document.addEventListener("DOMContentLoaded", function () {
     return scene.stages[Math.min(state.stageIndex, scene.stages.length - 1)];
   }
 
-  function stageSpokenName(stage = currentStage()) {
-    return stage.spokenName || stage.id.replaceAll("_", " ");
-  }
-
-  function getStageToken() {
-    return `${state.sceneIndex}:${state.stageIndex}:${state.stagesCompleted}`;
-  }
-
   function getSocialRound() {
     return Math.max(1, Math.min(TARGET_SOCIAL_ROUNDS, state.sceneIndex + 1));
   }
 
   function getProgressMode() {
-    const round = getSocialRound();
-
-    if (round === 1) return "star_leads";
-    if (round === 2) return "teacher_wonders_star_bridges";
-    if (round === 3) return "teacher_to_star_to_child";
+    if (state.sceneIndex <= 0) return "star_leads";
+    if (state.sceneIndex === 1) return "teacher_wonders_star_bridges";
+    if (state.sceneIndex === 2) return "teacher_to_star_to_child";
     return "teacher_direct_with_star_support";
   }
 
@@ -1096,7 +656,7 @@ document.addEventListener("DOMContentLoaded", function () {
     if (promptTitle) promptTitle.textContent = stage.title;
     if (promptText) {
       const scene = currentScene();
-      promptText.textContent = `${scene.name} • ${stage.partText}. ${stage.text} Tell us when this part is done.`;
+      promptText.textContent = `${scene.name} • ${stage.partText}. ${stage.text} Tell us whenever this part feels done.`;
     }
   }
 
@@ -1109,8 +669,72 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function updateQuietStatus(text) {
+    // Intentionally hidden from the child UI.
     if (quietStatusText) {
-      quietStatusText.textContent = text;
+      quietStatusText.textContent = "";
+    }
+  }
+
+  async function loadSavedDrawingProgress() {
+    try {
+      const response = await fetch(`/api/drawing-game/state?activity_id=${activityId}`);
+
+      if (!response.ok) return;
+
+      const data = await response.json();
+
+      if (!data.success || !data.state) return;
+
+      const saved = data.state;
+      const maxScene = drawingScenes.length - 1;
+
+      state.sceneIndex = Math.max(0, Math.min(maxScene, Number(saved.scene_index || 0)));
+      state.stageIndex = Math.max(0, Math.min(currentScene().stages.length - 1, Number(saved.stage_index || 0)));
+      state.scenesCompleted = Math.max(0, Number(saved.scenes_completed || 0));
+      state.stagesCompleted = Math.max(0, Number(saved.stages_completed || 0));
+      state.roundsCompleted = Math.max(0, Number(saved.rounds_completed || 0));
+      state.spokenResponses = Math.max(0, Number(saved.spoken_responses || 0));
+      state.silentWindows = Math.max(0, Number(saved.silent_windows || 0));
+      state.totalColorSelections = Math.max(0, Number(saved.total_color_selections || 0));
+      savedCanvasDataToRestore = String(saved.canvas_data || "");
+
+      if (!savedCanvasDataToRestore && state.stageIndex > 0) {
+        state.stageIndex = 0;
+      }
+
+      updateRoundDisplay();
+      setPrompt(currentStage());
+      setPalette(currentStage().palette);
+    } catch (error) {
+      console.warn("Could not load drawing progress:", error);
+    }
+  }
+
+  async function saveDrawingProgress(extra = {}) {
+    if (state.gameCompleted) return;
+
+    const payload = {
+      activity_id: activityId,
+      scene_index: state.sceneIndex,
+      stage_index: state.stageIndex,
+      scenes_completed: state.scenesCompleted,
+      stages_completed: state.stagesCompleted,
+      rounds_completed: state.roundsCompleted,
+      spoken_responses: state.spokenResponses,
+      silent_windows: state.silentWindows,
+      total_color_selections: state.totalColorSelections,
+      canvas_data: Object.prototype.hasOwnProperty.call(extra, "canvas_data") ? extra.canvas_data : getCanvasData(),
+      ...extra
+    };
+
+    try {
+      await fetch("/api/drawing-game/save-progress", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+    } catch (error) {
+      console.warn("Could not save drawing progress:", error);
     }
   }
 
@@ -1148,10 +772,12 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   async function speakNow(actor, text, options = {}) {
-    const hadDoneListener = doneListenerActive;
-    if (hadDoneListener) stopContinuousDoneListener({ keepMicClass: false });
+    if (typeof options.shouldStart === "function" && !options.shouldStart()) {
+      return;
+    }
 
-    const calmText = prepareLineForActor(actor, text);
+    const rawText = typeof text === "function" ? text() : text;
+    const calmText = cleanLine(rawText);
 
     if (!calmText || state.gameCompleted) return;
 
@@ -1178,6 +804,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
       const data = await response.json();
 
+      if (typeof options.shouldPlay === "function" && !options.shouldPlay()) {
+        return;
+      }
+
       if (data.success && data.audio) {
         await playCharacterAudio(actor, data.audio);
       } else {
@@ -1192,13 +822,11 @@ document.addEventListener("DOMContentLoaded", function () {
       if (tile) tile.classList.remove("speaking");
 
       stopMouthAnimation();
-      updateQuietStatus("Drawing time");
+      updateQuietStatus("Drawing together");
     }
 
     if (options.expectsResponse) {
       await askForResponse(actor, calmText, options);
-    } else if (hadDoneListener && !state.gameCompleted && !state.stageAdvanceLocked) {
-      startContinuousDoneListener({ retryLater: true });
     }
   }
 
@@ -1212,7 +840,13 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     try {
-      mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaStream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        }
+      });
       state.micReady = true;
       return mediaStream;
     } catch (error) {
@@ -1220,6 +854,27 @@ document.addEventListener("DOMContentLoaded", function () {
       state.micDenied = true;
       return null;
     }
+  }
+
+  function isExplicitRecorderActive() {
+    return Boolean(mediaRecorder && mediaRecorder.state && mediaRecorder.state !== "inactive");
+  }
+
+  function isPassiveRecorderActive() {
+    return Boolean(passiveMediaRecorder && passiveMediaRecorder.state && passiveMediaRecorder.state !== "inactive");
+  }
+
+  function updateMicIndicator() {
+    if (!micControl) return;
+
+    const shouldShowListening = Boolean(
+      state.isListening
+      || state.waitingForResponse
+      || passiveDoneEnabled
+      || isPassiveRecorderActive()
+    );
+
+    micControl.classList.toggle("quiet-listening", shouldShowListening);
   }
 
   function introIsVisible() {
@@ -1302,15 +957,23 @@ document.addEventListener("DOMContentLoaded", function () {
         startMouthAnimation(actor, activeAudio);
       });
 
-      activeAudio.addEventListener("ended", function () {
+      let resolvedAudio = false;
+
+      function resolveAudioPlayback() {
+        if (resolvedAudio) return;
+        resolvedAudio = true;
         stopMouthAnimation();
         resolve();
+      }
+
+      activeAudio.addEventListener("ended", resolveAudioPlayback);
+      activeAudio.addEventListener("pause", function () {
+        if (activeAudio && activeAudio.currentTime > 0) {
+          resolveAudioPlayback();
+        }
       });
 
-      activeAudio.addEventListener("error", function () {
-        stopMouthAnimation();
-        resolve();
-      });
+      activeAudio.addEventListener("error", resolveAudioPlayback);
 
       activeAudio.play().catch(function () {
         stopMouthAnimation();
@@ -1434,24 +1097,36 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   async function startResponseWindow(question, seconds) {
+    const shouldResumePassiveAfterResponse = passiveDoneEnabled && question?.intent !== "passive_stage_done";
+
+    if (shouldResumePassiveAfterResponse) {
+      pausePassiveDoneListenForResponse();
+    }
+
     const stream = await ensureMicPermission();
 
     if (!stream) {
       state.waitingForResponse = false;
       state.currentQuestion = null;
+      if (shouldResumePassiveAfterResponse) schedulePassiveDoneListen(400);
       await handleNoSpeech(question);
+      updateMicIndicator();
       return;
     }
+
+    question.resumePassiveAfterResponse = shouldResumePassiveAfterResponse;
 
     const tile = getTile(question.actor || "star");
 
     if (tile) tile.classList.add("soft-listening");
     if (micControl) micControl.classList.add("quiet-listening");
+    updateMicIndicator();
 
     updateQuietStatus("Listening quietly");
 
     recordingChunks = [];
     state.isListening = true;
+    updateMicIndicator();
 
     return new Promise(resolve => {
       try {
@@ -1582,22 +1257,22 @@ document.addEventListener("DOMContentLoaded", function () {
     const tile = getTile(question.actor || "star");
 
     if (tile) tile.classList.remove("soft-listening");
-    if (micControl) micControl.classList.remove("quiet-listening");
+    updateMicIndicator();
 
-    updateQuietStatus("Drawing time");
-
-    if (!recordingChunks.length) {
-      await handleNoSpeech(question);
-      return null;
-    }
-
-    const blob = new Blob(recordingChunks, {
-      type: recordingChunks[0]?.type || "audio/webm"
-    });
-
-    recordingChunks = [];
+    updateQuietStatus("Drawing together");
 
     try {
+      if (!recordingChunks.length) {
+        await handleNoSpeech(question);
+        return null;
+      }
+
+      const blob = new Blob(recordingChunks, {
+        type: recordingChunks[0]?.type || "audio/webm"
+      });
+
+      recordingChunks = [];
+
       const formData = new FormData();
       formData.append("audio", blob, "drawing-response.webm");
 
@@ -1626,6 +1301,18 @@ document.addEventListener("DOMContentLoaded", function () {
       console.error("Drawing transcription error:", error);
       await handleNoSpeech(question);
       return null;
+    } finally {
+      recordingChunks = [];
+      mediaRecorder = null;
+
+      if (question?.resumePassiveAfterResponse
+          && !state.gameCompleted
+          && !state.stageAdvanceLocked
+          && !state.pendingDoneConfirmation) {
+        schedulePassiveDoneListen(350);
+      }
+
+      updateMicIndicator();
     }
   }
 
@@ -1653,6 +1340,29 @@ document.addEventListener("DOMContentLoaded", function () {
     return cleaned;
   }
 
+  function interruptCurrentCharacterAudio() {
+    if (activeAudio) {
+      try {
+        activeAudio.pause();
+        activeAudio.currentTime = 0;
+      } catch (error) {}
+    }
+
+    stopMouthAnimation();
+    state.isSpeaking = false;
+    speechQueue = Promise.resolve();
+  }
+
+  async function handleDoneIntentFromSpeech() {
+    const now = Date.now();
+
+    if (now - state.lastDoneHeardAt < 1200) return;
+
+    state.lastDoneHeardAt = now;
+    interruptCurrentCharacterAudio();
+    await askStarConfirmStageDone();
+  }
+
   function countWords(text) {
     return String(text || "")
       .trim()
@@ -1669,22 +1379,123 @@ document.addEventListener("DOMContentLoaded", function () {
       .filter(Boolean);
   }
 
+  function transcriptHasExplicitDoneIntent(text) {
+    const lower = String(text || "").toLowerCase();
+
+    const explicitDonePhrases = [
+      "i'm done", "im done", "i am done", "all done", "i'm finished",
+      "im finished", "i am finished", "finished", "done", "this is done",
+      "it is done", "it's done", "its done", "next part", "move on",
+      "go to the next", "ready for the next", "ready to move", "that's it",
+      "that is it"
+    ];
+
+    return explicitDonePhrases.some(phrase => lower.includes(phrase));
+  }
+
+  function transcriptHasPassiveDoneIntent(text) {
+    const lower = String(text || "").toLowerCase();
+
+    const keepPhrases = [
+      "not done", "not finished", "i'm not done", "im not done",
+      "i am not done", "more time", "keep drawing", "keep working",
+      "wait", "not yet", "a little more"
+    ];
+
+    if (keepPhrases.some(phrase => lower.includes(phrase))) {
+      return false;
+    }
+
+    const nextPart = nextStageNameForSpeech().toLowerCase();
+    const nextScene = nextSceneNameForSpeech().toLowerCase();
+
+    const donePhrases = [
+      "i'm done", "im done", "i am done", "all done",
+      "i'm finished", "im finished", "i am finished",
+      "this is done", "it is done", "it's done", "its done",
+      "i'm ready", "im ready", "i am ready",
+      "move on", "next part", "next stage", "go to the next",
+      "ready for the next", "ready to move", "let's move on", "lets move on",
+      "that's it", "that is it"
+    ];
+
+    if (donePhrases.some(phrase => lower.includes(phrase))) {
+      return true;
+    }
+
+    if (nextPart && nextPart !== "the next part") {
+      const nextPartPhrases = [
+        `draw the ${nextPart}`,
+        `drawing the ${nextPart}`,
+        `add the ${nextPart}`,
+        `start the ${nextPart}`,
+        `do the ${nextPart}`,
+        `let's do the ${nextPart}`,
+        `lets do the ${nextPart}`,
+        `go to the ${nextPart}`
+      ];
+
+      if (nextPartPhrases.some(phrase => lower.includes(phrase))) {
+        return true;
+      }
+    }
+
+    if (nextScene && nextScene !== "the next picture") {
+      const sceneName = nextScene.replace(/^the /, "");
+      const nextScenePhrases = [
+        `draw the ${sceneName}`,
+        `start the ${sceneName}`,
+        `do the ${sceneName}`,
+        `go to the ${sceneName}`
+      ];
+
+      if (nextScenePhrases.some(phrase => lower.includes(phrase))) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   function classifyStageDoneResponse(text) {
     const lower = String(text || "").toLowerCase();
     const words = new Set(normalizedWords(lower));
+    const nextPart = nextStageNameForSpeech().toLowerCase();
+    const nextScene = nextSceneNameForSpeech().toLowerCase();
 
-    const doneWords = [
-      "done", "finished", "finish", "next", "ready", "completed",
-      "complete", "move on", "go on", "all done", "that's it", "that is it"
+    const stopPhrases = [
+      "done for the day", "be done for the day", "stop for today",
+      "stop now", "i want to stop", "go back", "dashboard", "no more"
     ];
 
-    const keepWords = [
-      "no", "not yet", "more", "keep", "continue", "wait", "still",
-      "again", "add more", "not done", "not finished"
+    const moveWords = [
+      "draw", "drawing", "add", "start", "go", "move", "next",
+      "ready", "continue", "let's", "lets", "want"
     ];
 
-    if (doneWords.some(word => lower.includes(word))) return "done";
-    if (keepWords.some(word => lower.includes(word))) return "keep";
+    const keepPhrases = [
+      "keep adding", "keep working", "continue working", "add more",
+      "more details", "not yet", "not done", "not finished",
+      "keep going", "stay here", "wait", "more time", "a little more"
+    ];
+
+    const mentionsNextPart = nextPart && nextPart !== "the next part" && lower.includes(nextPart);
+    const mentionsNextScene = nextScene && nextScene !== "the next picture" && lower.includes(nextScene.replace(/^the /, ""));
+    const hasMoveWord = moveWords.some(word => lower.includes(word));
+    const asksForMoreDrawingTime = lower.includes("more time") || lower.includes("a little more") || lower.includes("more details");
+
+    if (stopPhrases.some(phrase => lower.includes(phrase))) return "stop";
+
+    // After Star offers the next part/scene, answers like "draw the grass" or even
+    // just "grass" should count as moving on, not as unclear or "keep drawing."
+    if ((mentionsNextPart || mentionsNextScene) && !lower.includes("not ") && !asksForMoreDrawingTime) {
+      if (hasMoveWord || words.size <= 4) return "done";
+    }
+
+    if (lower.includes("move on") || lower.includes("next part") || lower.includes("next stage")) return "done";
+    if (keepPhrases.some(phrase => lower.includes(phrase))) return "keep";
+    if (words.has("no") || words.has("nope") || words.has("nah")) return "keep";
+    if (transcriptHasExplicitDoneIntent(text)) return "done";
 
     if (words.has("yes") || words.has("yeah") || words.has("yep") || words.has("okay") || words.has("ok")) {
       return "done";
@@ -1694,7 +1505,83 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function transcriptSoundsLikeDone(text) {
-    return classifyStageDoneResponse(text) === "done";
+    return transcriptHasExplicitDoneIntent(text);
+  }
+
+  function isLikelyChildQuestion(text) {
+    const lower = String(text || "").toLowerCase().trim();
+    if (!lower) return false;
+
+    const starters = [
+      "how", "what", "why", "where", "when", "can", "could",
+      "should", "do you", "does", "did", "is", "are", "am i"
+    ];
+
+    return lower.includes("?") || starters.some(starter => lower.startsWith(starter + " "));
+  }
+
+  function transcriptAsksAboutFinished(text) {
+    const lower = String(text || "").toLowerCase();
+    return (
+      lower.includes("ready")
+      || lower.includes("finish")
+      || lower.includes("finished")
+      || lower.includes("done")
+      || lower.includes("move on")
+      || lower.includes("next")
+    );
+  }
+
+  function transcriptAsksAboutDrawing(text) {
+    const lower = String(text || "").toLowerCase();
+    return (
+      lower.includes("drawing")
+      || lower.includes("picture")
+      || lower.includes("look")
+      || lower.includes("looks")
+      || lower.includes("good")
+      || lower.includes("nice")
+      || lower.includes("color")
+    );
+  }
+
+  async function handleSpontaneousQuestion(transcript) {
+    const now = Date.now();
+
+    if (now - state.lastSpontaneousQuestionAt < 5000) {
+      schedulePassiveDoneListen(1800);
+      return;
+    }
+
+    state.lastSpontaneousQuestionAt = now;
+
+    if (transcriptAsksAboutFinished(transcript)) {
+      await speakNow(TEACHER_ACTOR, pickLine([
+        "It looks close to ready to me. You can tell Star when this part is done, or add a little more.",
+        "I think this part is looking good. If it feels finished, you can tell Star that you are done.",
+        "It is looking ready. You can keep adding details, or tell Star when you are done."
+      ]));
+      schedulePassiveDoneListen(1200);
+      return;
+    }
+
+    if (transcriptAsksAboutDrawing(transcript)) {
+      await speakNow(TEACHER_ACTOR, pickLine([
+        "It is looking good so far. Nice work.",
+        "I like how your picture is coming together. Great job.",
+        "Your drawing is looking really nice so far."
+      ]));
+      schedulePassiveDoneListen(1200);
+      return;
+    }
+
+    await speakNow("star", pickLine([
+      "Good question. You can keep drawing, and the Teacher can help notice the picture.",
+      "That's a good question. Keep going when you're ready.",
+      "Good question. You can keep working on this part."
+    ]));
+
+    schedulePassiveDoneListen(1200);
   }
 
   async function handleSpeech(transcript, question) {
@@ -1712,6 +1599,21 @@ document.addEventListener("DOMContentLoaded", function () {
       state.redirectedQuestions += 1;
     }
 
+    if (question?.intent === "passive_stage_done") {
+      if (transcriptHasPassiveDoneIntent(transcript)) {
+        await handleDoneIntentFromSpeech();
+        return;
+      }
+
+      if (isLikelyChildQuestion(transcript)) {
+        await handleSpontaneousQuestion(transcript);
+        return;
+      }
+
+      schedulePassiveDoneListen(1600);
+      return;
+    }
+
     if (question?.intent === "scene_choice") {
       await handleSceneChoiceResponse(transcript);
       return;
@@ -1722,13 +1624,35 @@ document.addEventListener("DOMContentLoaded", function () {
       return;
     }
 
-    if (hasDrawnThisStage && transcriptSoundsLikeDone(transcript)) {
+    if (question?.intent === "side_question") {
       await speakNow("star", pickLine([
-        "Okay. Let's move to the next part.",
-        "Got it. We can go to the next part.",
-        "Okay, this part can be finished."
+        "Thanks for telling me.",
+        "That sounds nice.",
+        "I like hearing about that.",
+        "That makes sense."
       ]));
-      await advanceStage();
+
+      if (getProgressMode() !== "star_leads" && drawingHasBase()) {
+        await sleep(120);
+        await speakNow(TEACHER_ACTOR, pickLine([
+          "I liked hearing that.",
+          "That was nice to hear.",
+          "Thank you for sharing that."
+        ]));
+      }
+
+      scheduleStageCheck(6500);
+      schedulePassiveDoneListen(1400);
+      return;
+    }
+
+    if (hasDrawnThisStage && transcriptSoundsLikeDone(transcript)) {
+      await handleDoneIntentFromSpeech();
+      return;
+    }
+
+    if (isLikelyChildQuestion(transcript) && (!question || question.intent === "side_question" || question.source === "passive-stage-done")) {
+      await handleSpontaneousQuestion(transcript);
       return;
     }
 
@@ -1736,7 +1660,7 @@ document.addEventListener("DOMContentLoaded", function () {
       await speakNow(TEACHER_ACTOR, pickLine([
         "Nice choice.",
         "Good choice.",
-        "Thanks for telling me.",
+        "Thanks for telling me. Good job.",
         "Okay. I like that idea.",
         "That sounds good."
       ]));
@@ -1744,28 +1668,26 @@ document.addEventListener("DOMContentLoaded", function () {
       await sleep(180);
 
       await speakNow("star", pickLine([
-        "You can add that.",
-        "That works for your picture.",
-        "Good idea. Keep going.",
-        "That could look nice in your picture."
+        "Let's use that idea.",
+        "That works for this picture.",
+        "Keep going when you're ready.",
+        "That sounds good for this part."
       ]));
 
-      startContinuousDoneListener({ retryLater: true });
-      scheduleStageCheck(12000);
+      scheduleStageCheck(6500);
       return;
     }
 
     if (question?.source === "teacher-redirect") {
       await speakNow("star", pickLine([
-        "Good idea.",
-        "Nice. You can add that.",
         "Okay. Let's use that.",
         "That works.",
-        "That sounds good."
+        "That sounds good.",
+        "Let's try that.",
+        "Keep going when you're ready."
       ]));
 
-      startContinuousDoneListener({ retryLater: true });
-      scheduleStageCheck(12000);
+      scheduleStageCheck(6500);
       return;
     }
 
@@ -1780,50 +1702,245 @@ document.addEventListener("DOMContentLoaded", function () {
     await speakNow("star", pickLine([
       "Good idea.",
       "Nice. Let's keep drawing.",
-      "Okay. You can add that.",
+      "Okay. Let's add that.",
       "That sounds good.",
-      "You can try that.",
+      "Let's try that.",
       "That will look nice."
     ]));
 
-    startContinuousDoneListener({ retryLater: true });
-    scheduleStageCheck(12000);
+    scheduleStageCheck(6500);
+  }
+
+  function friendlyStageNameForSpeech(stage = currentStage()) {
+    const names = {
+      flower: "flower",
+      grass: "grass",
+      sun: "sun",
+      butterfly: "butterfly",
+      house: "house",
+      yard: "yard",
+      tree: "tree",
+      school: "school",
+      children: "children"
+    };
+
+    return names[stage.id] || stage.title.replace(/^Add\s+/i, "").replace(/^Draw\s+/i, "").toLowerCase();
+  }
+
+  function friendlySceneNameForSpeech(scene = currentScene()) {
+    const names = {
+      flower_scene: "flower picture",
+      house_scene: "house picture",
+      tree_scene: "tree picture",
+      school_scene: "school picture"
+    };
+
+    return names[scene.id] || String(scene.name || "picture").toLowerCase();
+  }
+
+  function nextStageNameForSpeech() {
+    const scene = currentScene();
+    const nextStage = scene.stages[state.stageIndex + 1];
+
+    if (!nextStage) return "the next part";
+
+    return friendlyStageNameForSpeech(nextStage);
+  }
+
+  function nextSceneNameForSpeech() {
+    const nextScene = drawingScenes[state.sceneIndex + 1];
+
+    if (!nextScene) return "the next picture";
+
+    return friendlySceneNameForSpeech(nextScene);
+  }
+
+  function isLastStageInCurrentScene() {
+    const scene = currentScene();
+    return state.stageIndex >= scene.stages.length - 1;
+  }
+
+  function isLastSceneInGame() {
+    return state.sceneIndex >= drawingScenes.length - 1;
+  }
+
+  async function askStarConfirmStageDone() {
+    if (state.pendingDoneConfirmation || state.stageAdvanceLocked || state.gameCompleted) return;
+
+    state.pendingDoneConfirmation = true;
+    clearStageCheckTimer();
+    clearPassiveDoneTimer();
+
+    const stage = currentStage();
+    const partName = friendlyStageNameForSpeech();
+    const sceneName = friendlySceneNameForSpeech();
+
+    await speakNow(TEACHER_ACTOR, pickLine([
+      `Your ${partName} is looking great so far.`,
+      `I like how your ${partName} is coming together.`,
+      `This is looking really nice so far.`
+    ]));
+
+    await sleep(140);
+
+    let options;
+
+    if (isLastStageInCurrentScene() && !isLastSceneInGame()) {
+      const nextSceneName = nextSceneNameForSpeech();
+
+      options = [
+        `Do you want to be done with this ${sceneName} and draw the ${nextSceneName} now, or keep adding details?`,
+        `Should we start the ${nextSceneName} now, or do you want more time with this ${sceneName}?`,
+        `Do you want to move on to drawing the ${nextSceneName}, or keep working on this ${sceneName}?`
+      ];
+    } else if (isLastStageInCurrentScene() && isLastSceneInGame()) {
+      options = [
+        `Do you want to finish drawing for today, or keep adding details to this ${sceneName}?`,
+        `Should we be done drawing for today, or do you want more time with this ${sceneName}?`,
+        `Do you want to finish for today, or keep working on this ${sceneName}?`
+      ];
+    } else {
+      const nextPartName = nextStageNameForSpeech();
+
+      options = [
+        `Do you want to continue adding details to the ${partName}, or move on to drawing the ${nextPartName} now?`,
+        `Should we draw the ${nextPartName} now, or do you want more time with the ${partName}?`,
+        `Do you want to move on to drawing the ${nextPartName}, or keep working on the ${partName}?`
+      ];
+    }
+
+    await queueSpeak("star", pickLine(options), {
+      expectsResponse: true,
+      askType: "choice",
+      source: "star-done-confirm",
+      intent: "stage_done",
+      responseSeconds: 8.5
+    });
   }
 
   async function handleStageDoneResponse(transcript) {
     const choice = classifyStageDoneResponse(transcript);
+    const shouldMoveStraightToNextScene = isLastStageInCurrentScene() && !isLastSceneInGame();
+    const shouldFinishGame = isLastStageInCurrentScene() && isLastSceneInGame();
+
+    state.pendingDoneConfirmation = false;
+
+    if (choice === "stop") {
+      await speakNow("star", pickLine([
+        "Okay. We can be done for the day.",
+        "Okay, we can stop here for today.",
+        "Sure. We can be done for the day."
+      ]));
+      await saveDrawingProgress();
+      cleanupMedia();
+      window.location.href = "/dashboard";
+      return;
+    }
 
     if (choice === "done") {
-      await speakNow("star", pickLine([
-        "Okay. Let's move to the next part.",
-        "Great. This part is done.",
-        "Okay, we can go to the next part."
-      ]));
+      if (shouldFinishGame) {
+        await speakNow("star", pickLine([
+          "Okay. We can finish drawing for today.",
+          "Got it. This picture is ready.",
+          "Okay. We can be done drawing for today."
+        ]));
+      } else if (shouldMoveStraightToNextScene) {
+        await speakNow("star", pickLine([
+          `Okay. Let's move on to drawing the ${nextSceneNameForSpeech()}.`,
+          `Got it. We can start the ${nextSceneNameForSpeech()} now.`,
+          `Okay. This ${friendlySceneNameForSpeech()} is ready, so we can go to the ${nextSceneNameForSpeech()}.`
+        ]));
+      } else {
+        await speakNow("star", pickLine([
+          `Okay. Let's move to the ${nextStageNameForSpeech()}.`,
+          `Got it. We can go to the ${nextStageNameForSpeech()}.`,
+          `Okay, this part is ready. Let's add the ${nextStageNameForSpeech()}.`
+        ]));
+      }
 
-      await advanceStage();
+      await advanceStage({
+        skipSceneChoice: shouldMoveStraightToNextScene,
+        skipTeacherPraise: true
+      });
       return;
     }
 
     if (choice === "keep") {
       await speakNow("star", pickLine([
-        "Okay. We can keep working on this part.",
-        "Sure. You can add a little more.",
-        "Okay, we can keep drawing."
+        "Okay. Keep working on this part.",
+        "Sure. Add a little more when you want.",
+        "Okay, keep going with this part."
       ]));
 
-      startContinuousDoneListener({ retryLater: true });
-      scheduleStageCheck(12000);
+      scheduleStageCheck(11000);
+      schedulePassiveDoneListen(1600);
       return;
     }
 
     await speakNow("star", pickLine([
-      "Okay. We can keep drawing for a little bit.",
-      "That's okay. We can add a little more.",
-      "No rush. We can keep working on this part."
+      "That's okay. Keep working on this part for now.",
+      "No rush. You can keep going.",
+      "That's okay. Add more when you are ready."
     ]));
 
-    startContinuousDoneListener({ retryLater: true });
-    scheduleStageCheck(12000);
+    scheduleStageCheck(11000);
+    schedulePassiveDoneListen(1600);
+  }
+
+  function classifySceneChoice(text) {
+    const lower = String(text || "").toLowerCase();
+    const words = new Set(normalizedWords(lower));
+
+    const stopPhrases = [
+      "be done", "done for the day", "all done", "i'm done", "im done",
+      "i am done", "stop", "finish", "finished", "no more", "go back",
+      "dashboard", "that's enough", "that is enough", "i want to stop"
+    ];
+
+    const continuePhrases = [
+      "another", "next", "more", "keep going", "continue", "keep drawing",
+      "play another", "draw another", "one more", "yes", "yeah", "yep", "sure", "okay", "ok"
+    ];
+
+    if (stopPhrases.some(phrase => lower.includes(phrase))) return "stop";
+    if (continuePhrases.some(phrase => lower.includes(phrase))) return "continue";
+
+    if (words.has("no") || words.has("nope") || words.has("nah")) return "stop";
+
+    return "unclear";
+  }
+
+  async function handleSceneChoiceResponse(transcript) {
+    const choice = classifySceneChoice(transcript);
+
+    if (choice === "stop") {
+      await speakNow("star", pickLine([
+        "Okay. We can be done for the day.",
+        "Okay, we can stop here for today.",
+        "Sure. We can be done for the day."
+      ]));
+      await saveDrawingProgress();
+      cleanupMedia();
+      window.location.href = "/dashboard";
+      return;
+    }
+
+    if (choice === "continue") {
+      await speakNow("star", pickLine([
+        `Okay. Let's move on to drawing the ${nextSceneNameForSpeech()}.`,
+        `Great. We can start the ${nextSceneNameForSpeech()} now.`,
+        `Okay, let's go to the ${nextSceneNameForSpeech()}.`
+      ]));
+      await continueToNextScene();
+      return;
+    }
+
+    await speakNow("star", pickLine([
+      "That's okay. We can pause here for a moment.",
+      "No worries. You can tell me if you want another picture or if you are done for the day.",
+      "That's okay. We can wait here."
+    ]));
+    await offerContinueAfterScene();
   }
 
   async function handleNoSpeech(question) {
@@ -1831,25 +1948,33 @@ document.addEventListener("DOMContentLoaded", function () {
 
     if (!question) return;
 
+    if (question.intent === "passive_stage_done") {
+      schedulePassiveDoneListen(1600);
+      return;
+    }
+
     if (question.intent === "scene_choice") {
       await speakNow("star", pickLine([
-        "That's okay. We can make another picture.",
-        "No rush. We'll keep going to the next picture.",
-        "That's okay. Let's try the next picture."
+        "That's okay. We can wait here.",
+        "No rush. You can tell me if you want another picture or if you are done for the day.",
+        "That's okay. We do not have to decide right away."
       ]));
-      beginNextScene();
+      await offerContinueAfterScene();
       return;
     }
 
     if (question.intent === "stage_done") {
+      state.pendingDoneConfirmation = false;
+      state.noSpeechDoneChecksThisStage += 1;
+
       await speakNow("star", pickLine([
-        "That's okay. We can keep drawing.",
-        "No rush. We can keep working on this part.",
-        "That's okay. You can keep adding more."
+        "That's okay. Keep working on this part for now.",
+        "No rush. You can add more when you want.",
+        "That's okay. Keep going when you're ready."
       ]));
 
-      startContinuousDoneListener({ retryLater: true });
-      scheduleStageCheck(12000);
+      scheduleStageCheck(9000);
+      schedulePassiveDoneListen(1600);
       return;
     }
 
@@ -1863,24 +1988,75 @@ document.addEventListener("DOMContentLoaded", function () {
       await sleep(160);
 
       await speakNow("star", pickLine([
-        "I'll stay here while you keep drawing.",
-        "You can just keep going.",
-        "That's okay. Keep drawing."
+        "That's okay. Keep going when you're ready.",
+        "No rush. You can add more when you want.",
+        "That's okay. Take your time."
       ]));
 
-      startContinuousDoneListener({ retryLater: true });
-      scheduleStageCheck(12000);
+      scheduleStageCheck(6500);
       return;
     }
 
     await speakNow("star", pickLine([
-      "That's okay. We can keep drawing.",
-      "No rush. I'll stay here with you.",
-      "That's okay. You can just keep going."
+      "That's okay. Keep going when you're ready.",
+      "No rush. You can add more when you want.",
+      "That's okay. Take your time."
     ]));
 
-    startContinuousDoneListener({ retryLater: true });
-    scheduleStageCheck(12000);
+    scheduleStageCheck(6500);
+  }
+
+  function getCanvasData() {
+    if (!canvas) return "";
+
+    try {
+      return canvas.toDataURL("image/png");
+    } catch (error) {
+      console.warn("Could not read drawing canvas:", error);
+      return "";
+    }
+  }
+
+  function restoreCanvasFromData(canvasData) {
+    return new Promise(resolve => {
+      if (!canvasData || restoredCanvasData) {
+        resolve(false);
+        return;
+      }
+
+      const image = new Image();
+
+      image.onload = function () {
+        try {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+          restoredCanvasData = true;
+          resolve(true);
+        } catch (error) {
+          console.warn("Could not restore drawing canvas:", error);
+          resolve(false);
+        }
+      };
+
+      image.onerror = function () {
+        resolve(false);
+      };
+
+      image.src = canvasData;
+    });
+  }
+
+  function scheduleCanvasSave(delayMs = 1800) {
+    if (state.gameCompleted) return;
+
+    if (canvasSaveTimer) {
+      clearTimeout(canvasSaveTimer);
+    }
+
+    canvasSaveTimer = setTimeout(function () {
+      canvasSaveTimer = null;
+      saveDrawingProgress();
+    }, delayMs);
   }
 
   function resizeCanvasForDisplay() {
@@ -1925,7 +2101,8 @@ document.addEventListener("DOMContentLoaded", function () {
     if (doneDrawingBtn) doneDrawingBtn.disabled = false;
 
     maybeReactToDrawingStart();
-    scheduleStageCheck(16000);
+    scheduleStageCheck(12000);
+    schedulePassiveDoneListen(1800);
   }
 
   function draw(event) {
@@ -1946,22 +2123,31 @@ document.addEventListener("DOMContentLoaded", function () {
 
     lastPoint = point;
     strokeCountThisStage += 1;
+    state.totalStrokeCount += 1;
 
     maybeReactDuringDrawing();
 
     if (strokeCountThisStage >= 15) {
-      scheduleStageCheck(14000);
+      scheduleStageCheck(10000);
+      schedulePassiveDoneListen(1200);
     }
+
+    scheduleCanvasSave(1800);
   }
 
   function stopDrawing() {
     isDrawing = false;
     lastPoint = null;
+
+    if (hasDrawnThisStage) {
+      scheduleCanvasSave(400);
+    }
   }
 
   function clearCanvas() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     resetStageDrawingState();
+    saveDrawingProgress({ canvas_data: "" });
   }
 
   function resetStageDrawingState() {
@@ -1975,17 +2161,25 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function resetStageConversationState() {
     clearStageCheckTimer();
+    clearPassiveDoneTimer();
 
     state.stageStartedAt = Date.now();
     state.drawingCommentsThisStage = 0;
     state.colorCommentsThisStage = 0;
     state.doneChecksThisStage = 0;
+    state.doneRemindersThisStage = 0;
     state.noSpeechDoneChecksThisStage = 0;
     state.lastGuidanceAt = 0;
     state.lastColorCommentAt = 0;
+    state.lastColorCommentedColor = null;
+    state.sameColorCommentStreak = 0;
     state.stageAdvanceLocked = false;
-    state.stageReminderCount = 0;
-    doneDetectedLocked = false;
+    state.pendingDoneConfirmation = false;
+
+    if (colorReactionTimer) {
+      clearTimeout(colorReactionTimer);
+      colorReactionTimer = null;
+    }
 
     resetStageDrawingState();
   }
@@ -2017,6 +2211,7 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function setColor(color, options = {}) {
+    const previousColor = currentColor;
     currentColor = color;
     currentTool = "pen";
 
@@ -2026,8 +2221,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
     setTool("pen");
 
-    if (!options.silent) {
+    if (!options.silent && previousColor !== color) {
+      state.totalColorSelections += 1;
       maybeReactToColorChange(color);
+      saveDrawingProgress({ total_color_selections: state.totalColorSelections });
     }
   }
 
@@ -2035,45 +2232,117 @@ document.addEventListener("DOMContentLoaded", function () {
     return COLOR_NAMES[color] || "that color";
   }
 
-  function colorNameForStage(color) {
-    const stage = currentStage();
-
-    if (stage.id === "grass") {
-      if (color === COLORS.green) return "dark green";
-      if (color === COLORS.lime) return "light green";
-    }
-
-    return colorName(color);
-  }
-
   function colorIdeaForStage(color) {
     const stage = currentStage();
     return stage.colorIdeas?.[color] || "this part of the picture";
   }
 
-  function buildStageColorSuggestion(stage = currentStage()) {
-    const palette = (stage.palette || []).slice(0, 4);
-    const pairs = palette.map(color => {
-      const label = colorNameForStage(color);
-      const idea = stage.colorIdeas?.[color] || stageSpokenName(stage);
-      return `${label} could be good for ${idea}`;
-    });
-
-    if (!pairs.length) return "You can choose any color you want for this part.";
-    if (pairs.length === 1) return `For this part, ${pairs[0]}.`;
-    if (pairs.length === 2) return `For this part, ${pairs[0]}, and ${pairs[1]}.`;
-
-    const last = pairs.pop();
-    return `For this part, ${pairs.join(", ")}, and ${last}.`;
+  function drawingHasBase() {
+    return state.totalStrokeCount >= 22 || strokeCountThisStage >= 12;
   }
 
-  function doneGuidanceLine(partName) {
-    return pickLine([
-      `Just tell me whenever you're done with the ${partName}.`,
-      `Whenever the ${partName} feels finished, you can tell me.`,
-      `No rush. Tell me when this part is done.`,
-      `Keep going until the ${partName} feels finished, then tell me.`
-    ]);
+  function shouldUseChildNameInTeacherLine() {
+    if (!childName || childName.toLowerCase() === "there") return false;
+
+    return state.teacherColorLineCount === 1 || state.teacherColorLineCount % 4 === 0;
+  }
+
+  function addTeacherPraiseToColorLine(line) {
+    if (!drawingHasBase()) return line;
+
+    const everyFourthColor = state.totalColorSelections > 0 && state.totalColorSelections % 4 === 0;
+
+    if (everyFourthColor) {
+      const praise = pickLine([
+        " Great job. Your drawing is looking great so far.",
+        " Nice work. This picture is really coming together.",
+        " Good job. I can see how much you have added."
+      ]);
+      return `${line}${praise}`;
+    }
+
+    if (Math.random() < 0.62) {
+      const praise = pickLine([
+        " Good job.",
+        " Nice work.",
+        " That is a great choice.",
+        " Your drawing is looking good so far.",
+        " You are doing a great job."
+      ]);
+      return `${line}${praise}`;
+    }
+
+    return line;
+  }
+
+  function buildTeacherColorComment(color) {
+    const label = colorName(color);
+    const idea = colorIdeaForStage(color);
+    const isSameColorAgain = state.lastColorCommentedColor === color;
+
+    state.teacherColorLineCount += 1;
+
+    if (isSameColorAgain) {
+      state.sameColorCommentStreak += 1;
+    } else {
+      state.sameColorCommentStreak = 0;
+    }
+
+    state.lastColorCommentedColor = color;
+
+    const includeName = shouldUseChildNameInTeacherLine();
+
+    if (includeName) {
+      state.teacherNameMentions += 1;
+    }
+
+    // For repeated comments on the same color within the same stage, avoid
+    // saying the same "great for stem/leaves" type recommendation each time.
+    // First same-color repeat becomes an observation; occasional later repeats
+    // may mention the stage idea again, but most stay general.
+    if (isSameColorAgain) {
+      const shouldMentionIdeaAgain = state.sameColorCommentStreak >= 3 && Math.random() < 0.25;
+
+      const repeatOptions = includeName
+        ? [
+            `I see that you are still using ${label}, ${childName}. Your drawing is coming along really nicely.`,
+            `${childName}, I notice you are still using ${label}. Nice work so far.`,
+            `You are still working with ${label}, ${childName}. This part is looking good.`
+          ]
+        : [
+            `I see that you are still using ${label}. Your drawing is coming along really nicely.`,
+            `I notice you are still using ${label}. Nice work so far.`,
+            `You are still working with ${label}. This part is looking good.`,
+            `That ${label} is helping the picture come together. Good job.`,
+            `I can see more ${label} now. It is looking good so far.`
+          ];
+
+      const repeatIdeaOptions = includeName
+        ? [
+            `I see that you are still using ${label}, ${childName}. It can keep working well for ${idea}.`,
+            `${childName}, you are using more ${label}. That can still help with ${idea}.`
+          ]
+        : [
+            `I see that you are still using ${label}. It can keep working well for ${idea}.`,
+            `You are using more ${label}. That can still help with ${idea}.`
+          ];
+
+      return pickLine(shouldMentionIdeaAgain ? repeatIdeaOptions : repeatOptions);
+    }
+
+    const baseOptions = includeName
+      ? [
+          `I can see that you selected ${label}, ${childName}. That's a great choice for ${idea}.`,
+          `${childName}, I notice that you are using ${label} now. That's a great choice for ${idea}.`,
+          `I see that you are using ${label} now, ${childName}. That can work well for ${idea}.`
+        ]
+      : [
+          `I can see that you selected ${label}. That's a great choice for ${idea}.`,
+          `I notice that you are using ${label} now. That's a great choice for ${idea}.`,
+          `I see that you are using ${label} now. That can work well for ${idea}.`
+        ];
+
+    return addTeacherPraiseToColorLine(pickLine(baseOptions));
   }
 
   function canCharacterChimeIn(minGap = 7600) {
@@ -2088,150 +2357,169 @@ document.addEventListener("DOMContentLoaded", function () {
     return true;
   }
 
-  function buildTeacherColorLine(colorLabel, idea, isMilestone = false) {
-    const colorLines = [
-      `I can see that you selected ${colorLabel}, ${childName}. That's a great choice for ${idea}.`,
-      `${childName}, I notice that you are using ${colorLabel} now. That's a great choice for ${idea}.`,
-      `I see that you are using ${colorLabel} now, ${childName}.`,
-      `I can see that you selected ${colorLabel}. That works nicely for ${idea}.`,
-      `I notice that you are using ${colorLabel} now. That's a good choice for ${idea}.`
-    ];
+  function maybeReactToColorChange(color) {
+    if (state.colorCommentsThisStage >= 4) return;
+    if (Date.now() - state.stageStartedAt < 900) return;
 
-    const praiseLines = [
-      `Your drawing is looking great so far.`,
-      `Great job. Your picture is looking really nice.`,
-      `You are doing a great job with this drawing.`,
-      `You are a great artist. This is looking nice.`
-    ];
+    const stageId = currentStage().id;
+    const sceneId = currentScene().id;
 
-    if (!isMilestone) {
-      return pickLine(colorLines);
+    if (colorReactionTimer) {
+      clearTimeout(colorReactionTimer);
+      colorReactionTimer = null;
     }
 
-    return `${pickLine(colorLines)} ${pickLine(praiseLines)}`;
-  }
+    colorReactionTimer = setTimeout(function () {
+      colorReactionTimer = null;
 
-  function maybeReactToColorChange(color) {
-    if (state.gameCompleted || state.stageAdvanceLocked || state.isListening || state.waitingForResponse) return;
+      if (currentColor !== color) return;
+      if (currentStage().id !== stageId || currentScene().id !== sceneId) return;
+      if (state.stageAdvanceLocked || state.gameCompleted) return;
+      if (state.isSpeaking || state.isListening || state.waitingForResponse) {
+        maybeReactToColorChange(color);
+        return;
+      }
+      if (Date.now() - state.lastColorCommentAt < 3600) return;
 
-    const now = Date.now();
-    const idea = colorIdeaForStage(color);
-    const colorLabel = colorNameForStage(color);
+      state.colorCommentsThisStage += 1;
+      state.lastColorCommentAt = Date.now();
+      state.lastGuidanceAt = Date.now();
 
-    state.totalColorSelections += 1;
-    const isMilestone = state.totalColorSelections > 0 && state.totalColorSelections % 4 === 0;
-
-    if (!isMilestone && now - state.lastColorCommentAt < 2100) return;
-
-    state.colorCommentsThisStage += 1;
-    state.lastColorCommentAt = now;
-    state.lastGuidanceAt = now;
-
-    queueSpeak(TEACHER_ACTOR, buildTeacherColorLine(colorLabel, idea, isMilestone));
+      queueSpeak(TEACHER_ACTOR, function () {
+        return buildTeacherColorComment(currentColor);
+      }, {
+        shouldStart: function () {
+          return currentStage().id === stageId
+            && currentScene().id === sceneId
+            && !state.stageAdvanceLocked
+            && !state.gameCompleted
+            && Boolean(currentColor);
+        },
+        shouldPlay: function () {
+          return currentStage().id === stageId
+            && currentScene().id === sceneId
+            && !state.stageAdvanceLocked
+            && !state.gameCompleted;
+        }
+      });
+    }, 700);
   }
 
   function maybeReactToDrawingStart() {
     if (state.drawingCommentsThisStage > 0) return;
-    if (!canCharacterChimeIn(3300)) return;
+    if (!canCharacterChimeIn(3600)) return;
+    if (!currentColor) return;
+
+    const stageId = currentStage().id;
+    const sceneId = currentScene().id;
 
     state.drawingCommentsThisStage += 1;
+    state.lastColorCommentAt = Date.now();
     state.lastGuidanceAt = Date.now();
 
-    const mode = getProgressMode();
-    const stage = currentStage();
-    const partName = stageSpokenName(stage);
+    queueSpeak(TEACHER_ACTOR, function () {
+      return buildTeacherColorComment(currentColor);
+    }, {
+      shouldStart: function () {
+        return currentStage().id === stageId
+          && currentScene().id === sceneId
+          && !state.stageAdvanceLocked
+          && !state.gameCompleted
+          && Boolean(currentColor);
+      },
+      shouldPlay: function () {
+        return currentStage().id === stageId
+          && currentScene().id === sceneId
+          && !state.stageAdvanceLocked
+          && !state.gameCompleted;
+      }
+    });
+  }
 
-    if (mode === "star_leads") {
-      queueSpeak("star", pickLine([
-        `Good start. You can put the ${partName} anywhere you want.`,
-        `Take your time with the ${partName}.`,
-        `Start wherever it feels easiest.`,
-        `You can make the ${partName} your own way.`
-      ]));
-      return;
-    }
+  function pickStarSideQuestion() {
+    const scene = currentScene();
 
-    if (mode === "teacher_wonders_star_bridges") {
-      queueSpeak("star", pickLine([
-        `Take your time with this part, ${childName}.`,
-        `You can choose where this part goes, ${childName}.`,
-        `Start wherever you want. I am right here.`
-      ]));
-      return;
-    }
+    const questionsByScene = {
+      flower_scene: [
+        "What do you like seeing outside?",
+        "What would you bring to a picnic?",
+        "What kinds of flowers have you seen before?",
+        "What would you put in a park?"
+      ],
+      house_scene: [
+        "What could someone do outside on a sunny day?",
+        "What would you put in a backyard?",
+        "What makes a house feel cozy?",
+        "What could be near a house outside?"
+      ],
+      tree_scene: [
+        "What animals might visit a tree?",
+        "What would you do under a big tree?",
+        "What do you like seeing at a park?",
+        "What could grow near a tree?"
+      ],
+      school_scene: [
+        "What might kids do outside before school starts?",
+        "What would make a school yard fun?",
+        "What do you like seeing outside at school?",
+        "What could children play outside?"
+      ]
+    };
 
-    if (mode === "teacher_to_star_to_child") {
-      queueSpeak(TEACHER_ACTOR, pickLine([
-        `I like how this starts.`,
-        `That is a nice beginning.`,
-        `This part is starting nicely.`,
-        `Great job starting this part.`
-      ]));
-      return;
-    }
+    return pickLine(questionsByScene[scene.id] || [
+      "What do you like about this kind of place?",
+      "What would you add outside?",
+      "What could happen in this scene?"
+    ]);
+  }
 
-    queueSpeak(TEACHER_ACTOR, pickLine([
-      `That is a good start.`,
-      `I like how you started that.`,
-      `Your picture is starting nicely.`,
-      `Great job starting this part.`
-    ]));
+  function maybeAskStarSideQuestion() {
+    if (!hasDrawnThisStage) return;
+    if (strokeCountThisStage < 28) return;
+    if (state.sideQuestionSceneIndex === state.sceneIndex) return;
+    if (!canCharacterChimeIn(9500)) return;
+    if (state.stageAdvanceLocked || state.gameCompleted) return;
+
+    state.sideQuestionSceneIndex = state.sceneIndex;
+    state.lastGuidanceAt = Date.now();
+
+    queueSpeak("star", pickStarSideQuestion(), {
+      expectsResponse: true,
+      askType: "easy_topic",
+      source: "star-side-question",
+      intent: "side_question",
+      responseSeconds: 5.0
+    });
   }
 
   function maybeReactDuringDrawing() {
-    if (strokeCountThisStage < 14) return;
+    if (strokeCountThisStage < 18) return;
     if (state.drawingCommentsThisStage >= 2) return;
-    if (!canCharacterChimeIn(8500)) return;
+    if (!canCharacterChimeIn(10500)) return;
+    if (!drawingHasBase()) return;
+    if (!currentColor) return;
 
     state.drawingCommentsThisStage += 1;
-    state.lastGuidanceAt = Date.now();
+    maybeReactToColorChange(currentColor);
+  }
 
-    const mode = getProgressMode();
+  async function giveStageGuidance(stage, mode) {
+    await queueSpeak("star", pickLine(stage.starLead));
+    await sleep(120);
 
-    if (mode === "star_leads") {
-      queueSpeak("star", pickLine([
-        "This is coming along.",
-        "You can add as much or as little as you want.",
-        "That part is looking good.",
-        "Keep going until it feels finished."
-      ]));
-      return;
-    }
-
-    if (mode === "teacher_wonders_star_bridges") {
-      queueSpeak(TEACHER_ACTOR, pickLine([
-        `That is looking good so far.`,
-        `I like how this picture is growing.`,
-        `That part is coming along nicely.`,
-        `Great job. This is looking nice.`
-      ]));
-      return;
-    }
-
-    if (mode === "teacher_to_star_to_child") {
-      queueSpeak(TEACHER_ACTOR, pickLine([
-        `Star, ${childName}'s picture is coming together.`,
-        `Star, I like how this part is looking.`,
-        `Star, this is turning into a nice scene.`
-      ]));
-      return;
-    }
-
-    queueSpeak(TEACHER_ACTOR, pickLine([
-      `That is looking good.`,
-      `I like how your scene is coming together.`,
-      `You are adding nice details.`,
-      `You are a great artist.`
+    await queueSpeak("star", pickLine([
+      "Use any colors you want. Tell me when this part feels ready.",
+      "You can draw it your way. Tell me whenever this part feels ready.",
+      "Take your time. Just tell me when this part feels ready."
     ]));
+
+    await maybeTeacherSupportStarGuidance();
   }
 
   async function beginStage(options = {}) {
-    stopContinuousDoneListener({ keepMicClass: false });
-
     const scene = currentScene();
     const stage = currentStage();
     const mode = getProgressMode();
-    const partName = stageSpokenName(stage);
 
     updateRoundDisplay();
     setPrompt(stage);
@@ -2242,223 +2530,387 @@ document.addEventListener("DOMContentLoaded", function () {
       clearCanvas();
     }
 
-    updateQuietStatus("Drawing time");
+    updateQuietStatus("");
 
     if (state.stageIndex === 0) {
       await queueSpeak("star", scene.newSceneLine);
       await sleep(180);
     }
 
-    if (mode === "star_leads") {
-      await queueSpeak("star", pickLine(stage.starLead));
-      await sleep(120);
-      await queueSpeak("star", buildStageColorSuggestion(stage));
-      await sleep(120);
-      await queueSpeak("star", doneGuidanceLine(partName));
-      await sleep(120);
-      await queueSpeak(TEACHER_ACTOR, pickLine(stage.teacherComment));
-      startContinuousDoneListener({ retryLater: true });
-      scheduleStageCheck(22000);
-      return;
-    }
+    await giveStageGuidance(stage, mode);
 
-    if (mode === "teacher_wonders_star_bridges") {
-      await queueSpeak("star", pickLine(stage.starLead));
-      await sleep(120);
-      await queueSpeak("star", buildStageColorSuggestion(stage));
-      await sleep(120);
-      await queueSpeak(TEACHER_ACTOR, pickLine(stage.teacherWonder));
-      await sleep(120);
-      await queueSpeak("star", doneGuidanceLine(partName));
-      startContinuousDoneListener({ retryLater: true });
-      scheduleStageCheck(23000);
-      return;
-    }
-
-    if (mode === "teacher_to_star_to_child") {
-      await queueSpeak(TEACHER_ACTOR, pickLine(stage.teacherToStar));
-      await sleep(120);
-      await queueSpeak("star", pickLine([
-        "That sounds like a good idea.",
-        "That could work for this picture.",
-        "You can add that part now.",
-        "That part can go wherever you want."
-      ]));
-      await sleep(120);
-      await queueSpeak("star", buildStageColorSuggestion(stage));
-      await sleep(120);
-      await queueSpeak("star", doneGuidanceLine(partName));
-      startContinuousDoneListener({ retryLater: true });
-      scheduleStageCheck(23000);
-      return;
-    }
-
-    await queueSpeak("star", pickLine([
-      "The Teacher can help guide this part now.",
-      "The Teacher can ask one small question now.",
-      "You can answer the Teacher with just one word if you want."
-    ]));
-
-    await sleep(140);
-
-    await queueSpeak(TEACHER_ACTOR, buildStageColorSuggestion(stage));
-    await sleep(120);
-
-    await queueSpeak(TEACHER_ACTOR, pickLine(stage.teacherDirect), {
-      expectsResponse: true,
-      askType: "choice",
-      source: "teacher-direct",
-      intent: "stage_choice",
-      responseSeconds: 5.7
-    });
-
-    await sleep(120);
-    await queueSpeak("star", doneGuidanceLine(partName));
-    startContinuousDoneListener({ retryLater: true });
-    scheduleStageCheck(23000);
-  }
-
-  function browserSpeechRecognitionConstructor() {
-    return window.SpeechRecognition || window.webkitSpeechRecognition || null;
-  }
-
-  function donePhraseHeard(text) {
-    const lower = String(text || "").toLowerCase();
-    return [
-      "i'm done", "im done", "i am done", "all done", "i'm finished", "im finished",
-      "i am finished", "finished", "done", "done drawing", "i finished", "we are done",
-      "we're done", "we done", "next part", "move on"
-    ].some(phrase => lower.includes(phrase));
-  }
-
-  function stopContinuousDoneListener(options = {}) {
-    if (doneListenerRestartTimer) {
-      clearTimeout(doneListenerRestartTimer);
-      doneListenerRestartTimer = null;
-    }
-
-    doneListenerActive = false;
-    doneListenerStageToken = null;
-
-    if (!options.keepMicClass && micControl) {
-      micControl.classList.remove("background-listening");
-    }
-
-    if (doneSpeechRecognition) {
-      try {
-        doneSpeechRecognition.onresult = null;
-        doneSpeechRecognition.onerror = null;
-        doneSpeechRecognition.onend = null;
-        doneSpeechRecognition.stop();
-      } catch (error) {}
-
-      doneSpeechRecognition = null;
-    }
-  }
-
-  function startContinuousDoneListener(options = {}) {
-    if (state.gameCompleted || state.stageAdvanceLocked || state.isSpeaking || state.isListening || state.waitingForResponse) {
-      if (options.retryLater) {
-        doneListenerRestartTimer = setTimeout(function () {
-          startContinuousDoneListener({ retryLater: true });
-        }, 900);
-      }
-      return;
-    }
-
-    const Recognition = browserSpeechRecognitionConstructor();
-
-    if (!Recognition) {
-      state.doneListenerSupported = false;
-      if (micControl) micControl.classList.remove("background-listening");
-      return;
-    }
-
-    const token = getStageToken();
-
-    if (doneListenerActive && doneListenerStageToken === token && doneSpeechRecognition) {
-      if (micControl) micControl.classList.add("background-listening");
-      return;
-    }
-
-    stopContinuousDoneListener({ keepMicClass: true });
-
-    state.doneListenerSupported = true;
-    state.doneListenerStartedAt = Date.now();
-    doneListenerActive = true;
-    doneListenerStageToken = token;
-
-    if (micControl) micControl.classList.add("background-listening");
-
-    try {
-      const recognition = new Recognition();
-      doneSpeechRecognition = recognition;
-      recognition.continuous = true;
-      recognition.interimResults = false;
-      recognition.lang = "en-US";
-
-      recognition.onresult = function (event) {
-        if (state.gameCompleted || state.stageAdvanceLocked) return;
-        if (doneListenerStageToken !== getStageToken()) return;
-
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          const transcript = Array.from(event.results[i])
-            .map(result => result.transcript || "")
-            .join(" ")
-            .trim();
-
-          if (!transcript) continue;
-
-          if (hasDrawnThisStage && donePhraseHeard(transcript) && !doneDetectedLocked) {
-            doneDetectedLocked = true;
-            const words = countWords(transcript);
-            state.spokenResponses += 1;
-            state.spokenWords += words;
-
-            stopContinuousDoneListener({ keepMicClass: false });
-
-            speechQueue = speechQueue.then(async function () {
-              await speakNow("star", pickLine([
-                "Okay. Let's move to the next part.",
-                "Got it. We can go to the next part.",
-                "Okay, this part is finished."
-              ]));
-              await advanceStage();
-            });
-
-            return;
-          }
-        }
-      };
-
-      recognition.onerror = function () {
-        if (micControl) micControl.classList.remove("background-listening");
-      };
-
-      recognition.onend = function () {
-        if (state.gameCompleted || state.stageAdvanceLocked) return;
-        if (doneListenerStageToken !== getStageToken()) return;
-        if (state.isSpeaking || state.isListening || state.waitingForResponse) return;
-
-        if (micControl) micControl.classList.remove("background-listening");
-
-        doneListenerRestartTimer = setTimeout(function () {
-          doneListenerActive = false;
-          startContinuousDoneListener({ retryLater: true });
-        }, 700);
-      };
-
-      recognition.start();
-    } catch (error) {
-      console.warn("Continuous done listener unavailable:", error);
-      stopContinuousDoneListener({ keepMicClass: false });
-    }
+    scheduleStageCheck(15000);
+    schedulePassiveDoneListen(800);
   }
 
   function clearStageCheckTimer() {
     if (stageCheckTimer) {
       clearTimeout(stageCheckTimer);
       stageCheckTimer = null;
+    }
+  }
+
+  function clearPassiveDoneTimer() {
+    stopContinuousPassiveDoneListen({ discard: true });
+  }
+
+  function schedulePassiveDoneListen(delayMs = 1800) {
+    if (state.gameCompleted || state.stageAdvanceLocked) return;
+    startContinuousPassiveDoneListen(delayMs);
+  }
+
+  async function startPassiveDoneListen() {
+    startContinuousPassiveDoneListen(0);
+  }
+
+  function getPassiveSpeechRecognitionConstructor() {
+    return window.SpeechRecognition || window.webkitSpeechRecognition || null;
+  }
+
+  function supportsPassiveSpeechRecognition() {
+    return Boolean(getPassiveSpeechRecognitionConstructor());
+  }
+
+  function stopPassiveSpeechRecognition(options = {}) {
+    const manual = options.manual !== false;
+
+    if (passiveSpeechRestartTimer) {
+      clearTimeout(passiveSpeechRestartTimer);
+      passiveSpeechRestartTimer = null;
+    }
+
+    passiveSpeechManuallyStopped = manual;
+
+    if (passiveSpeechRecognition) {
+      const recognition = passiveSpeechRecognition;
+      passiveSpeechRecognition = null;
+
+      try {
+        recognition.onresult = null;
+        recognition.onerror = null;
+        recognition.onend = null;
+        recognition.stop();
+      } catch (error) {}
+    }
+
+    updateMicIndicator();
+  }
+
+  function startPassiveSpeechRecognition(delayMs = 0) {
+    if (!supportsPassiveSpeechRecognition()) return false;
+
+    passiveDoneEnabled = true;
+    updateMicIndicator();
+
+    if (passiveSpeechRecognition || passiveSpeechRestartTimer) {
+      return true;
+    }
+
+    passiveSpeechManuallyStopped = false;
+
+    passiveSpeechRestartTimer = setTimeout(function () {
+      passiveSpeechRestartTimer = null;
+
+      if (!passiveDoneEnabled || state.gameCompleted || state.stageAdvanceLocked) {
+        updateMicIndicator();
+        return;
+      }
+
+      if (state.isListening || state.waitingForResponse || isExplicitRecorderActive()) {
+        startPassiveSpeechRecognition(350);
+        return;
+      }
+
+      const Recognition = getPassiveSpeechRecognitionConstructor();
+      if (!Recognition) {
+        startPassiveDoneRecorderChunk();
+        return;
+      }
+
+      let recognition;
+
+      try {
+        recognition = new Recognition();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = "en-US";
+      } catch (error) {
+        startPassiveDoneRecorderChunk();
+        return;
+      }
+
+      passiveSpeechRecognition = recognition;
+
+      recognition.onresult = function (event) {
+        if (!passiveDoneEnabled || state.gameCompleted || state.stageAdvanceLocked) return;
+
+        for (let i = event.resultIndex; i < event.results.length; i += 1) {
+          const result = event.results[i];
+          const transcript = cleanTranscript(result[0]?.transcript || "");
+
+          if (!transcript) continue;
+
+          const now = Date.now();
+          const lower = transcript.toLowerCase();
+
+          // Debounce repeated interim transcripts from the browser engine.
+          if (lower === passiveLastDetectedText && now - passiveLastDetectedAt < 900) {
+            continue;
+          }
+
+          passiveLastDetectedText = lower;
+          passiveLastDetectedAt = now;
+
+          if (transcriptHasPassiveDoneIntent(transcript)) {
+            stopPassiveSpeechRecognition({ manual: true });
+            handleDoneIntentFromSpeech();
+            return;
+          }
+        }
+      };
+
+      recognition.onerror = function () {
+        if (!passiveDoneEnabled || passiveSpeechManuallyStopped) return;
+
+        passiveSpeechRecognition = null;
+        startPassiveSpeechRecognition(600);
+      };
+
+      recognition.onend = function () {
+        passiveSpeechRecognition = null;
+        updateMicIndicator();
+
+        if (passiveDoneEnabled && !passiveSpeechManuallyStopped && !state.gameCompleted && !state.stageAdvanceLocked) {
+          startPassiveSpeechRecognition(250);
+        }
+      };
+
+      try {
+        recognition.start();
+        updateMicIndicator();
+      } catch (error) {
+        passiveSpeechRecognition = null;
+        startPassiveSpeechRecognition(600);
+      }
+    }, Math.max(0, delayMs));
+
+    return true;
+  }
+
+  function startContinuousPassiveDoneListen(delayMs = 0) {
+    if (state.gameCompleted || state.stageAdvanceLocked) return;
+
+    passiveDoneEnabled = true;
+    updateMicIndicator();
+
+    if (startPassiveSpeechRecognition(delayMs)) {
+      return;
+    }
+
+    if (passiveRestartTimer) {
+      clearTimeout(passiveRestartTimer);
+      passiveRestartTimer = null;
+    }
+
+    passiveRestartTimer = setTimeout(function () {
+      passiveRestartTimer = null;
+      startPassiveDoneRecorderChunk();
+    }, Math.max(0, delayMs));
+  }
+
+  function pausePassiveDoneListenForResponse() {
+    stopPassiveSpeechRecognition({ manual: true });
+
+    if (passiveRestartTimer) {
+      clearTimeout(passiveRestartTimer);
+      passiveRestartTimer = null;
+    }
+
+    if (passiveRecordingTimer) {
+      clearTimeout(passiveRecordingTimer);
+      passiveRecordingTimer = null;
+    }
+
+    if (passiveMediaRecorder && passiveMediaRecorder.state !== "inactive") {
+      passiveIgnoreNextStop = true;
+      try {
+        passiveMediaRecorder.stop();
+      } catch (error) {}
+    }
+
+    passiveMediaRecorder = null;
+    passiveRecordingChunks = [];
+    updateMicIndicator();
+  }
+
+  function stopContinuousPassiveDoneListen(options = {}) {
+    const discard = options.discard !== false;
+
+    passiveDoneEnabled = false;
+    stopPassiveSpeechRecognition({ manual: true });
+
+    if (passiveDoneTimer) {
+      clearTimeout(passiveDoneTimer);
+      passiveDoneTimer = null;
+    }
+
+    if (passiveRestartTimer) {
+      clearTimeout(passiveRestartTimer);
+      passiveRestartTimer = null;
+    }
+
+    if (passiveRecordingTimer) {
+      clearTimeout(passiveRecordingTimer);
+      passiveRecordingTimer = null;
+    }
+
+    if (passiveMediaRecorder && passiveMediaRecorder.state !== "inactive") {
+      passiveIgnoreNextStop = discard;
+      try {
+        passiveMediaRecorder.stop();
+      } catch (error) {}
+    }
+
+    passiveMediaRecorder = null;
+    passiveRecordingChunks = [];
+    updateMicIndicator();
+  }
+
+  async function startPassiveDoneRecorderChunk() {
+    if (!passiveDoneEnabled || state.gameCompleted || state.stageAdvanceLocked) {
+      updateMicIndicator();
+      return;
+    }
+
+    if (isExplicitRecorderActive() || state.isListening || state.waitingForResponse || passiveTranscribing) {
+      startContinuousPassiveDoneListen(300);
+      return;
+    }
+
+    const stream = await ensureMicPermission();
+
+    if (!stream) {
+      passiveDoneEnabled = false;
+      updateMicIndicator();
+      return;
+    }
+
+    const stageId = currentStage().id;
+    const sceneId = currentScene().id;
+
+    passiveRecordingChunks = [];
+    passiveIgnoreNextStop = false;
+
+    try {
+      const mimeType = getSupportedMimeType();
+
+      passiveMediaRecorder = mimeType
+        ? new MediaRecorder(stream, { mimeType })
+        : new MediaRecorder(stream);
+    } catch (error) {
+      passiveMediaRecorder = new MediaRecorder(stream);
+    }
+
+    passiveMediaRecorder.addEventListener("dataavailable", function (event) {
+      if (event.data && event.data.size > 0) {
+        passiveRecordingChunks.push(event.data);
+      }
+    });
+
+    passiveMediaRecorder.addEventListener("stop", function () {
+      handlePassiveDoneRecordingStop(stageId, sceneId);
+    }, { once: true });
+
+    try {
+      passiveMediaRecorder.start();
+      updateMicIndicator();
+    } catch (error) {
+      passiveMediaRecorder = null;
+      startContinuousPassiveDoneListen(700);
+      return;
+    }
+
+    passiveRecordingTimer = setTimeout(function () {
+      passiveRecordingTimer = null;
+
+      if (passiveMediaRecorder && passiveMediaRecorder.state !== "inactive") {
+        passiveIgnoreNextStop = false;
+        try {
+          passiveMediaRecorder.stop();
+        } catch (error) {
+          startContinuousPassiveDoneListen(250);
+        }
+      }
+    }, PASSIVE_DONE_CHUNK_MS);
+  }
+
+  async function handlePassiveDoneRecordingStop(stageId, sceneId) {
+    if (passiveRecordingTimer) {
+      clearTimeout(passiveRecordingTimer);
+      passiveRecordingTimer = null;
+    }
+
+    const chunks = passiveRecordingChunks.slice();
+    passiveRecordingChunks = [];
+    passiveMediaRecorder = null;
+
+    if (passiveIgnoreNextStop) {
+      passiveIgnoreNextStop = false;
+      updateMicIndicator();
+      return;
+    }
+
+    if (!passiveDoneEnabled || state.gameCompleted || state.stageAdvanceLocked) return;
+
+    if (!chunks.length) {
+      startContinuousPassiveDoneListen(250);
+      return;
+    }
+
+    if (currentStage().id !== stageId || currentScene().id !== sceneId) {
+      startContinuousPassiveDoneListen(250);
+      return;
+    }
+
+    if (state.pendingDoneConfirmation) {
+      startContinuousPassiveDoneListen(500);
+      return;
+    }
+
+    const blob = new Blob(chunks, {
+      type: chunks[0]?.type || "audio/webm"
+    });
+
+    passiveTranscribing = true;
+
+    try {
+      const formData = new FormData();
+      formData.append("audio", blob, "drawing-passive-done.webm");
+
+      const response = await fetch("/api/drawing-game/transcribe", {
+        method: "POST",
+        body: formData
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        const transcript = cleanTranscript(data.text || "");
+
+        if (transcript && transcriptHasPassiveDoneIntent(transcript)) {
+          await handleDoneIntentFromSpeech();
+          return;
+        }
+      }
+    } catch (error) {
+      console.warn("Passive drawing listener error:", error);
+    } finally {
+      passiveTranscribing = false;
+      updateMicIndicator();
+    }
+
+    if (passiveDoneEnabled && !state.stageAdvanceLocked && !state.pendingDoneConfirmation && !state.gameCompleted) {
+      startContinuousPassiveDoneListen(150);
     }
   }
 
@@ -2473,80 +2925,115 @@ document.addEventListener("DOMContentLoaded", function () {
     }, delayMs);
   }
 
-  async function maybeAskStageDone() {
-    if (state.gameCompleted || state.stageAdvanceLocked) return;
+  async function maybeTeacherSupportStarGuidance() {
+    if (state.teacherSupportForStarCount >= 5) return;
+    if (Math.random() > 0.35) return;
 
-    if (!hasDrawnThisStage || strokeCountThisStage < 8) {
+    state.teacherSupportForStarCount += 1;
+    await sleep(120);
+    await queueSpeak(TEACHER_ACTOR, pickLine([
+      "That's a great point, Star.",
+      "Good reminder, Star.",
+      "I like that idea, Star.",
+      "That makes sense, Star."
+    ]));
+  }
+
+  async function giveDoneReminder() {
+    if (state.gameCompleted || state.stageAdvanceLocked || state.pendingDoneConfirmation) return;
+
+    state.doneRemindersThisStage += 1;
+    state.lastGuidanceAt = Date.now();
+
+    const partName = friendlyStageNameForSpeech();
+    const sceneName = friendlySceneNameForSpeech();
+    let reminder;
+
+    if (isLastStageInCurrentScene() && !isLastSceneInGame()) {
+      reminder = pickLine([
+        `Let me know whenever this ${sceneName} feels ready, and we can decide whether to draw the ${nextSceneNameForSpeech()} next.`,
+        `Whenever this ${sceneName} feels ready, tell me, and we can choose what to do next.`
+      ]);
+    } else if (isLastStageInCurrentScene() && isLastSceneInGame()) {
+      reminder = pickLine([
+        `Let me know whenever this ${sceneName} feels ready, and we can finish drawing for today.`,
+        `Whenever this ${sceneName} feels ready, tell me, and we can wrap up for today.`
+      ]);
+    } else {
+      reminder = pickLine([
+        `Let me know whenever the ${partName} feels ready, and we can move on to the ${nextStageNameForSpeech()}.`,
+        `Whenever the ${partName} feels ready, tell me, and we can decide about the ${nextStageNameForSpeech()}.`
+      ]);
+    }
+
+    await queueSpeak("star", reminder);
+    await maybeTeacherSupportStarGuidance();
+
+    scheduleStageCheck(15000);
+    schedulePassiveDoneListen(800);
+  }
+
+  async function maybeAskStageDone() {
+    if (state.gameCompleted || state.stageAdvanceLocked || state.pendingDoneConfirmation) return;
+
+    if (!hasDrawnThisStage || strokeCountThisStage < 12) {
       scheduleStageCheck(9000);
       return;
     }
 
-    if (state.isSpeaking || state.isListening || state.waitingForResponse) {
-      scheduleStageCheck(6500);
+    if (state.isListening || state.waitingForResponse) {
+      scheduleStageCheck(5000);
       return;
     }
 
     if (Date.now() - state.stageStartedAt < 15000) {
-      scheduleStageCheck(9000);
+      scheduleStageCheck(5000);
       return;
     }
 
-    if (state.stageReminderCount >= 2) {
-      scheduleStageCheck(16000);
+    if (state.isSpeaking) {
+      scheduleStageCheck(3500);
       return;
     }
 
-    state.stageReminderCount += 1;
     state.doneChecksThisStage += 1;
-    state.lastGuidanceAt = Date.now();
-
-    const stage = currentStage();
-    const partName = stageSpokenName(stage);
-    const mode = getProgressMode();
-
-    if (mode === "teacher_direct_with_star_support" && state.stageReminderCount === 2) {
-      await queueSpeak(TEACHER_ACTOR, pickLine([
-        `When the ${partName} is finished, you can tell us.`,
-        `You can let us know when the ${partName} is ready.`,
-        `No rush. Tell us whenever this part is done.`
-      ]));
-    } else {
-      await queueSpeak("star", pickLine([
-        `Just tell me whenever you're finished with the ${partName}.`,
-        `No rush. When the ${partName} is ready, you can tell me.`,
-        `You can keep drawing. Tell me when this part is done.`
-      ]));
-    }
-
-    startContinuousDoneListener({ retryLater: true });
-    scheduleStageCheck(16000);
+    await giveDoneReminder();
   }
 
-  async function advanceStage() {
+  async function advanceStage(options = {}) {
     if (state.stageAdvanceLocked || state.gameCompleted) return;
 
     state.stageAdvanceLocked = true;
-    stopContinuousDoneListener({ keepMicClass: false });
     clearStageCheckTimer();
+    clearPassiveDoneTimer();
 
     const stage = currentStage();
 
     state.stagesCompleted += 1;
     state.roundsCompleted = Math.max(state.roundsCompleted, getSocialRound());
 
-    await speakNow(TEACHER_ACTOR, pickLine(stage.donePraise));
+    if (!options.skipTeacherPraise) {
+      await speakNow(TEACHER_ACTOR, pickLine(stage.donePraise));
+    }
 
     const scene = currentScene();
     const isLastStageInScene = state.stageIndex >= scene.stages.length - 1;
     const isLastScene = state.sceneIndex >= drawingScenes.length - 1;
 
     if (isLastStageInScene) {
-      state.scenesCompleted += 1;
+      state.scenesCompleted = Math.max(state.scenesCompleted, state.sceneIndex + 1);
 
       if (!isLastScene) {
-        await sleep(220);
-        await speakNow("star", scene.completeLine);
-        await askContinueAfterScene(scene);
+        await saveDrawingProgress();
+        await sleep(180);
+
+        if (options.skipSceneChoice) {
+          await continueToNextScene();
+          return;
+        }
+
+        state.stageAdvanceLocked = false;
+        await offerContinueAfterScene();
         return;
       }
 
@@ -2555,78 +3042,50 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     state.stageIndex += 1;
+    await saveDrawingProgress();
 
     setTimeout(function () {
       beginStage({ clearCanvas: false });
     }, 650);
   }
 
-  function classifySceneChoice(text) {
-    const lower = String(text || "").toLowerCase();
-    const words = new Set(normalizedWords(lower));
+  async function offerContinueAfterScene() {
+    if (state.gameCompleted) return;
 
-    const stopPhrases = ["stop", "end", "all done", "done for today", "finish", "finished", "dashboard", "no more", "no thanks"];
-    const continuePhrases = ["another", "again", "next", "keep going", "keep drawing", "more", "yes", "yeah", "yep", "sure", "okay", "ok", "play", "round"];
+    await saveDrawingProgress();
 
-    if (stopPhrases.some(phrase => lower.includes(phrase)) || words.has("no") || words.has("nope")) return "stop";
-    if (continuePhrases.some(phrase => lower.includes(phrase))) return "continue";
-
-    return "unclear";
-  }
-
-  async function askContinueAfterScene(scene) {
-    await sleep(180);
-
-    if (getProgressMode() === "teacher_to_star_to_child" || getProgressMode() === "teacher_direct_with_star_support") {
-      await speakNow(TEACHER_ACTOR, pickLine([
-        "That picture looks great.",
-        "Great job finishing that picture.",
-        "You did a great job with that scene."
+    if (drawingHasBase()) {
+      await queueSpeak(TEACHER_ACTOR, pickLine([
+        "That finished picture looks nice. Good job.",
+        "I like how that picture turned out.",
+        "That picture is finished now. Nice work."
       ]));
-      await sleep(140);
+      await sleep(130);
     }
 
-    await speakNow("star", pickLine([
-      "Do you want to make another picture, or are you all done for today?",
-      "Should we make another picture, or do you want to stop here?",
-      "You can keep going to the next picture, or we can stop here for today."
+    await queueSpeak("star", pickLine([
+      `Do you want to draw another scene now, or be done drawing for today?`,
+      `Should we start the ${nextSceneNameForSpeech()} now, or finish drawing for today?`,
+      `Do you want to keep going with another picture, or be done drawing for today?`
     ]), {
       expectsResponse: true,
       askType: "choice",
-      source: "star",
+      source: "scene-choice",
       intent: "scene_choice",
-      responseSeconds: 5.8
+      responseSeconds: 8.0
     });
   }
 
-  async function handleSceneChoiceResponse(transcript) {
-    const choice = classifySceneChoice(transcript);
-
-    if (choice === "stop") {
-      await speakNow("star", pickLine([
-        "Okay. We can stop here for today.",
-        "Okay. We can be all done for now.",
-        "That's okay. We can stop the drawing game here."
-      ]));
-      window.location.href = "/dashboard";
-      return;
-    }
-
-    await speakNow("star", pickLine([
-      "Okay. Let's make another picture.",
-      "Great. Let's go to the next picture.",
-      "Okay. We'll try the next drawing."
-    ]));
-    beginNextScene();
-  }
-
-  function beginNextScene() {
+  async function continueToNextScene() {
     state.sceneIndex += 1;
     state.stageIndex = 0;
+    restoredCanvasData = false;
+    savedCanvasDataToRestore = "";
+    await saveDrawingProgress({ canvas_data: "" });
 
     setTimeout(function () {
       beginStage({ clearCanvas: true });
-    }, 650);
+    }, 700);
   }
 
   async function finishFullActivity() {
@@ -2636,18 +3095,18 @@ document.addEventListener("DOMContentLoaded", function () {
 
     await sleep(220);
 
-    await speakNow("star", pickLine([
-      "You finished all four pictures.",
-      "That was a lot of drawing.",
-      "You helped make every scene."
+    await speakNow(TEACHER_ACTOR, pickLine([
+      "You made a whole set of pictures today. I loved seeing how each one came together.",
+      "You added so many nice details today. Thank you for showing me your drawings.",
+      "Your drawings looked thoughtful and creative today. I am glad I got to see them."
     ]));
 
     await sleep(180);
 
-    await speakNow(TEACHER_ACTOR, pickLine([
-      "Thank you for showing me your drawing. I liked seeing the school scene you made.",
-      "I liked watching your drawings with Star today.",
-      "That was a nice school scene. I am glad I got to see your drawing."
+    await speakNow("star", pickLine([
+      "That was great drawing today. We can finish for now.",
+      "You finished all the pictures. Nice work today.",
+      "We can be done drawing for today. Thanks for making these with us."
     ]));
 
     await completeAndGoNext();
@@ -2657,7 +3116,6 @@ document.addEventListener("DOMContentLoaded", function () {
     if (state.gameCompleted) return;
 
     state.gameCompleted = true;
-    stopContinuousDoneListener({ keepMicClass: false });
     clearStageCheckTimer();
 
     const minutesPlayed = Math.max(0, (Date.now() - state.sessionStart) / 60000);
@@ -2697,8 +3155,8 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   async function playIntro() {
-    await queueSpeak("star", "Hey again. It's me, Star. Today, I'll help you know what to draw next.");
-    await queueSpeak(TEACHER_ACTOR, "Hi. I'm the Teacher. I'll watch your drawing, notice your colors, and cheer you on.");
+    await queueSpeak("star", "Let's play a drawing game. You can use the colors and drawing tools on the board, and you can tell us when each part feels done.");
+    await queueSpeak(TEACHER_ACTOR, "Hi. I'm the Teacher. I'll watch your picture and notice the colors you choose.");
     await queueSpeak("star", "I'll share my screen so we can use the drawing board.");
     shrinkIntroToGame();
   }
@@ -2719,7 +3177,14 @@ document.addEventListener("DOMContentLoaded", function () {
       introScreen.classList.add("hidden");
       zoomStage.classList.remove("side-panel-hidden");
       closeAllMouths();
-      beginStage({ clearCanvas: true });
+      restoreCanvasFromData(savedCanvasDataToRestore).then(function (restored) {
+        if (savedCanvasDataToRestore && !restored) {
+          state.stageIndex = 0;
+          savedCanvasDataToRestore = "";
+        }
+
+        beginStage({ clearCanvas: !restored });
+      });
     }, 1500);
   }
 
@@ -2730,6 +3195,7 @@ document.addEventListener("DOMContentLoaded", function () {
     stopRingtone();
     playCallAcceptedSound();
     ensureMicPermission();
+    await loadSavedDrawingProgress();
 
     introScreen.classList.remove("hidden");
 
@@ -2745,12 +3211,17 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function cleanupMedia() {
-    stopContinuousDoneListener({ keepMicClass: false });
     clearStageCheckTimer();
+    clearPassiveDoneTimer();
 
     if (colorReactionTimer) {
       clearTimeout(colorReactionTimer);
       colorReactionTimer = null;
+    }
+
+    if (canvasSaveTimer) {
+      clearTimeout(canvasSaveTimer);
+      canvasSaveTimer = null;
     }
 
     stopResponseWindow();
@@ -2765,6 +3236,8 @@ document.addEventListener("DOMContentLoaded", function () {
       mediaStream.getTracks().forEach(track => track.stop());
       mediaStream = null;
     }
+
+    updateMicIndicator();
   }
 
   canvas.addEventListener("mousedown", startDrawing);
@@ -2798,7 +3271,7 @@ document.addEventListener("DOMContentLoaded", function () {
   if (doneDrawingBtn) {
     doneDrawingBtn.addEventListener("click", function () {
       if (!hasDrawnThisStage) return;
-      advanceStage();
+      askStarConfirmStageDone();
     });
   }
 
@@ -2819,13 +3292,17 @@ document.addEventListener("DOMContentLoaded", function () {
 
   if (hangupButton) {
     hangupButton.addEventListener("click", function () {
+      saveDrawingProgress();
       cleanupMedia();
       window.location.href = "/dashboard";
     });
   }
 
   window.addEventListener("resize", resizeCanvasForDisplay);
-  window.addEventListener("beforeunload", cleanupMedia);
+  window.addEventListener("beforeunload", function () {
+    saveDrawingProgress();
+    cleanupMedia();
+  });
 
   resizeCanvasForDisplay();
   setupCanvasStyle();
