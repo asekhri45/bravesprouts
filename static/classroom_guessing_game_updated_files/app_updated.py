@@ -949,6 +949,7 @@ def restart_activity():
     ensure_matching_game_progress_columns()
     ensure_mystery_animal_progress_columns()
     ensure_guessing_game_progress_columns()
+    ensure_library_guessing_game_progress_columns()
     ensure_drawing_game_progress_columns()
     ensure_classroom_object_progress_columns()
 
@@ -1004,6 +1005,9 @@ def restart_activity():
             guessing_game_rounds_completed = 0,
             guessing_game_last_played_at = NULL,
 
+            library_guessing_game_rounds_completed = 0,
+            library_guessing_game_last_played_at = NULL,
+
             drawing_scene_index = 0,
             drawing_stage_index = 0,
             drawing_rounds_completed = 0,
@@ -1034,6 +1038,8 @@ def restart_activity():
     session.pop("mystery_classroom_object_state", None)
     session.pop("book_guessing_game_history", None)
     session.pop("book_guessing_game_state", None)
+    session.pop("library_guessing_game_history", None)
+    session.pop("library_guessing_game_state", None)
     session.modified = True
 
     return jsonify({
@@ -16297,7 +16303,7 @@ def book_guessing_game_transcribe():
 
 
 # =========================
-# Library Guessing Game — Librarian thinks of something you can find at school
+# Classroom Guessing Game — Teacher thinks of a classroom object
 # Add this block to app.py after your existing Guessing Game block, or use it to replace any old library/book guessing backend.
 # =========================
 
@@ -16341,6 +16347,12 @@ def generate_library_guessing_voice_elevenlabs(text, game_complete=False, thinki
 
 
 LIBRARY_GUESSING_GAME_MAX_ROUNDS = 3
+LIBRARY_GUESSING_GAME_PRESET_OBJECT_ORDER = [
+    "pencil",
+    "backpack",
+    "glue_stick"
+]
+LIBRARY_GUESSING_GAME_NEXT_ACTIVITY_ID = 4
 LIBRARY_GUESSING_GAME_NEXT_GAME_OFFER_ROUND = 999
 
 LIBRARY_GUESSING_GAME_OBJECT_PROFILES = {
@@ -16557,23 +16569,27 @@ def library_guessing_words(text):
 
 
 def get_library_guessing_game_default_state(rounds_completed=0, used_objects=None):
-    import random
+    try:
+        rounds_completed_int = max(0, int(rounds_completed or 0))
+    except (TypeError, ValueError):
+        rounds_completed_int = 0
+
+    rounds_completed_int = min(rounds_completed_int, LIBRARY_GUESSING_GAME_MAX_ROUNDS)
+    preset_index = min(rounds_completed_int, len(LIBRARY_GUESSING_GAME_PRESET_OBJECT_ORDER) - 1)
+    secret_object = LIBRARY_GUESSING_GAME_PRESET_OBJECT_ORDER[preset_index]
+
+    if secret_object not in LIBRARY_GUESSING_GAME_OBJECT_PROFILES:
+        secret_object = "pencil"
 
     used_so_far = [
         obj for obj in list(used_objects or [])
         if obj in LIBRARY_GUESSING_GAME_OBJECT_PROFILES
     ]
 
-    object_names = [
-        obj for obj in LIBRARY_GUESSING_GAME_OBJECT_PROFILES.keys()
-        if obj not in set(used_so_far)
-    ]
+    if secret_object not in used_so_far:
+        used_so_far.append(secret_object)
 
-    if not object_names:
-        object_names = list(LIBRARY_GUESSING_GAME_OBJECT_PROFILES.keys())
-
-    secret_object = random.choice(object_names)
-    used_objects_for_session = (used_so_far + [secret_object])[-LIBRARY_GUESSING_GAME_MAX_ROUNDS:]
+    used_objects_for_session = used_so_far[-LIBRARY_GUESSING_GAME_MAX_ROUNDS:]
 
     return {
         "stage": "intro",
@@ -16599,7 +16615,6 @@ def get_library_guessing_game_default_state(rounds_completed=0, used_objects=Non
         "game_complete": False,
         "last_response_mode": "none"
     }
-
 
 def get_library_guessing_game_profile(game_state):
     secret_object = normalize_library_guessing_text(game_state.get("secret_object", "pencil"))
@@ -16896,9 +16911,9 @@ def get_library_guessing_game_ai_question_answer(text, game_state):
 
     try:
         system_prompt = f"""
-You are a warm cartoon librarian playing Library Guessing Game.
+You are a warm cartoon teacher playing Classroom Guessing Game.
 
-The librarian is thinking of one secret thing a child can find at school.
+The teacher is thinking of one secret classroom object.
 The child asks questions to collect clues and guess what it is.
 
 Secret object:
@@ -16923,7 +16938,7 @@ Rules:
 Output JSON only:
 {{
   "type": "answer",
-  "message": "Librarian's spoken line",
+  "message": "Teacher's spoken line",
   "question_answered": true
 }}
 """
@@ -17289,48 +17304,138 @@ def make_library_guessing_game_audio_response(
     return jsonify(payload)
 
 
+def ensure_library_guessing_game_progress_columns():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("PRAGMA table_info(progress)")
+    existing_columns = {row["name"] for row in cursor.fetchall()}
+
+    columns_to_add = {
+        "library_guessing_game_rounds_completed": "ALTER TABLE progress ADD COLUMN library_guessing_game_rounds_completed INTEGER DEFAULT 0",
+        "library_guessing_game_last_played_at": "ALTER TABLE progress ADD COLUMN library_guessing_game_last_played_at TEXT"
+    }
+
+    for column_name, alter_sql in columns_to_add.items():
+        if column_name not in existing_columns:
+            cursor.execute(alter_sql)
+
+    conn.commit()
+    conn.close()
+
+
+def get_library_guessing_game_saved_rounds_for_user():
+    ensure_library_guessing_game_progress_columns()
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT COALESCE(p.library_guessing_game_rounds_completed, 0) AS rounds_completed
+        FROM progress p
+        JOIN activity a ON p.activity_id = a.activity_id
+        WHERE p.user_id = ?
+          AND a.activity_name = 'library_guessing_game'
+        LIMIT 1
+    """, (session["user_id"],))
+
+    row = cursor.fetchone()
+    conn.close()
+
+    if not row:
+        return 0
+
+    try:
+        return max(0, min(LIBRARY_GUESSING_GAME_MAX_ROUNDS, int(row["rounds_completed"] or 0)))
+    except (TypeError, ValueError):
+        return 0
+
+
+def save_library_guessing_game_progress_for_user(rounds_completed):
+    ensure_library_guessing_game_progress_columns()
+
+    try:
+        rounds_completed = max(0, min(LIBRARY_GUESSING_GAME_MAX_ROUNDS, int(rounds_completed or 0)))
+    except (TypeError, ValueError):
+        rounds_completed = 0
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        UPDATE progress
+        SET
+            library_guessing_game_rounds_completed = MAX(COALESCE(library_guessing_game_rounds_completed, 0), ?),
+            library_guessing_game_last_played_at = ?,
+            is_completed = CASE
+                WHEN ? >= ? THEN 1
+                ELSE is_completed
+            END
+        WHERE user_id = ?
+          AND activity_id = (
+              SELECT activity_id
+              FROM activity
+              WHERE activity_name = 'library_guessing_game'
+              LIMIT 1
+          )
+    """, (
+        rounds_completed,
+        datetime.utcnow().isoformat(),
+        rounds_completed,
+        LIBRARY_GUESSING_GAME_MAX_ROUNDS,
+        session["user_id"]
+    ))
+
+    conn.commit()
+    conn.close()
+
+    return rounds_completed
+
+
+def reset_library_guessing_game_progress_for_user():
+    ensure_library_guessing_game_progress_columns()
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        UPDATE progress
+        SET
+            library_guessing_game_rounds_completed = 0,
+            library_guessing_game_last_played_at = NULL,
+            is_completed = 0
+        WHERE user_id = ?
+          AND activity_id = (
+              SELECT activity_id
+              FROM activity
+              WHERE activity_name = 'library_guessing_game'
+              LIMIT 1
+          )
+    """, (session["user_id"],))
+
+    conn.commit()
+    conn.close()
+
+    return 0
+
+
 def unlock_library_guessing_game_next_activity_for_user():
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
-            SELECT activity_id, scene_id, activity_order
-            FROM activity
-            WHERE activity_name = ?
-              AND is_active = 1
-            LIMIT 1
-        """, ("library_guessing_game",))
-
-        current_activity = cursor.fetchone()
-
-        if not current_activity:
-            conn.close()
-            return False
-
-        cursor.execute("""
             SELECT activity_id
             FROM activity
-            WHERE is_active = 1
-              AND (
-                scene_id > ?
-                OR (scene_id = ? AND activity_order > ?)
-              )
-            ORDER BY scene_id ASC, activity_order ASC
-            LIMIT 1
-        """, (
-            current_activity["scene_id"],
-            current_activity["scene_id"],
-            current_activity["activity_order"]
-        ))
+            WHERE activity_id = ?
+              AND is_active = 1
+        """, (LIBRARY_GUESSING_GAME_NEXT_ACTIVITY_ID,))
 
-        next_activity = cursor.fetchone()
+        activity = cursor.fetchone()
 
-        if not next_activity:
+        if not activity:
             conn.close()
             return False
-
-        next_activity_id = next_activity["activity_id"]
 
         cursor.execute("""
             INSERT OR IGNORE INTO progress (
@@ -17344,19 +17449,19 @@ def unlock_library_guessing_game_next_activity_for_user():
                 time_spent_on_activity
             )
             VALUES (?, ?, 1, 0, 0, 0, 0, 0)
-        """, (session["user_id"], next_activity_id))
+        """, (session["user_id"], LIBRARY_GUESSING_GAME_NEXT_ACTIVITY_ID))
 
         cursor.execute("""
             UPDATE progress
             SET is_unlocked = 1
             WHERE user_id = ? AND activity_id = ?
-        """, (session["user_id"], next_activity_id))
+        """, (session["user_id"], LIBRARY_GUESSING_GAME_NEXT_ACTIVITY_ID))
 
         cursor.execute("""
             UPDATE users
             SET current_activity_id = ?
             WHERE user_id = ?
-        """, (next_activity_id, session["user_id"]))
+        """, (LIBRARY_GUESSING_GAME_NEXT_ACTIVITY_ID, session["user_id"]))
 
         conn.commit()
         conn.close()
@@ -17364,9 +17469,8 @@ def unlock_library_guessing_game_next_activity_for_user():
         return True
 
     except Exception as e:
-        print("Could not unlock next Library Guessing Game activity:", repr(e))
+        print("Could not unlock next Classroom Guessing Game activity:", repr(e))
         return False
-
 
 def make_library_guessing_game_correct_round_response(
     profile,
@@ -17377,7 +17481,7 @@ def make_library_guessing_game_correct_round_response(
     base_message
 ):
     rounds_completed = int(game_state.get("rounds_completed", 0)) + 1
-    rounds_completed = save_guessing_game_progress_for_user(rounds_completed)
+    rounds_completed = save_library_guessing_game_progress_for_user(rounds_completed)
     game_state["rounds_completed"] = rounds_completed
     game_state["game_complete"] = True
 
@@ -17495,10 +17599,17 @@ def library_guessing_game_message():
         return jsonify({"success": False, "error": "Invalid event_type"}), 400
 
     if event_type in {"intro", "restart"}:
+        ensure_library_guessing_game_progress_columns()
         session.pop("library_guessing_game_history", None)
         session.pop("library_guessing_game_state", None)
         history = []
-        game_state = get_library_guessing_game_default_state(rounds_completed=0)
+
+        if event_type == "restart":
+            saved_rounds_completed = reset_library_guessing_game_progress_for_user()
+        else:
+            saved_rounds_completed = get_library_guessing_game_saved_rounds_for_user()
+
+        game_state = get_library_guessing_game_default_state(rounds_completed=saved_rounds_completed)
         child_response = ""
         previous_response_mode = "none"
     else:
@@ -17512,10 +17623,9 @@ def library_guessing_game_message():
 
     if event_type in {"intro", "restart"}:
         intro_options = [
-            "Hi, I'm the librarian. Let's play a guessing game. I'm thinking of something you can find at school. Ask me questions so you can guess what it is.",
-            "Hi, I'm the librarian. I picked something you can find at school. Ask me questions, and when you know it, make a guess.",
-            "Hi, I'm the librarian. I'm thinking of something from school. Your job is to ask questions and guess what it is.",
-            "Hi, I'm the librarian. I picked one school object. Ask me questions to get clues, then guess what it is."
+            "Hi, I'm your teacher. Let's play Classroom Guessing Game.",
+            "Hi, I'm your teacher. I have a classroom guessing game for us.",
+            "Hi, I'm your teacher. Let's try a classroom object guessing game."
         ]
 
         message = pick_non_repeating_line(
@@ -17539,28 +17649,32 @@ def library_guessing_game_message():
             )
 
         except Exception as e:
-            print("Library Guessing Game intro TTS error:", repr(e))
+            print("Classroom Guessing Game intro TTS error:", repr(e))
             return jsonify({
                 "success": False,
-                "error": "Could not generate Librarian intro"
+                "error": "Could not generate Teacher intro"
             }), 500
 
     if event_type == "first_prompt":
         rounds_completed = int(game_state.get("rounds_completed", 0))
 
-        if rounds_completed == LIBRARY_GUESSING_GAME_MAX_ROUNDS - 1:
+        if rounds_completed == 0:
             prompts = [
-                "I picked the last one for today. Ask me a question so you can figure out what it is.",
-                "Okay, this is our last one for today. Ask me a question, then try to guess when you know it.",
-                "I am thinking of the last one now. What question will help you guess it?",
-                "Last one for today. Ask your first question so you can start guessing."
+                "I picked a classroom object. You can ask me questions to figure out what classroom object I'm thinking of. You can ask what it is used for, what it looks like, where you might find it, or ask for a hint if you need one.",
+                "I have a classroom object in my head. Ask me questions to figure it out. You can ask about its color, size, where it belongs, or what people use it for. You can also ask for a hint.",
+                "I'm thinking of something from the classroom. You can ask me questions like, is it used for writing, can you carry it, or is it sticky. You can guess whenever you're ready."
+            ]
+        elif rounds_completed == 1:
+            prompts = [
+                "Let's try another one. I picked a new classroom object. Ask me questions to figure it out, and guess when you're ready.",
+                "Okay, new classroom object. You can ask me a few questions, ask for a hint, or make a guess.",
+                "I picked another classroom object. Ask me something about it, then try to guess when you know."
             ]
         else:
             prompts = [
-                "I picked one. Ask me a question so you can guess what it is.",
-                "I am thinking of it now. What question will help you guess it?",
-                "You can ask me something about it, like what it looks like or what it is used for.",
-                "Ask your first question so you can figure out what it is."
+                "Last one for today. I picked a classroom object.",
+                "Okay, this is our last one. I have a classroom object in mind.",
+                "Final round. I picked one more classroom object."
             ]
 
         recent_lines = [
@@ -17613,16 +17727,16 @@ def library_guessing_game_message():
 
             if rounds_completed == LIBRARY_GUESSING_GAME_MAX_ROUNDS - 1:
                 replay_prompts = [
-                    "Okay. Let's play one more round before we end our call today. I picked something new you can find at school.",
-                    "Okay. One more round for today. I have a new one in mind.",
-                    "Sure. This will be our last one today. I picked something new."
+                    "Okay. Let's play one more round before we end our call today. I picked a new classroom object.",
+                    "Okay. One more round for today. I have a new classroom object in mind.",
+                    "Sure. This will be our last one today. I picked something new from the classroom."
                 ]
             else:
                 replay_prompts = [
-                    "Okay. I picked something new you can find at school.",
-                    "Sure. I have a different one in mind now.",
+                    "Okay. I picked a new classroom object.",
+                    "Sure. I have a different classroom object in mind now.",
                     "Okay. New one. Ask me questions so you can guess it.",
-                    "Let's do another one. I picked something different."
+                    "Let's do another one. I picked something different from the classroom."
                 ]
 
             recent_prompts = game_state.get("recent_round_prompts", [])
@@ -17652,7 +17766,7 @@ def library_guessing_game_message():
                 }), 500
 
         if choice == "stop":
-            message = "Okay. We can stop here. Thanks for playing Library Guessing Game with me."
+            message = "Okay. We can stop here. Thanks for playing Classroom Guessing Game with me."
 
             try:
                 return make_library_guessing_game_audio_response(

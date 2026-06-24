@@ -2,25 +2,23 @@
 
 {% block head %}
 {{ super() }}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/book_guessing_game.css') }}?v=13">
-<script src="{{ url_for('static', filename='js/book_guessing_game.js') }}?v=13" defer></script>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/library_guessing_game.css') }}?v=2">
+<script src="{{ url_for('static', filename='js/library_guessing_game.js') }}?v=2" defer></script>
 {% endblock %}
 
-{% block title %}Mystery Classroom Object{% endblock %}
+{% block title %}Classroom Guessing Game{% endblock %}
 
 {% block content %}
-<div
-  class="animal-page book-page classroom-object-page"
-  data-activity-id="{{ activity.activity_id if activity else 5 }}"
-  data-child-name="{{ child|e }}"
->
+
+<div class="guess-page">
+
   <div class="incoming-call-screen" id="incomingCallScreen">
     <div class="incoming-bg"></div>
 
     <div class="incoming-content">
       <div class="incoming-copy">
-        <h1>Teacher is ready</h1>
-        <p><span>Teacher</span> wants to play Mystery Classroom Object.</p>
+        <h1>Incoming Call</h1>
+        <p><span>Teacher</span> is calling you...</p>
       </div>
 
       <div class="incoming-avatar-area">
@@ -37,13 +35,8 @@
       </div>
 
       <div class="incoming-actions">
-        <button class="incoming-btn decline-btn" id="declineCall" type="button" aria-label="Decline call">
-          ☎
-        </button>
-
-        <button class="incoming-btn accept-btn" id="acceptCall" type="button" aria-label="Accept call">
-          ☎
-        </button>
+        <button class="incoming-btn decline-btn" id="declineCall" type="button">☎</button>
+        <button class="incoming-btn accept-btn" id="acceptCall" type="button">☎</button>
       </div>
 
       <div class="incoming-labels">
@@ -53,52 +46,51 @@
     </div>
   </div>
 
-  <main class="animal-stage call-hidden" id="animalStage">
+  <main class="guess-stage call-hidden" id="guessStage">
+
+    <div class="guess-round-card" id="guessRoundCard" aria-live="polite">
+      <span>Round</span>
+      <strong><span id="guessRoundNumber">1</span> of 3</strong>
+    </div>
+
+    <div class="guess-status" id="guessStatus"></div>
+    <div class="guess-response-panel hide" id="guessResponsePanel"></div>
+
     <section class="star-fullscreen">
-      <div class="star-wrap">
+      <div class="star-wrap librarian-wrap">
         <img
           src="{{ url_for('static', filename='images/librarian.png') }}"
           alt="Teacher character"
-          class="main-star"
+          class="main-star main-librarian"
         >
 
         <img
           src="{{ url_for('static', filename='images/librarian-mouth-closed.png') }}"
           alt=""
-          class="star-mouth-img"
-          id="starMouth"
+          class="star-mouth-img librarian-mouth-img"
+          id="librarianMouth"
         >
       </div>
     </section>
 
-    <div class="animal-status" id="animalStatus" aria-live="polite">
-      Teacher is thinking.
-    </div>
-
-    <div class="animal-response-panel hide" id="animalResponsePanel" aria-label="Optional response buttons"></div>
-
-    <div class="animal-round-card" id="roundCard" aria-live="polite">
-      <span>Round</span>
-      <strong id="roundNumber">1 of 9</strong>
-    </div>
   </main>
 
   <div class="call-controls">
+
     <a href="{{ url_for('dashboard') }}" class="back-link">
       ← Back to Dashboard
     </a>
 
     <div class="controls-center">
-      <div class="control-button mic-control" id="micControl">🎙️</div>
+      <div class="control-button mic-control">🎙️</div>
       <div class="control-button">🎥</div>
-
-      <button class="hangup-button" id="hangupBtn" type="button" aria-label="End call">
-        ☎
-      </button>
-
+      <button class="hangup-button" id="hangupBtn" type="button">☎</button>
       <div class="control-button">💬</div>
       <div class="control-button">⋯</div>
     </div>
+
   </div>
+
 </div>
+
 {% endblock %}

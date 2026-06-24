@@ -1,8 +1,8 @@
 :root {
-  --purple: #2f855a;
-  --purple-dark: #1f5f3b;
-  --text: #231f35;
-  --muted: #716981;
+  --purple: #2f9e7e;
+  --purple-dark: #176b54;
+  --text: #1e2c27;
+  --muted: #5d756c;
 }
 
 html,
@@ -13,14 +13,14 @@ body {
   font-family: "Nunito", sans-serif;
 }
 
-.animal-page {
+.guess-page {
   width: 100vw;
   height: 100vh;
   position: relative;
   overflow: hidden;
 }
 
-.animal-page::before {
+.guess-page::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -38,7 +38,7 @@ body {
   z-index: 0;
 }
 
-.animal-page::after {
+.guess-page::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -52,7 +52,7 @@ body {
   z-index: 3;
 }
 
-.animal-stage {
+.guess-stage {
   width: 100%;
   height: calc(100vh - 86px);
   position: relative;
@@ -82,7 +82,7 @@ body {
 .main-star {
   width: 100%;
   display: block;
-  filter: drop-shadow(0 24px 34px rgba(31, 95, 59, 0.18));
+  filter: drop-shadow(0 24px 34px rgba(23, 107, 84, 0.18));
 }
 
 .star-mouth-img {
@@ -97,54 +97,70 @@ body {
   pointer-events: none;
 }
 
-.animal-status {
-  position: absolute;
-  right: 90px;
-  bottom: 218px;
-  z-index: 12;
-  min-width: 210px;
-  max-width: 360px;
-  padding: 14px 18px;
+.guess-status {
+  position: fixed;
+  top: 30px;
+  left: calc(50% + 30px);
+  right: auto;
+  bottom: auto;
+  transform: translateX(-50%) translateY(-8px);
+  z-index: 80;
+
+  min-width: 240px;
+  max-width: min(420px, calc(100vw - 48px));
+  padding: 14px 22px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.9);
-  color: var(--purple-dark);
-  font-size: 16px;
-  font-weight: 900;
+
   text-align: center;
-  box-shadow: 0 14px 34px rgba(35, 31, 53, 0.16);
+  font-size: 1rem;
+  font-weight: 900;
+  color: #32224f;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(47, 158, 126, 0.18);
+  box-shadow:
+    0 16px 36px rgba(52, 34, 88, 0.16),
+    0 4px 12px rgba(47, 158, 126, 0.10);
+  backdrop-filter: blur(14px);
+
   opacity: 0;
-  transform: translateY(8px);
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  visibility: hidden;
   pointer-events: none;
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease,
+    visibility 0.2s ease;
 }
 
-.animal-status.show {
+.guess-status.show {
   opacity: 1;
-  transform: translateY(0);
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
 }
 
-.animal-page.is-listening .animal-status {
-  background: rgba(255, 255, 255, 0.96);
+.guess-page.is-listening .guess-status {
+  background: rgba(255, 255, 255, 0.97);
 }
 
-.animal-response-panel {
+.guess-response-panel {
   position: absolute;
-  right: 90px;
-  bottom: 130px;
+  left: 50%;
+  bottom: 112px;
   z-index: 12;
+  transform: translateX(-50%);
   display: flex;
   gap: 14px;
   align-items: center;
+  justify-content: center;
   transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
-.animal-response-panel.hide {
+.guess-response-panel.hide {
   opacity: 0;
-  transform: translateY(8px);
+  transform: translateX(-50%) translateY(8px);
   pointer-events: none;
 }
 
-.animal-response-btn {
+.guess-response-btn {
   border: none;
   border-radius: 999px;
   padding: 14px 22px;
@@ -158,7 +174,7 @@ body {
   transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
 }
 
-.animal-response-btn:hover {
+.guess-response-btn:hover {
   transform: translateY(-2px);
   background: white;
   box-shadow: 0 18px 38px rgba(35, 31, 53, 0.2);
@@ -208,8 +224,8 @@ body {
   transition: background 0.18s ease, transform 0.18s ease;
 }
 
-.animal-page.is-listening .mic-control {
-  background: rgba(47, 133, 90, 0.95);
+.guess-page.is-listening .mic-control {
+  background: rgba(47, 158, 126, 0.95);
   transform: scale(1.04);
 }
 
@@ -250,7 +266,7 @@ body {
   overflow: hidden;
   background:
     radial-gradient(circle at 50% 34%, rgba(255, 255, 255, 0.12), transparent 28%),
-    linear-gradient(135deg, #3b2617 0%, #6b4f2a 48%, #1f3d2b 100%);
+    linear-gradient(135deg, #183d34 0%, #2f9e7e 48%, #8a5a20 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -267,7 +283,7 @@ body {
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(rgba(42, 28, 18, 0.58), rgba(42, 28, 18, 0.58)),
+    linear-gradient(rgba(24, 61, 52, 0.58), rgba(24, 61, 52, 0.58)),
     url("/static/images/librarybg.png");
   background-size: cover;
   background-position: center;
@@ -422,30 +438,44 @@ body {
   opacity: 0.9;
 }
 
-
-/* Teacher character sizing. Asset files are still the original librarian filenames. Keep class names so the JS stays identical. */
-.book-page .star-wrap {
-  width: min(43vw, 560px);
-  bottom: -400px;
+.guess-page.call-ending-transition {
+  background: #000 !important;
 }
 
-.book-page .main-star {
-  filter: drop-shadow(0 24px 34px rgba(31, 95, 59, 0.2));
-}
-
-.book-page .star-mouth-img {
-  left: 49%;
-  top: 16%;
-  width: 9%;
+.guess-page.call-ending-transition::after {
+  content: "";
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  width: 180vmax;
+  height: 180vmax;
+  z-index: 99998;
+  pointer-events: none;
+  border-radius: 50%;
+  background: transparent;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 0 240vmax #000;
+  animation: guessingGameIrisClose 1050ms cubic-bezier(0.22, 0.9, 0.32, 1) forwards;
 }
 
 @media (max-height: 760px) {
   .star-wrap {
     width: min(48vw, 560px);
   }
+}
 
-  .animal-status {
-    bottom: 198px;
+@media (max-width: 760px) {
+  .guess-status {
+    top: 18px;
+    left: 50%;
+    min-width: 220px;
+    font-size: 16px;
+    padding: 14px 18px;
+  }
+
+  .guess-response-panel {
+    width: calc(100vw - 28px);
+    flex-wrap: wrap;
   }
 }
 
@@ -506,89 +536,8 @@ body {
       0 0 0 16px rgba(34, 197, 94, 0);
   }
 }
-/* Final Mystery Animal polish additions. Put this at the bottom of mystery_animal.css. */
 
-/* Bigger, more centered status pill */
-#animalStatus,
-.animal-status {
-  position: fixed !important;
-  top: 30px !important;
-  left: calc(50% + 30px) !important;
-  right: auto !important;
-  bottom: auto !important;
-
-  transform: translateX(-50%) translateY(-8px) !important;
-
-  min-width: 240px;
-  max-width: min(420px, calc(100vw - 38px));
-
-  padding: 14px 22px;
-  border-radius: 999px;
-
-  text-align: center;
-  font-size: 1rem;
-  font-weight: 900;
-
-  background: rgba(255, 255, 255, 0.94);
-  color: #32224f;
-
-  border: 1px solid rgba(139, 92, 246, 0.18);
-  box-shadow:
-    0 16px 36px rgba(52, 34, 88, 0.16),
-    0 4px 12px rgba(139, 92, 246, 0.10);
-
-  z-index: 80;
-  backdrop-filter: blur(14px);
-
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-
-  transition:
-    opacity 0.2s ease,
-    transform 0.2s ease,
-    visibility 0.2s ease;
-}
-
-#animalStatus.show,
-.animal-status.show {
-  opacity: 1;
-  visibility: visible;
-  transform: translateX(-50%) translateY(0) !important;
-}
-
-.animal-page.is-listening #animalStatus,
-.animal-page.is-listening .animal-status {
-  background: rgba(255, 255, 255, 0.97);
-}
-
-/* Circular fade-to-black */
-.animal-page.call-ending-transition {
-  background: #000 !important;
-}
-
-.animal-page.call-ending-transition::after {
-  content: "";
-  position: fixed;
-  top: 50%;
-  left: 50%;
-
-  width: 180vmax;
-  height: 180vmax;
-
-  z-index: 99998;
-  pointer-events: none;
-
-  border-radius: 50%;
-  background: transparent;
-
-  transform: translate(-50%, -50%);
-  box-shadow: 0 0 0 240vmax #000;
-
-  animation: mysteryAnimalIrisClose 1050ms cubic-bezier(0.22, 0.9, 0.32, 1) forwards;
-}
-
-@keyframes mysteryAnimalIrisClose {
+@keyframes guessingGameIrisClose {
   0% {
     width: 180vmax;
     height: 180vmax;
@@ -610,67 +559,61 @@ body {
   }
 }
 
-@media (max-width: 760px) {
-  #animalStatus,
-  .animal-status {
-    top: 18px !important;
-    left: 50% !important;
-    min-width: 220px;
-    font-size: 16px;
-    padding: 14px 18px;
-  }
-}
-
-/* Round display — matches Mystery Animal's round card */
-.animal-round-card {
-  position: absolute;
-  right: 90px;
-  bottom: 112px;
-  z-index: 13;
-  width: 240px;
-  box-sizing: border-box;
+.guess-round-card {
+  position: fixed;
+  top: 30px;
+  right: 44px;
+  z-index: 80;
+  min-width: 150px;
+  padding: 13px 18px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 2px solid rgba(255, 255, 255, 0.52);
+  box-shadow: 0 12px 28px rgba(35, 31, 53, 0.12);
+  backdrop-filter: blur(14px);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 13px 18px;
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.56);
-  border: 2px solid rgba(255, 255, 255, 0.46);
-  box-shadow: 0 10px 22px rgba(35, 31, 53, 0.08);
-  backdrop-filter: blur(14px);
+  gap: 14px;
 }
 
-.animal-round-card span {
+.guess-round-card span {
   color: #5b516e;
   font-size: 14px;
   font-weight: 900;
 }
 
-.animal-round-card strong {
-  min-width: 78px;
-  width: auto;
-  height: 34px;
-  padding: 0 12px;
-  border-radius: 999px;
-  background: var(--purple);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
+.guess-round-card strong {
+  color: var(--purple-dark);
+  font-size: 17px;
   font-weight: 1000;
-  white-space: nowrap;
+}
+
+.librarian-wrap {
+  bottom: -400px;
+  width: min(43vw, 560px);
+}
+
+.main-librarian {
+  filter: drop-shadow(0 24px 34px rgba(23, 107, 84, 0.20));
+}
+
+.librarian-mouth-img {
+  left: 49%;
+  top: 15%;
+  width: 13%;
+}
+
+@media (max-height: 760px) {
+  .librarian-wrap {
+    width: min(36vw, 430px);
+    bottom: -62px;
+  }
 }
 
 @media (max-width: 760px) {
-  .animal-round-card {
-    right: 24px;
-    bottom: 104px;
-    width: 210px;
-  }
-
-  .animal-response-panel {
-    right: 24px;
-    bottom: 170px;
+  .librarian-wrap {
+    width: min(72vw, 430px);
+    bottom: -52px;
   }
 }

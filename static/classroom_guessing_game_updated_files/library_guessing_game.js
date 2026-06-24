@@ -1,15 +1,15 @@
 document.addEventListener("DOMContentLoaded", function () {
-  const animalPage = document.querySelector(".animal-page");
+  const guessPage = document.querySelector(".guess-page");
 
   const incomingCallScreen = document.getElementById("incomingCallScreen");
   const acceptCall = document.getElementById("acceptCall");
   const declineCall = document.getElementById("declineCall");
-  const animalStage = document.getElementById("animalStage");
+  const guessStage = document.getElementById("guessStage");
 
   const hangupBtn = document.getElementById("hangupBtn");
-  const animalStatus = document.getElementById("animalStatus");
-  const animalResponsePanel = document.getElementById("animalResponsePanel");
-  const roundNumber = document.getElementById("roundNumber");
+  const guessStatus = document.getElementById("guessStatus");
+  const guessResponsePanel = document.getElementById("guessResponsePanel");
+  const guessRoundNumber = document.getElementById("guessRoundNumber");
 
   let starAudio = null;
   let audioContext = null;
@@ -24,6 +24,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   let currentResponseMode = "none";
   let currentStage = "intro";
+  let offerNextGame = false;
 
   let activeStream = null;
   let micAudioContext = null;
@@ -39,7 +40,6 @@ document.addEventListener("DOMContentLoaded", function () {
   let waitingForStarResponse = false;
   let gameActive = false;
   let sessionDone = false;
-  let starSpeaking = false;
 
   let recognition = null;
   let recognitionActive = false;
@@ -51,6 +51,7 @@ document.addEventListener("DOMContentLoaded", function () {
   let lastLiveTranscript = "";
   let lastCleanTranscript = "";
   let thinkingRestartCount = 0;
+  let silentRetryCount = 0;
 
   let thinkingFillerTimer = null;
   let thinkingFillerInterval = null;
@@ -60,8 +61,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
   const SpeechRecognition =
     window.SpeechRecognition || window.webkitSpeechRecognition || null;
-
-  const LISTEN_AFTER_STAR_AUDIO_MS = 650;
 
   const ringtone = new Audio("/static/images/ringtone.mp3");
   ringtone.loop = true;
@@ -73,137 +72,73 @@ document.addEventListener("DOMContentLoaded", function () {
   let ringtoneStarted = false;
 
   function setStatus(text, shouldShow = true) {
-    if (!animalStatus) return;
+    if (!guessStatus) return;
 
-    animalStatus.textContent = text || "";
+    guessStatus.textContent = text || "";
 
     if (shouldShow && text) {
-      animalStatus.classList.add("show");
+      guessStatus.classList.add("show");
     } else {
-      animalStatus.classList.remove("show");
+      guessStatus.classList.remove("show");
     }
   }
 
-  function updateRoundDisplay(gameState = {}, stage = currentStage) {
-    if (!roundNumber) return;
+  function updateRoundDisplay(gameState) {
+    if (!guessRoundNumber || !gameState) return;
 
-    const totalRounds = 9;
-    const completed = Math.max(0, Number(gameState.rounds_completed || 0));
-    let displayRound = completed + 1;
+    const completed = Number(gameState.rounds_completed || 0);
+    const currentRound = Math.min(Math.max(completed + 1, 1), 3);
 
-    if (stage === "round_choice" || stage === "session_done") {
-      displayRound = Math.max(1, completed);
-    }
-
-    displayRound = Math.max(1, Math.min(totalRounds, displayRound));
-    roundNumber.textContent = `${displayRound} of ${totalRounds}`;
+    guessRoundNumber.textContent = String(currentRound);
   }
 
   function setListeningUI(active) {
-    if (!animalPage) return;
+    if (!guessPage) return;
 
     if (active) {
-      animalPage.classList.add("is-listening");
+      guessPage.classList.add("is-listening");
       setStatus("I’m listening.");
     } else {
-      animalPage.classList.remove("is-listening");
+      guessPage.classList.remove("is-listening");
     }
-  }
-
-  function startListeningAfterStarFinishes() {
-    if (!gameActive || sessionDone) return;
-
-    setTimeout(function () {
-      if (!gameActive || sessionDone) return;
-
-      if (starAudio && !starAudio.ended && !starAudio.paused) {
-        starAudio.addEventListener("ended", function () {
-          setTimeout(function () {
-            if (gameActive && !sessionDone) {
-              startListeningForChild();
-            }
-          }, 350);
-        }, { once: true });
-
-        return;
-      }
-
-      startListeningForChild();
-    }, LISTEN_AFTER_STAR_AUDIO_MS);
   }
 
   function getLiveHardCapDuration() {
     const extraThinkingTime = Math.min(thinkingRestartCount * 2500, 5000);
 
-    if (currentResponseMode === "yes_no") return 9000 + extraThinkingTime;
-    if (currentResponseMode === "guess_confirmation") return 9000 + extraThinkingTime;
-    if (currentResponseMode === "choice") return 11000 + extraThinkingTime;
-    if (currentResponseMode === "one_word") return 13000 + extraThinkingTime;
-    if (currentResponseMode === "short_phrase") return 16000 + extraThinkingTime;
-    if (currentResponseMode === "open_hint") return 18000 + extraThinkingTime;
-    if (currentResponseMode === "round_choice") return 18000 + extraThinkingTime;
-
-    return 12000 + extraThinkingTime;
+    if (((currentResponseMode === "round_choice" || currentResponseMode === "round_choice_voice") || currentResponseMode === "round_choice_voice")) return 18000 + extraThinkingTime;
+    return 24000 + extraThinkingTime;
   }
 
   function getBackupListeningDuration() {
     const extraThinkingTime = Math.min(thinkingRestartCount * 2500, 5000);
 
-    if (currentResponseMode === "yes_no") return 6500 + extraThinkingTime;
-    if (currentResponseMode === "guess_confirmation") return 7000 + extraThinkingTime;
-    if (currentResponseMode === "choice") return 8500 + extraThinkingTime;
-    if (currentResponseMode === "one_word") return 10000 + extraThinkingTime;
-    if (currentResponseMode === "short_phrase") return 12500 + extraThinkingTime;
-    if (currentResponseMode === "open_hint") return 14500 + extraThinkingTime;
-    if (currentResponseMode === "round_choice") return 15000 + extraThinkingTime;
-
-    return 10000 + extraThinkingTime;
+    if (((currentResponseMode === "round_choice" || currentResponseMode === "round_choice_voice") || currentResponseMode === "round_choice_voice")) return 14000 + extraThinkingTime;
+    return 21000 + extraThinkingTime;
   }
 
   function getBackupSilenceAfterSpeechDuration() {
-    const extraThinkingPause = Math.min(thinkingRestartCount * 800, 1800);
+    const extraThinkingPause = Math.min(thinkingRestartCount * 500, 1000);
 
-    if (currentResponseMode === "yes_no") return 1500 + extraThinkingPause;
-    if (currentResponseMode === "guess_confirmation") return 1100 + extraThinkingPause;
-    if (currentResponseMode === "choice") return 2200 + extraThinkingPause;
-    if (currentResponseMode === "one_word") return 2400 + extraThinkingPause;
-    if (currentResponseMode === "short_phrase") return 3100 + extraThinkingPause;
-    if (currentResponseMode === "open_hint") return 3600 + extraThinkingPause;
-    if (currentResponseMode === "round_choice") return 3200 + extraThinkingPause;
-
-    return 2400 + extraThinkingPause;
+    if (((currentResponseMode === "round_choice" || currentResponseMode === "round_choice_voice") || currentResponseMode === "round_choice_voice")) return 2200 + extraThinkingPause;
+    return 2900 + extraThinkingPause;
   }
 
   function getBackupMinimumRecordingDuration() {
-    if (currentResponseMode === "yes_no") return 750;
-    if (currentResponseMode === "guess_confirmation") return 650;
-    if (currentResponseMode === "choice") return 1000;
-    if (currentResponseMode === "one_word") return 1150;
-    if (currentResponseMode === "short_phrase") return 1500;
-    if (currentResponseMode === "open_hint") return 1800;
-    if (currentResponseMode === "round_choice") return 1800;
-
-    return 1200;
+    if (((currentResponseMode === "round_choice" || currentResponseMode === "round_choice_voice") || currentResponseMode === "round_choice_voice")) return 1400;
+    return 1800;
   }
 
   function getLiveSubmitDelay(cleanedTranscript) {
-    if (currentResponseMode === "yes_no") {
-      if (isYesOrNoLike(cleanedTranscript)) return 350;
-      return 900;
+    if (((currentResponseMode === "round_choice" || currentResponseMode === "round_choice_voice") || currentResponseMode === "round_choice_voice")) {
+      if (isShortChoiceLike(cleanedTranscript)) return 300;
+      return 650;
     }
 
-    if (currentResponseMode === "guess_confirmation") {
-      if (isYesOrNoLike(cleanedTranscript)) return 350;
-      return 900;
-    }
+    if (isLikelyDirectGuess(cleanedTranscript)) return 650;
+    if (isLikelyShortQuestion(cleanedTranscript)) return 1150;
 
-    if (currentResponseMode === "choice") return 900;
-    if (currentResponseMode === "one_word") return 950;
-    if (currentResponseMode === "short_phrase") return 1250;
-    if (currentResponseMode === "open_hint") return 1500;
-    if (currentResponseMode === "round_choice") return 1200;
-
-    return 1000;
+    return 1400;
   }
 
   function normalizeTranscriptText(text) {
@@ -220,14 +155,7 @@ document.addEventListener("DOMContentLoaded", function () {
     if (!cleaned) return "";
 
     const startingFillers = new Set([
-      "um",
-      "uh",
-      "umm",
-      "uhh",
-      "hmm",
-      "hm",
-      "mmm",
-      "like"
+      "um", "uh", "umm", "uhh", "hmm", "hm", "mmm", "like"
     ]);
 
     let words = cleaned.split(" ").filter(Boolean);
@@ -239,11 +167,7 @@ document.addEventListener("DOMContentLoaded", function () {
     cleaned = words.join(" ").trim();
 
     const softStarts = [
-      "let me think",
-      "i think",
-      "i guess",
-      "wait",
-      "hold on"
+      "let me think", "i think", "i guess", "maybe", "wait", "hold on"
     ];
 
     for (const phrase of softStarts) {
@@ -264,91 +188,70 @@ document.addEventListener("DOMContentLoaded", function () {
     if (!cleaned) return true;
 
     const thinkingOnlyPhrases = new Set([
-      "um",
-      "uh",
-      "umm",
-      "uhh",
-      "hmm",
-      "hm",
-      "mmm",
-      "let me think",
-      "i am thinking",
-      "i'm thinking",
-      "im thinking",
-      "thinking",
-      "wait",
-      "one second",
-      "hold on",
-      "give me a second",
-      "give me one second",
-      "give me a minute",
-      "i need a second",
-      "i need to think",
-      "let me see",
-      "hmm let me think",
-      "um let me think",
-      "uh let me think"
+      "um", "uh", "umm", "uhh", "hmm", "hm", "mmm",
+      "let me think", "i am thinking", "i'm thinking", "im thinking",
+      "thinking", "wait", "one second", "hold on", "give me a second",
+      "give me one second", "give me a minute", "i need a second",
+      "i need to think", "let me see"
     ]);
 
-    if (thinkingOnlyPhrases.has(cleaned)) {
-      return true;
-    }
+    if (thinkingOnlyPhrases.has(cleaned)) return true;
 
     const words = cleaned.split(" ").filter(Boolean);
-
-    const fillerWords = new Set([
-      "um",
-      "uh",
-      "umm",
-      "uhh",
-      "hmm",
-      "hm",
-      "mmm",
-      "like",
-      "wait"
-    ]);
+    const fillerWords = new Set(["um", "uh", "umm", "uhh", "hmm", "hm", "mmm", "like", "wait"]);
 
     return words.length > 0 && words.every(function (word) {
       return fillerWords.has(word);
     });
   }
 
-  function isYesOrNoLike(text) {
+  function isShortChoiceLike(text) {
     const cleaned = normalizeTranscriptText(text);
-    const words = new Set(cleaned.split(" ").filter(Boolean));
+    const words = cleaned.split(" ").filter(Boolean);
 
-    const yesWords = new Set([
-      "yes",
-      "yeah",
-      "yep",
-      "yup",
-      "correct",
-      "right",
-      "sure"
+    if (words.length > 4) return false;
+
+    const choiceWords = new Set([
+      "yes", "yeah", "yep", "yup", "sure", "okay", "ok", "alright", "cool",
+      "again", "more", "stop", "done", "no", "nope", "next", "different"
     ]);
 
-    const noWords = new Set([
-      "no",
-      "nope",
-      "nah",
-      "not"
+    return words.some(function (word) {
+      return choiceWords.has(word);
+    });
+  }
+
+  function isLikelyDirectGuess(text) {
+    const cleaned = normalizeTranscriptText(text);
+
+    if (!cleaned) return false;
+
+    const classroomObjectWords = new Set([
+      "pencil", "backpack", "bag", "bookbag", "glue", "gluestick", "stick"
     ]);
 
-    for (const word of words) {
-      if (yesWords.has(word) || noWords.has(word)) {
-        return true;
-      }
-    }
+    const words = cleaned.split(" ").filter(Boolean);
+    const hasClassroomObject = words.some(function (word) {
+      return classroomObjectWords.has(word);
+    }) || cleaned.includes("glue stick") || cleaned.includes("school bag");
 
-    return false;
+    if (!hasClassroomObject) return false;
+
+    return cleaned.includes("is it") || cleaned.includes("i think") || cleaned.includes("guess") || words.length <= 4;
+  }
+
+  function isLikelyShortQuestion(text) {
+    const cleaned = normalizeTranscriptText(text);
+    const words = cleaned.split(" ").filter(Boolean);
+
+    if (words.length <= 3) return false;
+
+    const starters = ["is", "are", "do", "does", "can", "could", "would", "has", "have", "what", "where", "how"];
+    return starters.includes(words[0]);
   }
 
   function resetThinkingState() {
     thinkingRestartCount = 0;
-  }
-
-  function delay(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   async function playThinkingFillerLine() {
@@ -357,32 +260,16 @@ document.addEventListener("DOMContentLoaded", function () {
     const requestId = thinkingFillerRequestId;
 
     try {
-      const response = await fetch("/api/book-guessing-game/thinking-audio", {
+      const avoid = encodeURIComponent(recentThinkingLines.join("|"));
+      const response = await fetch(`/api/library-guessing-game/thinking-audio?avoid=${avoid}`, {
         method: "GET",
         credentials: "same-origin"
       });
 
       const data = await response.json();
 
-      if (
-        requestId !== thinkingFillerRequestId ||
-        !waitingForStarResponse ||
-        sessionDone
-      ) {
-        return;
-      }
-
-      if (!response.ok || !data.success || !data.audio_url) {
-        return;
-      }
-
-      if (
-        data.line &&
-        recentThinkingLines.length > 0 &&
-        recentThinkingLines[recentThinkingLines.length - 1] === data.line
-      ) {
-        return;
-      }
+      if (requestId !== thinkingFillerRequestId || !waitingForStarResponse || sessionDone) return;
+      if (!response.ok || !data.success || !data.audio_url) return;
 
       if (data.line) {
         recentThinkingLines.push(data.line);
@@ -411,53 +298,20 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function startThinkingFiller() {
     stopThinkingFiller();
-
     thinkingFillerRequestId += 1;
 
     thinkingFillerTimer = setTimeout(function () {
       playThinkingFillerLine();
 
       thinkingFillerInterval = setInterval(function () {
-        if (!waitingForStarResponse || sessionDone || starSpeaking) {
+        if (!waitingForStarResponse || sessionDone) {
           stopThinkingFiller();
           return;
         }
 
         playThinkingFillerLine();
-      }, 6500);
-    }, 1800);
-  }
-
-  async function finishThinkingFillerBeforeStar() {
-    thinkingFillerRequestId += 1;
-
-    if (thinkingFillerTimer) {
-      clearTimeout(thinkingFillerTimer);
-      thinkingFillerTimer = null;
-    }
-
-    if (thinkingFillerInterval) {
-      clearInterval(thinkingFillerInterval);
-      thinkingFillerInterval = null;
-    }
-
-    if (
-      thinkingFillerAudio &&
-      !thinkingFillerAudio.paused &&
-      !thinkingFillerAudio.ended
-    ) {
-      await Promise.race([
-        new Promise(resolve => {
-          thinkingFillerAudio.addEventListener("ended", resolve, { once: true });
-          thinkingFillerAudio.addEventListener("error", resolve, { once: true });
-        }),
-        delay(650)
-      ]);
-
-      await delay(220);
-    }
-
-    thinkingFillerAudio = null;
+      }, 4200);
+    }, 900);
   }
 
   function stopThinkingFiller() {
@@ -489,9 +343,7 @@ document.addEventListener("DOMContentLoaded", function () {
     thinkingRestartCount += 1;
     setStatus("Take your time.", true);
 
-    if (SpeechRecognition) {
-      return;
-    }
+    if (SpeechRecognition) return;
 
     setTimeout(function () {
       if (!isListening && !waitingForStarResponse && gameActive && !sessionDone) {
@@ -500,25 +352,44 @@ document.addEventListener("DOMContentLoaded", function () {
     }, 250);
   }
 
+  function makeResponseButton(label, value) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "guess-response-btn";
+    button.textContent = label;
+
+    button.addEventListener("click", function () {
+      handleManualResponse(value);
+    });
+
+    return button;
+  }
 
   function showResponseButtons(mode) {
-    // Speech-only Mystery Animal: no on-screen answer buttons.
+    // Voice-only game: no play-again / stop buttons.
     hideResponseButtons();
   }
 
   function hideResponseButtons() {
-    if (!animalResponsePanel) return;
+    if (!guessResponsePanel) return;
 
-    animalResponsePanel.classList.add("hide");
-    animalResponsePanel.innerHTML = "";
+    guessResponsePanel.classList.add("hide");
+    guessResponsePanel.innerHTML = "";
   }
 
+  function handleManualResponse(value) {
+    if (waitingForStarResponse || sessionDone) return;
+
+    resetThinkingState();
+    cancelListening();
+    hideResponseButtons();
+    requestStarMessage("child_answer", value);
+  }
 
   function startRingtone() {
     if (ringtoneStarted) return;
 
-    ringtone
-      .play()
+    ringtone.play()
       .then(function () {
         ringtoneStarted = true;
       })
@@ -542,26 +413,27 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   async function requestStarMessage(eventType, childResponse = "") {
-    if (waitingForStarResponse || starSpeaking || sessionDone) return;
+    if (waitingForStarResponse || sessionDone) return;
+
+    if (eventType === "child_answer") {
+      silentRetryCount = 0;
+    }
 
     waitingForStarResponse = true;
     hideResponseButtons();
     setListeningUI(false);
 
-    if (eventType === "first_question") {
+    if (eventType === "child_answer" || eventType === "no_response") {
+      setStatus("Teacher is thinking.");
+      stopThinkingFiller();
+    } else if (eventType === "first_prompt") {
       setStatus("Teacher is ready.");
-    } else if (eventType === "no_response") {
-      setStatus("Teacher is thinking.");
-      startThinkingFiller();
-    } else if (eventType === "child_answer") {
-      setStatus("Teacher is thinking.");
-      startThinkingFiller();
     } else {
       setStatus("Teacher is getting ready.");
     }
 
     try {
-      const response = await fetch("/api/book-guessing-game/message", {
+      const response = await fetch("/api/library-guessing-game/message", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -575,9 +447,9 @@ document.addEventListener("DOMContentLoaded", function () {
       });
 
       const data = await response.json();
-      console.log("🏫 Teacher response:", data);
+      console.log("⭐ Classroom Guessing Game Teacher response:", data);
 
-      await finishThinkingFillerBeforeStar();
+      stopThinkingFiller();
 
       if (!response.ok || !data.success) {
         throw new Error(data.error || "Teacher response failed");
@@ -585,7 +457,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
       currentResponseMode = data.response_mode || "none";
       currentStage = data.stage || "intro";
-      updateRoundDisplay(data.game_state || {}, currentStage);
+      offerNextGame = Boolean(data.offer_next_game);
+      updateRoundDisplay(data.game_state);
 
       const expectsResponse = Boolean(data.expects_response) && !data.session_done;
       const nextEvent = data.next_event || null;
@@ -593,16 +466,15 @@ document.addEventListener("DOMContentLoaded", function () {
       const nextUrl = data.next_url || null;
       const redirectAfterMs = Number(data.redirect_after_ms || 0);
 
-      await playStarResponseAudio(data, expectsResponse, function () {
+      playStarAudio(data.audio, expectsResponse, function () {
         if (nextUrl) {
           sessionDone = true;
           gameActive = false;
           setStatus("Calling you right back.", true);
-
           playCallAcceptedSound();
 
-          if (animalPage) {
-            animalPage.classList.add("call-ending-transition");
+          if (guessPage) {
+            guessPage.classList.add("call-ending-transition");
           }
 
           setTimeout(function () {
@@ -630,12 +502,14 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         if (expectsResponse && gameActive && !sessionDone) {
-          startListeningAfterStarFinishes();
+          setTimeout(function () {
+            startListeningForChild();
+          }, 150);
         }
       });
     } catch (error) {
       stopThinkingFiller();
-      console.error("Mystery Classroom Object request error:", error);
+      console.error("Guessing Game request error:", error);
       setStatus("Something got quiet. You can try again.");
     } finally {
       waitingForStarResponse = false;
@@ -643,10 +517,11 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   async function startListeningForChild() {
-    if (isListening || waitingForStarResponse || starSpeaking || sessionDone || !gameActive) return;
+    if (isListening || waitingForStarResponse || sessionDone || !gameActive) return;
 
     hideResponseButtons();
     setListeningUI(true);
+    showResponseButtons(currentResponseMode);
 
     if (SpeechRecognition) {
       startLiveSpeechRecognition();
@@ -682,7 +557,6 @@ document.addEventListener("DOMContentLoaded", function () {
       }
 
       transcript = transcript.trim();
-
       if (!transcript) return;
 
       lastLiveTranscript = transcript;
@@ -690,7 +564,6 @@ document.addEventListener("DOMContentLoaded", function () {
       const cleanedTranscript = cleanTranscriptForMeaning(transcript);
 
       if (!cleanedTranscript || isThinkingOnlyTranscript(cleanedTranscript)) {
-        console.log("Live thinking/filler detected:", transcript);
         lastCleanTranscript = "";
         clearRecognitionSubmitTimer();
         continueListeningAfterThinkingSound();
@@ -723,9 +596,7 @@ document.addEventListener("DOMContentLoaded", function () {
     recognition.onend = function () {
       const elapsed = Date.now() - recognitionStartedAt;
 
-      if (recognitionStoppedByUs || !recognitionActive || sessionDone || !gameActive) {
-        return;
-      }
+      if (recognitionStoppedByUs || !recognitionActive || sessionDone || !gameActive) return;
 
       if (elapsed < getLiveHardCapDuration()) {
         clearTimeout(recognitionRestartTimer);
@@ -759,7 +630,18 @@ document.addEventListener("DOMContentLoaded", function () {
       }
 
       stopLiveSpeechRecognition(true);
+
+      if (silentRetryCount < 1 && currentResponseMode !== "round_choice_voice" && currentResponseMode !== "round_choice") {
+        silentRetryCount += 1;
+        setStatus("I’m listening.");
+        setTimeout(function () {
+          startListeningForChild();
+        }, 250);
+        return;
+      }
+
       resetThinkingState();
+      silentRetryCount = 0;
       requestStarMessage("no_response", "");
     }, getLiveHardCapDuration());
 
@@ -773,9 +655,7 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function submitLiveTranscriptIfReady() {
-    if (!recognitionActive || !isListening || waitingForStarResponse || sessionDone || !gameActive) {
-      return;
-    }
+    if (!recognitionActive || !isListening || waitingForStarResponse || sessionDone || !gameActive) return;
 
     const cleanedTranscript = cleanTranscriptForMeaning(lastCleanTranscript || lastLiveTranscript);
 
@@ -813,9 +693,7 @@ document.addEventListener("DOMContentLoaded", function () {
       recognitionHardCapTimer = null;
     }
 
-    if (markStoppedByUs) {
-      recognitionStoppedByUs = true;
-    }
+    if (markStoppedByUs) recognitionStoppedByUs = true;
 
     if (recognition) {
       try {
@@ -833,9 +711,7 @@ document.addEventListener("DOMContentLoaded", function () {
     recognition = null;
     recognitionActive = false;
 
-    if (markStoppedByUs) {
-      isListening = false;
-    }
+    if (markStoppedByUs) isListening = false;
   }
 
   function clearRecognitionSubmitTimer() {
@@ -848,12 +724,8 @@ document.addEventListener("DOMContentLoaded", function () {
   async function startAudioRecorderFallback() {
     if (sessionDone || !gameActive) return;
 
-    console.log("🎤 Starting backup recorder...");
-
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: true
-      });
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
       activeStream = stream;
       audioChunks = [];
@@ -867,11 +739,10 @@ document.addEventListener("DOMContentLoaded", function () {
       lastSpeechAt = recordStartedAt;
 
       setListeningUI(true);
+      showResponseButtons(currentResponseMode);
 
       mediaRecorder.addEventListener("dataavailable", function (event) {
-        if (event.data && event.data.size > 0) {
-          audioChunks.push(event.data);
-        }
+        if (event.data && event.data.size > 0) audioChunks.push(event.data);
       });
 
       mediaRecorder.addEventListener("stop", async function () {
@@ -889,13 +760,20 @@ document.addEventListener("DOMContentLoaded", function () {
           return;
         }
 
-        const audioBlob = new Blob(audioChunks, {
-          type: "audio/webm"
-        });
+        const audioBlob = new Blob(audioChunks, { type: "audio/webm" });
 
         if (!audioBlob.size || !speechDetected) {
-          console.warn("No clear speech captured.");
+          if (silentRetryCount < 1 && currentResponseMode !== "round_choice_voice" && currentResponseMode !== "round_choice") {
+            silentRetryCount += 1;
+            setStatus("I’m listening.");
+            setTimeout(function () {
+              startListeningForChild();
+            }, 250);
+            return;
+          }
+
           resetThinkingState();
+          silentRetryCount = 0;
           await requestStarMessage("no_response", "");
           return;
         }
@@ -913,7 +791,7 @@ document.addEventListener("DOMContentLoaded", function () {
       console.error("Microphone error:", error);
       isListening = false;
       setListeningUI(false);
-      hideResponseButtons();
+      showResponseButtons(currentResponseMode);
       setStatus("You can try the mic again.");
     }
   }
@@ -939,9 +817,7 @@ document.addEventListener("DOMContentLoaded", function () {
   function cancelListening() {
     clearRecognitionSubmitTimer();
 
-    if (recognitionActive || recognition) {
-      stopLiveSpeechRecognition(true);
-    }
+    if (recognitionActive || recognition) stopLiveSpeechRecognition(true);
 
     if (!isListening && !mediaRecorder) return;
 
@@ -999,7 +875,6 @@ document.addEventListener("DOMContentLoaded", function () {
         micAnalyser.getByteTimeDomainData(dataArray);
 
         let sum = 0;
-
         for (let i = 0; i < dataArray.length; i++) {
           const centered = (dataArray[i] - 128) / 128;
           sum += centered * centered;
@@ -1008,13 +883,8 @@ document.addEventListener("DOMContentLoaded", function () {
         const rms = Math.sqrt(sum / dataArray.length);
         const now = Date.now();
 
-        const speechThreshold = 0.022;
-
-        if (rms > speechThreshold) {
-          if (!speechDetected) {
-            firstSpeechAt = now;
-          }
-
+        if (rms > 0.035) {
+          if (!speechDetected) firstSpeechAt = now;
           speechDetected = true;
           lastSpeechAt = now;
         }
@@ -1029,13 +899,7 @@ document.addEventListener("DOMContentLoaded", function () {
           speechDuration < 850 &&
           elapsedSinceStart < getBackupListeningDuration() - 1200;
 
-        if (speechWasVeryBrief) {
-          if (currentResponseMode === "yes_no" || currentResponseMode === "guess_confirmation") {
-            silenceNeeded += 1200;
-          } else {
-            silenceNeeded += 3200;
-          }
-        }
+        if (speechWasVeryBrief) silenceNeeded += 2500;
 
         const heardSpeechAndThenPause =
           speechDetected &&
@@ -1063,49 +927,41 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     if (micSource) {
-      try {
-        micSource.disconnect();
-      } catch (e) {}
+      try { micSource.disconnect(); } catch (e) {}
       micSource = null;
     }
 
     if (micAnalyser) {
-      try {
-        micAnalyser.disconnect();
-      } catch (e) {}
+      try { micAnalyser.disconnect(); } catch (e) {}
       micAnalyser = null;
     }
 
     if (micAudioContext) {
-      try {
-        micAudioContext.close();
-      } catch (e) {}
+      try { micAudioContext.close(); } catch (e) {}
       micAudioContext = null;
     }
   }
 
   async function sendAudioToTranscribe(audioBlob) {
     setStatus("Teacher is thinking.");
-    startThinkingFiller();
+    stopThinkingFiller();
 
     try {
       const formData = new FormData();
       formData.append("audio", audioBlob, "child-response.webm");
 
-      const response = await fetch("/api/book-guessing-game/transcribe", {
+      const response = await fetch("/api/library-guessing-game/transcribe", {
         method: "POST",
         credentials: "same-origin",
         body: formData
       });
 
       const data = await response.json();
-
-      console.log("📝 Backup transcription response:", data);
       stopThinkingFiller();
 
       if (!response.ok || !data.success) {
-        console.error(data.error || "Transcription failed");
         resetThinkingState();
+        silentRetryCount = 0;
         await requestStarMessage("no_response", "");
         return;
       }
@@ -1114,12 +970,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
       if (!transcript) {
         resetThinkingState();
+        silentRetryCount = 0;
         await requestStarMessage("no_response", "");
         return;
       }
 
       if (isThinkingOnlyTranscript(transcript)) {
-        console.log("Thinking sound detected, continuing to listen:", transcript);
         continueListeningAfterThinkingSound();
         return;
       }
@@ -1127,12 +983,9 @@ document.addEventListener("DOMContentLoaded", function () {
       const cleanedTranscript = cleanTranscriptForMeaning(transcript);
 
       if (!cleanedTranscript || isThinkingOnlyTranscript(cleanedTranscript)) {
-        console.log("Transcript became filler after cleaning, continuing to listen:", transcript);
         continueListeningAfterThinkingSound();
         return;
       }
-
-      console.log("Sending cleaned backup transcript:", cleanedTranscript);
 
       resetThinkingState();
       await requestStarMessage("child_answer", cleanedTranscript);
@@ -1144,103 +997,16 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
-  function preloadAudio(src) {
-    return new Promise(resolve => {
-      if (!src) {
-        resolve(null);
-        return;
-      }
-
-      const audio = new Audio(src);
-      audio.preload = "auto";
-
-      let done = false;
-
-      function finish() {
-        if (done) return;
-        done = true;
-        resolve(audio);
-      }
-
-      audio.addEventListener("canplaythrough", finish, { once: true });
-      audio.addEventListener("loadeddata", finish, { once: true });
-      audio.addEventListener("error", finish, { once: true });
-
-      audio.load();
-      setTimeout(finish, 900);
-    });
-  }
-
-  function playStarAudioAsPromise(audioSrc) {
-    return new Promise(resolve => {
-      playStarAudio(audioSrc, false, resolve);
-    });
-  }
-
-  async function playStarAudioSequence(audioParts, expectsResponse = true, onEnded = null) {
-    const parts = (audioParts || []).filter(Boolean);
-
-    if (!parts.length) {
+  function playStarAudio(audioSrc, expectsResponse = true, onEnded = null) {
+    if (!audioSrc) {
+      stopMouthAnimation();
       if (onEnded) onEnded();
       return;
     }
 
-    await Promise.all(parts.map(preloadAudio));
-
-    for (let i = 0; i < parts.length; i++) {
-      await playStarAudioAsPromise(parts[i]);
-
-      if (i < parts.length - 1) {
-        await delay(220);
-      }
-    }
-
-    if (onEnded) {
-      onEnded();
-      return;
-    }
-
-    if (expectsResponse && gameActive && !sessionDone) {
-      startListeningAfterStarFinishes();
-    }
-  }
-
-  async function playStarResponseAudio(data, expectsResponse = true, onEnded = null) {
-    const audioParts = Array.isArray(data.audio_parts)
-      ? data.audio_parts.filter(Boolean)
-      : [];
-
-    if (audioParts.length) {
-      await playStarAudioSequence(audioParts, expectsResponse, onEnded);
-      return;
-    }
-
-    if (data.audio_url) {
-      await playStarAudioSequence([data.audio_url], expectsResponse, onEnded);
-      return;
-    }
-
-    await playStarAudioAsPromise(data.audio); if (onEnded) onEnded();
-  }
-
-  function playStarAudio(audioSrc, expectsResponse = true, onEnded = null) {
-    if (!audioSrc) {
-      starSpeaking = false;
-      stopMouthAnimation();
-
-      if (onEnded) {
-        onEnded();
-      }
-
-      return;
-    }
-
     stopThinkingFiller();
-    starSpeaking = true;
 
-    if (isListening || recognitionActive) {
-      cancelListening();
-    }
+    if (isListening || recognitionActive) cancelListening();
 
     if (starAudio) {
       starAudio.pause();
@@ -1253,7 +1019,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
     starAudio = new Audio(audioSrc);
     starAudio.volume = 1.0;
-
     starAudio.playbackRate = 0.94;
     starAudio.preservesPitch = false;
     starAudio.mozPreservesPitch = false;
@@ -1264,7 +1029,6 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     starAudio.addEventListener("ended", function () {
-      starSpeaking = false;
       stopMouthAnimation();
 
       if (onEnded) {
@@ -1273,13 +1037,14 @@ document.addEventListener("DOMContentLoaded", function () {
       }
 
       if (expectsResponse && gameActive && !sessionDone) {
-        startListeningAfterStarFinishes();
+        setTimeout(function () {
+          startListeningForChild();
+        }, 150);
       }
     });
 
     starAudio.addEventListener("error", function () {
-      starSpeaking = false;
-      console.error("Star audio error");
+      console.error("Teacher audio error");
       stopMouthAnimation();
 
       if (onEnded) {
@@ -1288,12 +1053,11 @@ document.addEventListener("DOMContentLoaded", function () {
       }
 
       if (expectsResponse && gameActive && !sessionDone) {
-        startListeningAfterStarFinishes();
+        setTimeout(startListeningForChild, 150);
       }
     });
 
     starAudio.play().catch(function (error) {
-      starSpeaking = false;
       console.error("Audio playback error:", error);
       stopMouthAnimation();
 
@@ -1303,14 +1067,13 @@ document.addEventListener("DOMContentLoaded", function () {
       }
 
       if (expectsResponse && gameActive && !sessionDone) {
-        startListeningAfterStarFinishes();
+        setTimeout(startListeningForChild, 150);
       }
     });
   }
 
   function startMouthAnimation() {
-    const mouth = document.getElementById("starMouth");
-
+    const mouth = document.getElementById("librarianMouth");
     if (!mouth || !starAudio) return;
 
     stopMouthAnimation();
@@ -1346,10 +1109,7 @@ document.addEventListener("DOMContentLoaded", function () {
       analyser.getByteFrequencyData(dataArray);
 
       let sum = 0;
-
-      for (let i = 0; i < dataArray.length; i++) {
-        sum += dataArray[i];
-      }
+      for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
 
       const average = sum / dataArray.length;
       const normalized = Math.min(Math.max((average - 10) / 70, 0), 1);
@@ -1357,15 +1117,10 @@ document.addEventListener("DOMContentLoaded", function () {
       const scaleX = 1 + normalized * 0.18;
       const scaleY = 1 + normalized * 0.32;
 
-      if (average < 14) {
-        setMouth("closed", 1, 1);
-      } else if (average < 34) {
-        setMouth("small", scaleX, scaleY);
-      } else if (average < 58) {
-        setMouth("medium", scaleX, scaleY);
-      } else {
-        setMouth("wide", scaleX, scaleY);
-      }
+      if (average < 14) setMouth("closed", 1, 1);
+      else if (average < 34) setMouth("small", scaleX, scaleY);
+      else if (average < 58) setMouth("medium", scaleX, scaleY);
+      else setMouth("wide", scaleX, scaleY);
 
       mouthAnimationFrame = requestAnimationFrame(animateMouth);
     }
@@ -1374,7 +1129,7 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function stopMouthAnimation() {
-    const mouth = document.getElementById("starMouth");
+    const mouth = document.getElementById("librarianMouth");
 
     if (mouthAnimationFrame) {
       cancelAnimationFrame(mouthAnimationFrame);
@@ -1382,23 +1137,17 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     if (sourceNode) {
-      try {
-        sourceNode.disconnect();
-      } catch (e) {}
+      try { sourceNode.disconnect(); } catch (e) {}
       sourceNode = null;
     }
 
     if (analyser) {
-      try {
-        analyser.disconnect();
-      } catch (e) {}
+      try { analyser.disconnect(); } catch (e) {}
       analyser = null;
     }
 
     if (audioContext) {
-      try {
-        audioContext.close();
-      } catch (e) {}
+      try { audioContext.close(); } catch (e) {}
       audioContext = null;
     }
 
@@ -1421,8 +1170,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
     currentResponseMode = "none";
     currentStage = "intro";
+    offerNextGame = false;
     sessionDone = false;
     gameActive = true;
+    updateRoundDisplay({ rounds_completed: 0 });
 
     setTimeout(function () {
       requestStarMessage("restart");
@@ -1436,25 +1187,20 @@ document.addEventListener("DOMContentLoaded", function () {
     stopRingtone();
     playCallAcceptedSound();
 
-    if (incomingCallScreen) {
-      incomingCallScreen.classList.add("hide");
-    }
-
-    if (animalStage) {
-      animalStage.classList.remove("call-hidden");
-    }
+    if (incomingCallScreen) incomingCallScreen.classList.add("hide");
+    if (guessStage) guessStage.classList.remove("call-hidden");
 
     setTimeout(function () {
-      if (incomingCallScreen) {
-        incomingCallScreen.style.display = "none";
-      }
+      if (incomingCallScreen) incomingCallScreen.style.display = "none";
     }, 450);
 
     currentResponseMode = "none";
     currentStage = "intro";
+    offerNextGame = false;
     sessionDone = false;
     gameActive = true;
     resetThinkingState();
+    updateRoundDisplay({ rounds_completed: 0 });
 
     setTimeout(function () {
       requestStarMessage("intro");
@@ -1480,9 +1226,7 @@ document.addEventListener("DOMContentLoaded", function () {
     window.location.href = "/dashboard";
   }
 
-  if (acceptCall) {
-    acceptCall.addEventListener("click", startGameAfterCall);
-  }
+  if (acceptCall) acceptCall.addEventListener("click", startGameAfterCall);
 
   if (declineCall) {
     declineCall.addEventListener("click", function () {
@@ -1498,11 +1242,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  if (hangupBtn) {
-    hangupBtn.addEventListener("click", endCall);
-  }
-
-  updateRoundDisplay({ rounds_completed: 0 }, "intro");
+  if (hangupBtn) hangupBtn.addEventListener("click", endCall);
 
   setTimeout(startRingtone, 400);
 
@@ -1514,7 +1254,5 @@ document.addEventListener("DOMContentLoaded", function () {
     }, 250);
   }
 
-  window.restartMysteryAnimal = restartGame;
-  window.restartMysteryClassroomObject = restartGame;
-  window.restartBookGuessingGame = restartGame;
+  window.restartGuessingGame = restartGame;
 });
