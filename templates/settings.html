@@ -323,6 +323,21 @@
 
       <div class="settings-divider"></div>
 
+            <div class="settings-row logout-row">
+        <div class="settings-row-copy">
+          <span class="row-title logout-title">Log Out</span>
+          <p>Sign out of your parent account on this device.</p>
+        </div>
+
+        <div class="settings-row-control logout-control">
+          <a href="{{ url_for('logout') }}" class="logout-account-btn">
+            Log out
+          </a>
+        </div>
+      </div>
+
+      <div class="settings-divider"></div>
+
       <form id="deleteAccountForm" action="{{ url_for('delete_account') }}" method="POST">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 

@@ -2,7 +2,7 @@
 
 {% block head %}
 {{ super() }}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}?v=15">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}?v=19">
 {% endblock %}
 
 {% block title %}Home{% endblock %}
@@ -26,8 +26,8 @@
 
     <section class="dashboard-body-topbar">
       <div class="nav-greeting">
-        <h2>Good morning, {{ parent.split()[0] }}!</h2>
-        <p>Let’s build {{ child }}'s confidence, one conversation at a time.</p>
+        <h2>Parent Dashboard<span class="parent-label">This area is only meant for parents</span></h2>
+        <p>Welcome back, {{ parent.split()[0] }}! Track {{ child }}'s progress, manage settings, and access support resources.</p>
       </div>
 
       <div class="profile-dropdown">
@@ -88,8 +88,8 @@
 
     {% if ns.current_activity %}
       <section class="today-card
-        {% if ns.current_activity.activity_id >= 7 and ns.current_activity.activity_id <= 9 %}today-green{% endif %}
-        {% if ns.current_activity.activity_id >= 4 and ns.current_activity.activity_id <= 6 %}today-blue{% endif %}
+        {% if ns.current_activity.character_active|lower == 'librarian' %}today-green{% endif %}
+        {% if ns.current_activity.character_active|lower == 'restaurantworker' %}today-blue{% endif %}
       " data-tour-target="current-activity">
 
         <div class="today-copy">
@@ -102,28 +102,34 @@
           </p>
 
           <div class="today-meta-row">
-            <span><strong>📊</strong> Level {{ ns.current_activity.level_of_realism or 1 }} of {{ ns.current_activity.total_levels_of_realism or 1 }}</span>
+            <span><strong>📊</strong> Level {{ ns.current_activity.level_of_realism or 1 }} of 3</span>
             <span><strong>🕒</strong> {{ ns.current_activity.time_recommended or 30 }} min</span>
-            <span><strong>👥</strong> With Parent</span>
+            {% if ns.current_activity.activity_id == 1 %}
+              <span><strong>👥</strong> Parent-guided</span>
+            {% elif ns.current_activity.activity_id <= 3 %}
+              <span><strong>👥</strong> Parent nearby</span>
+            {% else %}
+              <span><strong>👥</strong> Parent optional</span>
+            {% endif %}
           </div>
 
           <div class="today-action-row">
-  <a
-    href="{{ url_for('open_activity', activity_id=ns.current_activity.activity_id) }}"
-    class="start-activity-btn">
-    <span class="play-circle">▶</span>
-    Start Activity
-  </a>
+            <a
+              href="{{ url_for('open_activity', activity_id=ns.current_activity.activity_id) }}"
+              class="start-activity-btn">
+              <span class="play-circle">▶</span>
+              Start Activity
+            </a>
 
-  <button
-    type="button"
-    class="view-instructions-btn"
-    id="viewInstructionsBtn"
-    data-activity-name="{{ ns.current_activity.activity_name.replace('_', ' ').title() }}"
-    data-activity-id="{{ ns.current_activity.activity_id }}">
-    View Instructions
-  </button>
-</div>
+            <button
+              type="button"
+              class="view-instructions-btn"
+              id="viewInstructionsBtn"
+              data-activity-name="{{ ns.current_activity.activity_name.replace('_', ' ').title() }}"
+              data-activity-id="{{ ns.current_activity.activity_id }}">
+              View Instructions
+            </button>
+          </div>
         </div>
 
         <div class="today-visual">
@@ -191,28 +197,29 @@
               </div>
 
               <div class="journey-action">
-  {% if activity.activity_id == current_activity_id %}
-    <div class="journey-current-actions">
-      <button
-        class="journey-restart-btn activity-action-btn"
-        type="button"
-        data-action="restart"
-        data-activity-id="{{ activity.activity_id }}">
-        Restart
-      </button>
-      <a
-        href="{{ url_for('open_activity', activity_id=activity.activity_id) }}"
-        class="journey-current-pill">
-        <span>Current</span>
+                {% if activity.activity_id == current_activity_id %}
+                  <div class="journey-current-actions">
+                    <button
+                      class="journey-restart-btn activity-action-btn"
+                      type="button"
+                      data-action="restart"
+                      data-activity-id="{{ activity.activity_id }}">
+                      Restart
+                    </button>
 
-        <img
-          src="{{ url_for('static', filename='images/shine.png') }}"
-          class="journey-current-shine"
-          alt=""
-        >
-    </a>
-    </div>
-  {% elif activity.is_unlocked %}
+                    <a
+                      href="{{ url_for('open_activity', activity_id=activity.activity_id) }}"
+                      class="journey-current-pill">
+                      <span>Current</span>
+
+                      <img
+                        src="{{ url_for('static', filename='images/shine.png') }}"
+                        class="journey-current-shine"
+                        alt=""
+                      >
+                    </a>
+                  </div>
+                {% elif activity.is_unlocked %}
                   <button
                     class="journey-action-btn activity-action-btn"
                     type="button"
@@ -221,16 +228,20 @@
                     Set Current
                   </button>
                 {% else %}
-                  <button
-                    class="journey-lock-pill activity-action-btn"
-                    type="button"
-                    data-action="unlock"
-                    data-activity-id="{{ activity.activity_id }}"
-                    data-activity-name="{{ activity.activity_name.replace('_', ' ').title() }}"
-                    data-character="{{ activity.character_active or 'the character' }}"
-                    data-time="{{ activity.time_recommended or 30 }}">
-                    Unlock
-                  </button>
+                  {% set previous_activity = activities[loop.index0 - 1] if loop.index0 > 0 else none %}
+
+<button
+  class="journey-lock-pill activity-action-btn"
+  type="button"
+  data-action="unlock"
+  data-activity-id="{{ activity.activity_id }}"
+  data-activity-name="{{ activity.activity_name.replace('_', ' ').title() }}"
+
+  data-prereq-activity-name="{{ previous_activity.activity_name.replace('_', ' ').title() if previous_activity else 'the previous activity' }}"
+  data-prereq-character="{{ previous_activity.character_active if previous_activity and previous_activity.character_active else 'the previous character' }}"
+  data-prereq-time="{{ previous_activity.time_recommended if previous_activity and previous_activity.time_recommended else 30 }}">
+  Unlock
+</button>
                 {% endif %}
               </div>
             </div>
@@ -289,6 +300,182 @@
     <h2 id="instructionsTitle">Instructions</h2>
 
     <div class="instructions-content" id="instructionsContent"></div>
+  </div>
+</div>
+
+<div
+  class="feedback-system"
+  id="feedbackSystem"
+  data-user-id="{{ session.get('user_id') }}"
+  data-login-count="{{ login_count|default(0) }}"
+  data-show-feedback="{{ 1 if show_feedback_prompt else 0 }}"
+>
+  <div class="feedback-modal-overlay" id="feedbackOverlay">
+    <!-- STEP 1: Invite modal -->
+    <div class="feedback-panel feedback-panel-intro active" id="feedbackIntroPanel">
+      <button type="button" class="feedback-close-btn" id="closeFeedbackBtn" aria-label="Close">
+        ×
+      </button>
+
+      <div class="feedback-intro-grid">
+        <div class="feedback-intro-art">
+          <img
+            src="{{ url_for('static', filename='images/feedback_star_intro.png') }}"
+            alt="Star"
+            class="feedback-intro-star"
+          >
+        </div>
+
+        <div class="feedback-intro-copy">
+          <h2>Help us make BraveSprouts even better</h2>
+
+          <p class="feedback-intro-body">
+            We're always working to make BraveSprouts the best it can be for children with selective mutism.
+          </p>
+
+          <div class="feedback-highlight-card">
+            <div class="feedback-highlight-icon-wrap">
+              <img
+                src="{{ url_for('static', filename='images/feedback_icon_clock_purple.png') }}"
+                alt=""
+                class="feedback-highlight-icon"
+              >
+            </div>
+
+            <div class="feedback-highlight-text">
+              It only takes about <strong>30 seconds</strong> to answer
+              <strong>3 quick questions</strong>, and your feedback will truly go a long way in helping
+              <strong>your child</strong> and other children just like yours.
+            </div>
+
+            <div class="feedback-highlight-heart-wrap">
+              <img
+                src="{{ url_for('static', filename='images/feedback_icon_heart_purple.svg') }}"
+                alt=""
+                class="feedback-highlight-heart"
+              >
+            </div>
+          </div>
+
+          <div class="feedback-intro-actions">
+            <button type="button" class="feedback-primary-btn" id="feedbackYesBtn">
+              <img
+                src="{{ url_for('static', filename='images/feedback_icon_heart_white.svg') }}"
+                alt=""
+                class="feedback-primary-icon"
+              >
+              <span>Yes, I'll help!</span>
+            </button>
+
+            <button type="button" class="feedback-secondary-btn" id="feedbackLaterBtn">
+              Maybe later
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2: Actual survey -->
+    <div class="feedback-panel feedback-panel-form" id="feedbackFormPanel" hidden>
+      <button type="button" class="feedback-back-btn" id="feedbackBackBtn">
+        ← Back to dashboard
+      </button>
+
+      <button type="button" class="feedback-close-btn feedback-form-close-btn" id="closeFeedbackFormBtn" aria-label="Close">
+        ×
+      </button>
+
+      <div class="feedback-form-header">
+        <h2>3 quick questions</h2>
+        <p>Short answers are perfect. A sentence or two is more than enough.</p>
+      </div>
+
+      <form class="feedback-form" id="feedbackForm">
+        <label class="feedback-field">
+          <span class="feedback-field-label">
+            <span class="feedback-field-number">1</span>
+            What did your child enjoy?
+          </span>
+          <textarea
+            id="feedbackEnjoyed"
+            rows="1"
+            maxlength="600"
+            placeholder="For example: Star, the characters, the art, a specific activity..."
+          ></textarea>
+        </label>
+
+        <label class="feedback-field">
+          <span class="feedback-field-label">
+            <span class="feedback-field-number">2</span>
+            What didn't work?
+          </span>
+          <textarea
+            id="feedbackDidntWork"
+            rows="1"
+            maxlength="600"
+            placeholder="For example: too hard, too easy, confusing, technical issue..."
+          ></textarea>
+        </label>
+
+        <label class="feedback-field">
+          <span class="feedback-field-label">
+            <span class="feedback-field-number">3</span>
+            What would make it even better?
+          </span>
+          <textarea
+            id="feedbackBetter"
+            rows="1"
+            maxlength="600"
+            placeholder="Tell us one thing that would make BraveSprouts even better for your family."
+          ></textarea>
+        </label>
+
+        <p class="feedback-status" id="feedbackStatus"></p>
+
+        <div class="feedback-form-actions">
+          <button type="button" class="feedback-secondary-btn" id="feedbackFormLaterBtn">
+            Maybe later
+          </button>
+
+          <button type="submit" class="feedback-primary-btn feedback-primary-btn-submit" id="submitFeedbackBtn">
+            Submit feedback
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Bottom-right widget -->
+  <div
+    class="feedback-widget"
+    id="feedbackFloatingBtn"
+    role="button"
+    tabindex="0"
+    aria-label="Open feedback survey"
+  >
+    <img
+      src="{{ url_for('static', filename='images/feedback_star_widget.png') }}"
+      alt="Star"
+      class="feedback-widget-star"
+    >
+
+    <div class="feedback-widget-card">
+      <div class="feedback-widget-copy">
+        <strong>Got 30 secs?</strong>
+        <span>Help make BraveSprouts better!</span>
+        <small>Your feedback helps other children with selective mutism.</small>
+      </div>
+
+      <button type="button" class="feedback-widget-button" id="feedbackWidgetSurveyBtn">
+        Take Survey
+        <span aria-hidden="true">↗</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Thank-you toast -->
+  <div class="feedback-thanks-toast" id="feedbackThanks">
+    💜 Thank you! Your feedback will help us improve BraveSprouts.
   </div>
 </div>
 

@@ -378,3 +378,153 @@ input, button, textarea, select, a {
     50%      { transform: translateY(-12px) translateX(6px); }
 }
 
+@media (max-width: 900px) {
+    html,
+    body {
+        overflow-x: hidden;
+    }
+
+    .page {
+        min-height: 100vh;
+        padding: 28px 20px 42px;
+    }
+
+    .topbar {
+        flex-direction: column;
+        gap: 18px;
+        margin-bottom: 38px;
+    }
+
+    .logo {
+        height: auto;
+        width: min(82vw, 340px);
+        margin-left: 0;
+    }
+
+    .back-home {
+        margin-right: 0;
+        padding: 11px 20px;
+        font-size: 15px;
+        border-radius: 999px;
+    }
+
+    .login-layout {
+        display: block;
+        min-height: auto;
+        max-width: 430px;
+        margin: 0 auto;
+    }
+
+    .illustration-area {
+        display: none;
+    }
+
+    .login-card {
+        max-width: 100%;
+        padding: 42px 22px 34px;
+        border-radius: 30px;
+    }
+
+    .login-card h1 {
+        font-size: clamp(2.6rem, 12vw, 3.7rem);
+        line-height: 1.05;
+        margin-bottom: 14px;
+    }
+
+    .subtitle {
+        font-size: 1.05rem;
+        line-height: 1.45;
+        margin-bottom: 30px;
+    }
+
+    .input-group {
+        height: 66px;
+        padding: 0 18px;
+        border-radius: 20px;
+    }
+
+    .input-icon {
+        width: 20px;
+        height: 20px;
+        margin-right: 14px;
+    }
+
+    .input-group input {
+        font-size: 1rem;
+        min-width: 0;
+    }
+
+    .password-toggle-btn {
+        margin-left: 8px;
+    }
+
+    .password-toggle {
+        width: 24px;
+    }
+
+    .form-row {
+        gap: 12px;
+        margin: 10px 2px 24px;
+    }
+
+    .remember-me {
+        gap: 9px;
+        font-size: 0.95rem;
+    }
+
+    .remember-me input {
+        width: 18px;
+        height: 18px;
+    }
+
+    .forgot-link {
+        font-size: 0.95rem;
+        white-space: nowrap;
+    }
+
+    .login-btn {
+        padding: 17px 22px;
+        margin-top: 10px;
+    }
+
+    .signup-row {
+        margin-top: 28px;
+        font-size: 1rem;
+        gap: 8px;
+    }
+}
+
+@media (max-width: 390px) {
+    .form-row {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 14px;
+    }
+
+    .forgot-link {
+        align-self: flex-end;
+    }
+}
+
+@media (max-width: 1150px) {
+    html,
+    body {
+        overflow-x: hidden;
+    }
+
+    .login-layout {
+        display: block;
+        max-width: 460px;
+        min-height: auto;
+        margin: 0 auto;
+    }
+
+    .illustration-area {
+        display: none;
+    }
+
+    .login-card {
+        max-width: 100%;
+        padding: 48px 26px 38px;
+    }
+}

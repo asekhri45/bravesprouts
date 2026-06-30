@@ -1,0 +1,22 @@
+html,
+body {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: white;
+}
+
+body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.coming-soon {
+    height: 100vh;
+    width: auto;
+    max-width: 100vw;
+    object-fit: contain;
+    display: block;
+}

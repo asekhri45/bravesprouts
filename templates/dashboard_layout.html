@@ -18,7 +18,7 @@
   <aside class="sidebar">
     <div class="sidebar-logo">
       <img
-        src="{{ url_for('static', filename='images/logo_v2.png') }}"
+        src="{{ url_for('static', filename='images/logo_v4.png') }}"
         class="logo"
         alt="BraveSprouts logo"
       >
@@ -44,7 +44,7 @@
 
   <a href="{{ url_for('ask_bravesprouts') }}" class="sidebar-item {% if active_page == 'ask_bravesprouts' %}active{% endif %}">
     <img src="{{ url_for('static', filename='images/' + ('ask_bravesprouts_selected.png' if active_page == 'ask_bravesprouts' else 'ask_bravesprouts_unselected.png')) }}" class="sidebar-icon">
-    <span>Ask BraveSprouts</span>
+    <span>MyBraveSprout AI</span>
   </a>
 
   <a href="{{ url_for('acknowledgments') }}" class="sidebar-item {% if active_page == 'acknowledgments' %}active{% endif %}">

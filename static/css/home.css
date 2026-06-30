@@ -571,3 +571,161 @@ body::after {
         align-self: flex-start;
     }
 }
+
+@media (max-width: 768px) {
+    :root {
+        --nav-height: 86px;
+        --container-width: min(92%, 430px);
+    }
+
+    body {
+        padding-top: var(--nav-height);
+        overflow-x: hidden;
+    }
+
+    .navbar {
+        padding: 16px 0 10px;
+    }
+
+    .nav-inner {
+        justify-content: center;
+    }
+
+    .logo {
+        width: min(82vw, 330px);
+    }
+
+    .nav-buttons {
+        display: none;
+    }
+
+    .hero-section {
+        min-height: auto;
+        margin-bottom: 56px;
+        padding: 22px 0 0;
+    }
+
+    .hero-container {
+        width: var(--container-width);
+        flex-direction: column;
+        gap: 18px;
+        text-align: center;
+    }
+
+    .hero-image {
+        order: 2;
+        width: 100%;
+        margin-top: 8px;
+    }
+
+    .hero-image img {
+        max-width: 145px;
+    }
+
+    .hero-text {
+        order: 1;
+        max-width: 100%;
+    }
+
+    .hero-text h1 {
+        font-size: clamp(2.65rem, 12vw, 4rem);
+        line-height: 1.08;
+        margin-bottom: 22px;
+        letter-spacing: -0.03em;
+    }
+
+    .hero-text p {
+        max-width: 360px;
+        margin: 0 auto 30px;
+        font-size: 1.08rem;
+        line-height: 1.65;
+    }
+
+    .hero-buttons {
+        justify-content: center;
+        gap: 12px;
+    }
+
+    .hero-btn {
+        padding: 15px 18px;
+        border-radius: 18px;
+        font-size: 0.92rem;
+        line-height: 1.25;
+    }
+
+    .hero-btn.primary {
+        min-width: 135px;
+    }
+
+    .hero-btn.secondary {
+        min-width: 165px;
+    }
+
+    .feature-strip {
+        padding: 18px 0;
+    }
+
+    .feature-strip-track {
+        animation-duration: 16s;
+    }
+
+    .feature-item {
+        gap: 12px;
+        padding: 0 16px;
+    }
+
+    .feature-image {
+        height: 58px;
+        margin-left: 10px;
+    }
+
+    .settings-image {
+        height: 44px;
+    }
+
+    .feature-text {
+        gap: 8px;
+        margin-right: 12px;
+    }
+
+    .feature-number {
+        font-size: 3.2rem;
+    }
+
+    .feature-label {
+        font-size: 1.1rem;
+        line-height: 1.1;
+    }
+
+    .feature-divider {
+        height: 70px;
+    }
+}
+
+.desktop-label {
+    display: inline;
+}
+
+.mobile-label {
+    display: none;
+}
+
+@media (max-width: 600px) {
+    .desktop-label {
+        display: none;
+    }
+
+    .mobile-label {
+        display: inline;
+    }
+}
+
+@media (max-width: 900px) {
+    .hero-container {
+        flex-direction: column;
+    }
+
+    .hero-image {
+        display: none;
+    }
+}

@@ -1,28 +1,52 @@
 document.addEventListener("DOMContentLoaded", function () {
   // ---------------------
-  // PROFILE DROPDOWN
-  // ---------------------
-  const profileDropdown = document.querySelector(".profile-dropdown");
-  const profileTrigger = document.getElementById("profileTrigger");
-  const dropdownMenu = document.getElementById("dropdownMenu");
+// PROFILE DROPDOWN
+// ---------------------
+const profileDropdown = document.querySelector(".profile-dropdown");
+const profileTrigger = document.getElementById("profileTrigger");
+const dropdownMenu = document.getElementById("dropdownMenu");
 
-  if (profileDropdown && profileTrigger && dropdownMenu) {
-    profileTrigger.addEventListener("click", function (event) {
-      event.stopPropagation();
+if (profileDropdown && profileTrigger && dropdownMenu) {
+  let closeTimer;
 
-      dropdownMenu.classList.toggle("active");
-      profileDropdown.classList.toggle("open");
-    });
+  function openDropdown() {
+    clearTimeout(closeTimer);
+    dropdownMenu.classList.add("active");
+    profileDropdown.classList.add("open");
+  }
 
-    dropdownMenu.addEventListener("click", function (event) {
-      event.stopPropagation();
-    });
-
-    document.addEventListener("click", function () {
+  function closeDropdown() {
+    closeTimer = setTimeout(() => {
       dropdownMenu.classList.remove("active");
       profileDropdown.classList.remove("open");
-    });
+    }, 180);
   }
+
+  profileDropdown.addEventListener("mouseenter", openDropdown);
+  profileDropdown.addEventListener("mouseleave", closeDropdown);
+
+  profileTrigger.addEventListener("click", function (event) {
+    event.stopPropagation();
+
+    const isOpen = dropdownMenu.classList.contains("active");
+
+    if (isOpen) {
+      dropdownMenu.classList.remove("active");
+      profileDropdown.classList.remove("open");
+    } else {
+      openDropdown();
+    }
+  });
+
+  dropdownMenu.addEventListener("click", function (event) {
+    event.stopPropagation();
+  });
+
+  document.addEventListener("click", function () {
+    dropdownMenu.classList.remove("active");
+    profileDropdown.classList.remove("open");
+  });
+}
 
   // ---------------------
   // PROFILE ICON
@@ -163,8 +187,9 @@ document.addEventListener("DOMContentLoaded", function () {
         pendingUnlockButton = this;
 
         const activityName = this.dataset.activityName || "this activity";
-        const character = this.dataset.character || "the character";
-        const time = this.dataset.time || "30";
+        const prereqActivityName = this.dataset.prereqActivityName || "the previous activity";
+        const prereqCharacter = this.dataset.prereqCharacter || "the previous character";
+        const prereqTime = this.dataset.prereqTime || "30";
 
         if (unlockModalTitle) {
           unlockModalTitle.textContent = `Unlock ${activityName}?`;
@@ -172,17 +197,17 @@ document.addEventListener("DOMContentLoaded", function () {
 
         if (characterCheckText) {
           characterCheckText.textContent =
-            `Is the child comfortable speaking to ${character}?`;
+            `Is the child comfortable speaking to ${prereqCharacter}?`;
         }
 
         if (activityCheckText) {
           activityCheckText.textContent =
-            `Can the child comfortably complete ${activityName}?`;
+          `Can the child comfortably complete ${prereqActivityName}?`;
         }
 
         if (timeCheckText) {
           timeCheckText.textContent =
-            `Has the child been on this activity for at least ${time} minutes?`;
+            `Has the child spent at least ${prereqTime} minutes on ${prereqActivityName}?`;
         }
 
         resetUnlockModal();
@@ -1424,4 +1449,303 @@ document.addEventListener("keydown", function (event) {
 
   drawJourneyConnector();
   window.addEventListener("resize", drawJourneyConnector);
+      // ---------------------
+  // FEEDBACK SURVEY
+  // ---------------------
+  const feedbackSystem = document.getElementById("feedbackSystem");
+
+  if (feedbackSystem) {
+    const shouldShowFeedback = feedbackSystem.dataset.showFeedback === "1";
+
+    const feedbackOverlay = document.getElementById("feedbackOverlay");
+    const feedbackIntroPanel = document.getElementById("feedbackIntroPanel");
+    const feedbackFormPanel = document.getElementById("feedbackFormPanel");
+
+    const closeFeedbackBtn = document.getElementById("closeFeedbackBtn");
+    const closeFeedbackFormBtn = document.getElementById("closeFeedbackFormBtn");
+
+    const feedbackYesBtn = document.getElementById("feedbackYesBtn");
+    const feedbackLaterBtn = document.getElementById("feedbackLaterBtn");
+    const feedbackFormLaterBtn = document.getElementById("feedbackFormLaterBtn");
+    const feedbackBackBtn = document.getElementById("feedbackBackBtn");
+
+    const feedbackFloatingBtn = document.getElementById("feedbackFloatingBtn");
+    const feedbackWidgetSurveyBtn = document.getElementById("feedbackWidgetSurveyBtn");
+
+    const feedbackForm = document.getElementById("feedbackForm");
+    const submitFeedbackBtn = document.getElementById("submitFeedbackBtn");
+    const feedbackStatus = document.getElementById("feedbackStatus");
+    const feedbackThanks = document.getElementById("feedbackThanks");
+
+    const feedbackEnjoyed = document.getElementById("feedbackEnjoyed");
+    const feedbackDidntWork = document.getElementById("feedbackDidntWork");
+    const feedbackBetter = document.getElementById("feedbackBetter");
+
+    const feedbackTextareas = [feedbackEnjoyed, feedbackDidntWork, feedbackBetter].filter(Boolean);
+
+    let feedbackSubmitted = false;
+
+    function autoResizeTextarea(textarea) {
+      if (!textarea) return;
+
+      textarea.style.height = "0px";
+
+      const maxHeight = 118;
+      const newHeight = Math.min(textarea.scrollHeight, maxHeight);
+
+      textarea.style.height = `${newHeight}px`;
+      textarea.style.overflowY = textarea.scrollHeight > maxHeight ? "auto" : "hidden";
+    }
+
+    feedbackTextareas.forEach((textarea) => {
+      autoResizeTextarea(textarea);
+
+      textarea.addEventListener("input", function () {
+        autoResizeTextarea(this);
+      });
+    });
+
+    function setFeedbackPanel(panelName) {
+      if (!feedbackIntroPanel || !feedbackFormPanel) return;
+
+      if (panelName === "intro") {
+        feedbackIntroPanel.hidden = false;
+        feedbackFormPanel.hidden = true;
+        feedbackIntroPanel.classList.add("active");
+        feedbackFormPanel.classList.remove("active");
+      } else {
+        feedbackIntroPanel.hidden = true;
+        feedbackFormPanel.hidden = false;
+        feedbackIntroPanel.classList.remove("active");
+        feedbackFormPanel.classList.add("active");
+      }
+    }
+
+    function openFeedbackIntro() {
+      if (!feedbackOverlay) return;
+
+      hideFeedbackBubble();
+      feedbackOverlay.classList.add("active");
+      document.body.classList.add("feedback-open");
+      setFeedbackPanel("intro");
+    }
+
+    function openFeedbackForm() {
+      if (!feedbackOverlay) return;
+
+      hideFeedbackBubble();
+      feedbackOverlay.classList.add("active");
+      document.body.classList.add("feedback-open");
+      setFeedbackPanel("form");
+
+      requestAnimationFrame(() => {
+        feedbackTextareas.forEach(autoResizeTextarea);
+
+        if (feedbackEnjoyed) {
+          feedbackEnjoyed.focus();
+        }
+      });
+    }
+
+    function closeFeedbackOverlay() {
+      if (feedbackOverlay) {
+        feedbackOverlay.classList.remove("active");
+      }
+
+      document.body.classList.remove("feedback-open");
+    }
+
+    function showFeedbackBubble() {
+      if (!feedbackFloatingBtn || !shouldShowFeedback || feedbackSubmitted) return;
+      feedbackFloatingBtn.classList.add("active");
+    }
+
+    function hideFeedbackBubble() {
+      if (feedbackFloatingBtn) {
+        feedbackFloatingBtn.classList.remove("active");
+      }
+    }
+
+    async function persistDismissedState() {
+      try {
+        await fetch("/dismiss-feedback-prompt", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          credentials: "same-origin",
+          body: JSON.stringify({})
+        });
+      } catch (error) {
+        console.error("Could not save dismissed feedback state:", error);
+      }
+    }
+
+    async function dismissFeedbackFlow() {
+      closeFeedbackOverlay();
+
+      if (!feedbackSubmitted) {
+        showFeedbackBubble();
+        await persistDismissedState();
+      }
+    }
+
+    function showThankYouToast() {
+      if (!feedbackThanks) return;
+
+      feedbackThanks.classList.add("active");
+
+      setTimeout(() => {
+        feedbackThanks.classList.remove("active");
+      }, 4200);
+    }
+
+    // If the parent has logged in enough times and has not submitted feedback,
+    // show the main request every time they land on the dashboard.
+    const feedbackSessionKey = "bravesprouts_feedback_intro_login_key";
+
+const currentLoginKey = [
+  feedbackSystem.dataset.userId || "user",
+  feedbackSystem.dataset.loginCount || "0"
+].join("-");
+
+const feedbackIntroShownForThisLogin =
+  sessionStorage.getItem(feedbackSessionKey) === currentLoginKey;
+
+if (shouldShowFeedback) {
+  if (!feedbackIntroShownForThisLogin) {
+    sessionStorage.setItem(feedbackSessionKey, currentLoginKey);
+
+    setTimeout(() => {
+      openFeedbackIntro();
+    }, 550);
+  } else {
+    showFeedbackBubble();
+  }
+}
+
+    if (closeFeedbackBtn) {
+      closeFeedbackBtn.addEventListener("click", dismissFeedbackFlow);
+    }
+
+    if (closeFeedbackFormBtn) {
+      closeFeedbackFormBtn.addEventListener("click", dismissFeedbackFlow);
+    }
+
+    if (feedbackLaterBtn) {
+      feedbackLaterBtn.addEventListener("click", dismissFeedbackFlow);
+    }
+
+    if (feedbackFormLaterBtn) {
+      feedbackFormLaterBtn.addEventListener("click", dismissFeedbackFlow);
+    }
+
+    if (feedbackYesBtn) {
+      feedbackYesBtn.addEventListener("click", function () {
+        openFeedbackForm();
+      });
+    }
+
+    if (feedbackBackBtn) {
+      feedbackBackBtn.addEventListener("click", function () {
+        dismissFeedbackFlow();
+      });
+    }
+
+    if (feedbackFloatingBtn) {
+      feedbackFloatingBtn.addEventListener("click", function () {
+        openFeedbackForm();
+      });
+
+      feedbackFloatingBtn.addEventListener("keydown", function (event) {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          openFeedbackForm();
+        }
+      });
+    }
+
+    if (feedbackWidgetSurveyBtn) {
+      feedbackWidgetSurveyBtn.addEventListener("click", function (event) {
+        event.stopPropagation();
+        openFeedbackForm();
+      });
+    }
+
+    if (feedbackOverlay) {
+      feedbackOverlay.addEventListener("click", function (event) {
+        if (event.target === feedbackOverlay) {
+          dismissFeedbackFlow();
+        }
+      });
+    }
+
+    if (feedbackForm) {
+      feedbackForm.addEventListener("submit", async function (event) {
+        event.preventDefault();
+
+        const payload = {
+          what_child_enjoyed: feedbackEnjoyed ? feedbackEnjoyed.value.trim() : "",
+          what_didnt_work: feedbackDidntWork ? feedbackDidntWork.value.trim() : "",
+          what_would_make_better: feedbackBetter ? feedbackBetter.value.trim() : ""
+        };
+
+        const allAnswersFilled =
+  payload.what_child_enjoyed &&
+  payload.what_didnt_work &&
+  payload.what_would_make_better;
+
+if (!allAnswersFilled) {
+  if (feedbackStatus) {
+    feedbackStatus.textContent = "Please answer all 3 questions before submitting.";
+  }
+  return;
+}
+
+        if (submitFeedbackBtn) {
+          submitFeedbackBtn.disabled = true;
+          submitFeedbackBtn.textContent = "Submitting...";
+        }
+
+        if (feedbackStatus) {
+          feedbackStatus.textContent = "";
+        }
+
+        try {
+          const response = await fetch("/submit-feedback", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            credentials: "same-origin",
+            body: JSON.stringify(payload)
+          });
+
+          const data = await response.json();
+
+          if (!response.ok || !data.success) {
+            throw new Error(data.error || "Could not submit feedback.");
+          }
+
+          feedbackSubmitted = true;
+          closeFeedbackOverlay();
+          hideFeedbackBubble();
+          showThankYouToast();
+        } catch (error) {
+          console.error("Feedback submit error:", error);
+
+          if (feedbackStatus) {
+            feedbackStatus.textContent = error.message || "Something went wrong. Please try again.";
+          }
+
+          if (submitFeedbackBtn) {
+            submitFeedbackBtn.disabled = false;
+            submitFeedbackBtn.textContent = "Submit feedback";
+          }
+        }
+      });
+    }
+  }
+
+
 });

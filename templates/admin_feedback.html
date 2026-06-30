@@ -1,0 +1,134 @@
+{% extends "dashboard_layout.html" %}
+
+{% block title %}Feedback{% endblock %}
+
+{% block head %}
+{{ super() }}
+<style>
+  .admin-feedback-shell {
+    width: min(100%, 1050px);
+    margin: 0 auto;
+    padding: 12px 0 60px;
+  }
+
+  .admin-feedback-header {
+    margin-bottom: 24px;
+  }
+
+  .admin-feedback-header h1 {
+    margin: 0 0 8px;
+    color: #1f1b2e;
+    font-size: 32px;
+  }
+
+  .admin-feedback-header p {
+    margin: 0;
+    color: #7b7289;
+  }
+
+  .feedback-admin-list {
+    display: grid;
+    gap: 18px;
+  }
+
+  .feedback-admin-card {
+    background: white;
+    border: 1px solid #e8defc;
+    border-radius: 24px;
+    padding: 22px;
+    box-shadow: 0 10px 26px rgba(31, 27, 46, 0.055);
+  }
+
+  .feedback-admin-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 16px;
+    color: #7b7289;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .feedback-admin-card h2 {
+    margin: 0 0 4px;
+    color: #1f1b2e;
+    font-size: 21px;
+  }
+
+  .feedback-answer {
+    margin-top: 14px;
+    padding: 14px;
+    border-radius: 18px;
+    background: #faf7ff;
+    border: 1px solid #e8defc;
+  }
+
+  .feedback-answer strong {
+    display: block;
+    margin-bottom: 6px;
+    color: #6d28d9;
+  }
+
+  .feedback-answer p {
+    margin: 0;
+    color: #1f1b2e;
+    line-height: 1.5;
+    white-space: pre-wrap;
+  }
+
+  .empty-feedback {
+    background: white;
+    border: 1px solid #e8defc;
+    border-radius: 24px;
+    padding: 28px;
+    color: #7b7289;
+  }
+</style>
+{% endblock %}
+
+{% block dashboard_content %}
+
+<div class="admin-feedback-shell">
+  <div class="admin-feedback-header">
+    <h1>Parent Feedback</h1>
+    <p>Review what families enjoyed, what did not work, and what would make BraveSprouts better.</p>
+  </div>
+
+  {% if feedback_rows %}
+    <div class="feedback-admin-list">
+      {% for row in feedback_rows %}
+        <article class="feedback-admin-card">
+          <h2>{{ row.parent_name }}</h2>
+
+          <div class="feedback-admin-meta">
+            <span>{{ row.email }}</span>
+            <span>Child: {{ row.child_name or "Not set" }}</span>
+            <span>Age: {{ row.child_age or "Not set" }}</span>
+            <span>Submitted: {{ row.created_at }}</span>
+          </div>
+
+          <div class="feedback-answer">
+            <strong>What did your child enjoy?</strong>
+            <p>{{ row.what_child_enjoyed or "No response." }}</p>
+          </div>
+
+          <div class="feedback-answer">
+            <strong>What didn't work?</strong>
+            <p>{{ row.what_didnt_work or "No response." }}</p>
+          </div>
+
+          <div class="feedback-answer">
+            <strong>What would make it even better?</strong>
+            <p>{{ row.what_would_make_better or "No response." }}</p>
+          </div>
+        </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-feedback">
+      No feedback has been submitted yet.
+    </div>
+  {% endif %}
+</div>
+
+{% endblock %}

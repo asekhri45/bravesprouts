@@ -1169,3 +1169,214 @@ body.bravesprouts-tour-center-active .bravesprouts-tour-overlay {
     font-size: 14px !important;
   }
 }
+
+/* =========================================================
+   ZOOM / RESPONSIVE SAFETY FIXES
+   Paste at the VERY BOTTOM of bravesprouts tour CSS
+========================================================= */
+
+.bravesprouts-tour-card,
+.bravesprouts-tour-step-pill,
+.bravesprouts-tour-spotlight,
+.bravesprouts-tour-overlay {
+  box-sizing: border-box;
+}
+
+.bravesprouts-tour-card {
+  max-width: calc(100vw - 28px) !important;
+  max-height: calc(100vh - 96px) !important;
+  overflow-y: auto !important;
+}
+
+.bravesprouts-tour-card.has-side-image,
+.bravesprouts-tour-card.is-center-only {
+  padding-left: clamp(78px, 18vw, 104px) !important;
+  padding-right: clamp(18px, 4vw, 30px) !important;
+}
+
+.bravesprouts-tour-card.has-side-image .bravesprouts-tour-side-star,
+.bravesprouts-tour-card.is-center-only .bravesprouts-tour-side-star,
+.bravesprouts-tour-card.is-intro .bravesprouts-tour-intro-star {
+  width: clamp(44px, 10vw, 60px) !important;
+  height: clamp(44px, 10vw, 60px) !important;
+}
+
+.bravesprouts-tour-card h3,
+.bravesprouts-tour-card.has-side-image h3,
+.bravesprouts-tour-card.is-center-only h3,
+.bravesprouts-tour-card.is-intro h3 {
+  font-size: clamp(20px, 4.8vw, 27px) !important;
+}
+
+.bravesprouts-tour-card p,
+.bravesprouts-tour-card.has-side-image p,
+.bravesprouts-tour-card.is-intro p {
+  font-size: clamp(13px, 3vw, 15px) !important;
+}
+
+.bravesprouts-tour-actions {
+  flex-wrap: wrap !important;
+}
+
+.bravesprouts-tour-btn {
+  white-space: nowrap;
+}
+
+.bravesprouts-tour-step-pill {
+  max-width: calc(100vw - 24px) !important;
+  overflow: hidden !important;
+}
+
+.bravesprouts-tour-step-main {
+  min-width: 0 !important;
+}
+
+.bravesprouts-tour-step-name,
+.bravesprouts-tour-step-text {
+  min-width: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+/* Extra protection for browser zoom / shorter screens */
+@media (max-height: 720px), (max-width: 760px) {
+  .bravesprouts-tour-card {
+    padding-top: 20px !important;
+    padding-bottom: 18px !important;
+    border-radius: 22px !important;
+  }
+
+  .bravesprouts-tour-dots {
+    margin-top: 12px !important;
+  }
+
+  .bravesprouts-tour-actions {
+    margin-top: 14px !important;
+  }
+
+  .bravesprouts-tour-step-pill {
+    top: 8px !important;
+  }
+}
+
+/* Very narrow or heavily zoomed screens */
+@media (max-width: 520px) {
+  .bravesprouts-tour-card.has-side-image,
+  .bravesprouts-tour-card.is-center-only,
+  .bravesprouts-tour-card.is-intro {
+    padding-left: 22px !important;
+    padding-right: 22px !important;
+    text-align: center !important;
+  }
+
+  .bravesprouts-tour-card.has-side-image .bravesprouts-tour-side-star,
+  .bravesprouts-tour-card.is-center-only .bravesprouts-tour-side-star,
+  .bravesprouts-tour-card.is-intro .bravesprouts-tour-intro-star {
+    position: static !important;
+    display: block !important;
+    margin: 0 auto 12px !important;
+  }
+
+  .bravesprouts-tour-card h3,
+  .bravesprouts-tour-card p {
+    text-align: center !important;
+  }
+
+  .bravesprouts-tour-actions,
+  .bravesprouts-tour-left-actions,
+  .bravesprouts-tour-right-actions {
+    width: 100% !important;
+  }
+
+  .bravesprouts-tour-btn {
+    flex: 1 1 auto !important;
+  }
+
+  .bravesprouts-tour-arrow,
+  .bravesprouts-tour-image-arrow {
+    display: none !important;
+  }
+}
+
+/* =========================================================
+   TOUR STEP 6 ZOOM FIX
+   Keeps child profile fields visible at 125% / 150% zoom
+========================================================= */
+
+body.bravesprouts-tour-step-6-active .bravesprouts-tour-card {
+  width: min(360px, calc(100vw - 32px)) !important;
+  max-height: calc(100vh - 120px) !important;
+  overflow-y: auto !important;
+  padding: 20px 22px 18px 82px !important;
+  border-radius: 22px !important;
+}
+
+/* Move the Step 6 card away from the name/age fields */
+body.bravesprouts-tour-step-6-active .bravesprouts-tour-card.has-side-image {
+  top: auto !important;
+  bottom: 28px !important;
+  left: 28px !important;
+  right: auto !important;
+}
+
+/* Make the Step 6 card slightly more compact */
+body.bravesprouts-tour-step-6-active .bravesprouts-tour-card h3 {
+  font-size: clamp(21px, 3.2vw, 25px) !important;
+  line-height: 1.08 !important;
+  margin-bottom: 8px !important;
+}
+
+body.bravesprouts-tour-step-6-active .bravesprouts-tour-card p {
+  font-size: 13.5px !important;
+  line-height: 1.38 !important;
+}
+
+body.bravesprouts-tour-step-6-active .bravesprouts-tour-instruction {
+  margin-top: 10px !important;
+  padding: 9px 10px !important;
+}
+
+body.bravesprouts-tour-step-6-active .bravesprouts-tour-dots {
+  margin-top: 10px !important;
+}
+
+body.bravesprouts-tour-step-6-active .bravesprouts-tour-actions {
+  margin-top: 12px !important;
+}
+
+/* Shrink star slightly on this step */
+body.bravesprouts-tour-step-6-active .bravesprouts-tour-side-star {
+  width: 48px !important;
+  height: 48px !important;
+  left: 22px !important;
+  top: 24px !important;
+}
+
+/* On heavy zoom / smaller screens, place card below the highlighted box */
+@media (max-width: 1100px), (max-height: 760px) {
+  body.bravesprouts-tour-step-6-active .bravesprouts-tour-card.has-side-image {
+    width: min(340px, calc(100vw - 28px)) !important;
+    bottom: 18px !important;
+    left: 18px !important;
+  }
+}
+
+/* On very narrow screens, stack the star and text */
+@media (max-width: 560px) {
+  body.bravesprouts-tour-step-6-active .bravesprouts-tour-card {
+    padding: 18px !important;
+    text-align: center !important;
+  }
+
+  body.bravesprouts-tour-step-6-active .bravesprouts-tour-side-star {
+    position: static !important;
+    display: block !important;
+    margin: 0 auto 10px !important;
+  }
+
+  body.bravesprouts-tour-step-6-active .bravesprouts-tour-card h3,
+  body.bravesprouts-tour-step-6-active .bravesprouts-tour-card p {
+    text-align: center !important;
+  }
+}

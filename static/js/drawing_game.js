@@ -34,7 +34,7 @@ document.addEventListener("DOMContentLoaded", function () {
     Drawing Game redesign:
     - Star is the familiar safety partner.
     - The Teacher uses the existing "librarian" backend/voice/assets internally.
-    - Four scenes build gradually: flower garden, house, tree, school.
+    - Four scenes build gradually: flower garden, house, farm, school.
     - Each scene has four drawing parts, but the social progression stays in 12 Match-Cards-style rounds.
     - Speech is encouraged, never required. Silence never blocks the activity.
   */
@@ -270,9 +270,9 @@ document.addEventListener("DOMContentLoaded", function () {
             "Should the butterfly be big or small?"
           ],
           donePraise: [
-            "Great job. The butterfly looks nice.",
-            "Good job. This flower picture looks great.",
-            "Nice work. You made a lovely picture."
+            "Wow, that is amazing. You are such a great artist.",
+            "Your drawing came out so good. I really like how you made it.",
+            "Wow. This flower picture looks wonderful. You did such a great job."
           ]
         }
       ]
@@ -299,7 +299,7 @@ document.addEventListener("DOMContentLoaded", function () {
           starLead: ["Start with one house.", "First, draw a complete house.", "Make the house first."],
           starChoice: ["The house can be big or small.", "You can choose where the door and windows go.", "Start with whichever house part feels easiest."],
           teacherComment: ["A house is a nice next picture.", "That is a clear thing to draw.", "I like starting with the main house."],
-          teacherWonder: ["I wonder what color the house will be.", "Maybe the house will have windows.", "I wonder where the door will go."],
+          teacherWonder: ["I wonder if you're going to choose a red roof, a brown roof, or something else.", "I wonder if you're going to make the door blue, red, or another color.", "I wonder if this house will be tall, wide, or both."],
           teacherToStar: ["Star, I wonder what part of the house will come first.", "Star, maybe the house could have blue windows.", "Star, the house might need a door."],
           teacherDirect: ["What color should the house be?", "Where should the door go?", "Should the house be big or small?"],
           donePraise: ["Great job. That house looks good.", "Nice house. You are doing a great job.", "Good job making the house."]
@@ -315,7 +315,7 @@ document.addEventListener("DOMContentLoaded", function () {
           starLead: ["Now add a yard around the house.", "Next, add grass near the house.", "Now the house can have a yard."],
           starChoice: ["The yard can go under the house.", "You can make a little yard or a big yard.", "Choose where the grass should go."],
           teacherComment: ["A yard helps the house feel outside.", "That is a nice next part.", "The house has somewhere to sit now."],
-          teacherWonder: ["I wonder if the yard will be light or dark green.", "Maybe the yard can go across the bottom.", "I wonder how much grass the house needs."],
+          teacherWonder: ["I wonder if you're going to choose dark green grass, light green grass, or both.", "I wonder if the yard will be small near the house or stretch across the page.", "I wonder if the grass will be short, tall, or a mix."],
           teacherToStar: ["Star, I wonder where the yard should go.", "Star, maybe the grass could go under the house.", "Star, both greens could work here."],
           teacherDirect: ["Should the yard be little or big?", "Where should the grass go?", "Should the yard go across the picture?"],
           donePraise: ["Great job adding the yard.", "Nice work. The house has grass now.", "Good job. The yard looks nice."]
@@ -331,7 +331,7 @@ document.addEventListener("DOMContentLoaded", function () {
           starLead: ["Now add a sun.", "Next, add sunshine above the house.", "The house can have a sun now."],
           starChoice: ["The sun can go in any open spot.", "The sun can be big or small.", "Choose where the sun should go."],
           teacherComment: ["A sun brightens the house picture.", "That is a nice sunny part.", "The picture is getting brighter."],
-          teacherWonder: ["I wonder if the sun will have rays.", "Maybe the sun can go near the top.", "I wonder if the sun will be yellow or orange."],
+          teacherWonder: ["I wonder if you're going to use yellow, orange, or both for the sun.", "I wonder if the sun will have short rays, long rays, or both.", "I wonder where the sunshine will fit best in this picture."],
           teacherToStar: ["Star, I wonder where the sun should go.", "Star, maybe the sun could have rays.", "Star, yellow and orange could both work here."],
           teacherDirect: ["Where should the sun go?", "Should the sun have rays?", "Should the sun be big or small?"],
           donePraise: ["Great job. That sun looks bright.", "Nice work adding sunshine.", "Good job. The house picture looks brighter now."]
@@ -347,7 +347,7 @@ document.addEventListener("DOMContentLoaded", function () {
           starLead: ["Let's finish this picture with a tree.", "Now add a tree near the house.", "One more part: add a tree."],
           starChoice: ["The tree can go beside the house.", "You can make the tree tall or short.", "Choose where the tree should go."],
           teacherComment: ["A tree is a nice final part.", "That will make the house picture feel complete.", "I like that final detail."],
-          teacherWonder: ["I wonder if the tree will be tall.", "Maybe the tree can go beside the house.", "I wonder how many leaves it will have."],
+          teacherWonder: ["I wonder if the tree will be tall, short, or somewhere in between.", "I wonder if you're going to choose dark green leaves, light green leaves, or both.", "I wonder if the tree will go right next to the house or farther away."],
           teacherToStar: ["Star, I wonder where the tree should go.", "Star, maybe the tree could go beside the house.", "Star, brown and green could both help here."],
           teacherDirect: ["Where should the tree go?", "Should the tree be tall or short?", "What color should the leaves be?"],
           donePraise: ["Great job. The tree looks nice.", "Good job. The house picture looks complete.", "Nice work. You made a great house picture."]
@@ -355,59 +355,63 @@ document.addEventListener("DOMContentLoaded", function () {
       ]
     },
     {
-      id: "tree_scene",
-      name: "Tree Scene",
-      sceneIntro: "Now let's make a tree picture.",
-      newSceneLine: "Now let's make a tree picture.",
-      completeLine: "The tree picture is finished.",
+      id: "farm_scene",
+      name: "Farm Scene",
+      sceneIntro: "Now we can make a farm picture.",
+      newSceneLine: "Now we can make a farm picture.",
+      completeLine: "The farm picture is finished.",
       stages: [
         {
-          id: "tree", title: "Draw a tree", text: "Start with one complete tree.", partText: "Part 1 of 4", palette: [COLORS.brown, COLORS.green, COLORS.lime],
-          colorIdeas: {[COLORS.brown]: "the tree trunk", [COLORS.green]: "tree leaves", [COLORS.lime]: "lighter leaves"},
-          colorSuggestion: "For the tree, brown can work well for the trunk, and green or light green can work well for leaves.",
-          starLead: ["Start with one tree.", "First, draw a complete tree.", "Make the tree first."],
-          starChoice: ["The tree can be tall or short.", "You can start with the trunk or the leaves.", "Start with whichever tree part feels easiest."],
-          teacherComment: ["A tree is a good main part.", "That is a nice thing to draw.", "I like starting with the whole tree."],
-          teacherWonder: ["I wonder if the tree will be tall.", "Maybe the tree will have lots of leaves.", "I wonder where the trunk will go."],
-          teacherToStar: ["Star, I wonder what part of the tree will come first.", "Star, maybe the tree could have lots of leaves.", "Star, the tree might need a trunk too."],
-          teacherDirect: ["Should the tree be tall or short?", "What color should the leaves be?", "Where should the trunk go?"],
-          donePraise: ["Great job. That tree looks good.", "Nice tree. You are a great artist.", "Good job making the tree."]
+          id: "barn", title: "Draw a red barn", text: "Start with one red barn.", partText: "Part 1 of 4", palette: [COLORS.red, COLORS.brown, COLORS.gray],
+          colorIdeas: {[COLORS.red]: "the barn walls", [COLORS.brown]: "the barn door", [COLORS.gray]: "the roof or path"},
+          colorSuggestion: "For the barn, red can work well for the walls, brown can work well for the door, and gray can work well for the roof.",
+          starLead: ["Let's start with one red barn.", "We can begin with a red barn.", "Draw one red barn when you're ready."],
+          starChoice: ["The barn can be big or small.", "You can start with the barn walls or the door.", "Start with whichever barn part feels easiest."],
+          teacherComment: ["A barn is a good main part for a farm.", "That is a nice thing to draw first.", "I like starting with the barn."],
+          teacherWonder: ["I wonder if the barn will be bright red, dark red, or another color.", "I wonder if this barn will be big, small, or somewhere in between.", "I wonder what animals might live near this barn."],
+          teacherIndirect: ["Tell me your favorite farm animal.", "Tell me which you like better: pigs or cows."],
+          teacherToStar: ["Star, I wonder what part of the barn will come first.", "Star, maybe the barn could have a big door.", "Star, red and brown could both help here."],
+          teacherDirect: ["Tell me your favorite farm animal.", "Tell me which you like better: pigs or cows.", "Tell me which door feels better: big or small."],
+          donePraise: ["Great job. That barn looks good.", "Nice barn. You are doing a great job.", "Good job making the barn."]
         },
         {
-          id: "grass", title: "Add grass", text: "Add grass under the tree.", partText: "Part 2 of 4", palette: [COLORS.green, COLORS.lime],
+          id: "grass", title: "Add grass", text: "Add grass around the barn.", partText: "Part 2 of 4", palette: [COLORS.green, COLORS.lime],
           colorIdeas: {[COLORS.green]: "darker grass", [COLORS.lime]: "lighter grass"},
           colorSuggestion: "For the grass, dark green can make deeper grass and light green can make brighter grass.",
-          starLead: ["Now add grass under the tree.", "Next, put some grass near the tree.", "Now the tree can have grass."],
-          starChoice: ["The grass can go under the tree.", "You can make a little grass or a lot of grass.", "Choose where the grass should go."],
-          teacherComment: ["Grass is a good next part for the tree.", "The tree has somewhere to grow now.", "That makes the tree feel outside."],
-          teacherWonder: ["I wonder if the grass will be light or dark green.", "Maybe the grass can go under the tree.", "I wonder how much grass the tree needs."],
-          teacherToStar: ["Star, I wonder where the grass should go.", "Star, maybe the grass could go under the tree.", "Star, both greens could work here."],
-          teacherDirect: ["Should the grass be little or big?", "Where should the grass go?", "Should the grass go across the picture?"],
-          donePraise: ["Great job adding grass.", "Nice grass. The tree picture is looking good.", "Good job. The grass looks nice."]
+          starLead: ["Now add grass around the barn.", "Next, put grass near the barn.", "Now the farm can have grass."],
+          starChoice: ["The grass can go under the barn.", "You can make a little grass or a lot of grass.", "Choose where the grass should go."],
+          teacherComment: ["Grass is a good next part for the farm.", "The barn has somewhere to sit now.", "That makes the farm feel outside."],
+          teacherWonder: ["I wonder if you're going to choose dark green grass, light green grass, or both.", "I wonder if the grass will be short, tall, or a mix.", "I wonder which farm animal might like this grass."],
+          teacherIndirect: ["Tell me which grass color feels better: light green or dark green.", "Tell me which grass feels better: short or tall."],
+          teacherToStar: ["Star, I wonder where the grass should go.", "Star, maybe the grass could go under the barn.", "Star, both greens could work here."],
+          teacherDirect: ["Tell me which grass color feels better: light green or dark green.", "Tell me which grass feels better: short or tall.", "Tell me where the grass should go: near the barn or under the cow."],
+          donePraise: ["Great job adding grass.", "Nice grass. The farm picture is looking good.", "Good job. The grass looks nice."]
         },
         {
-          id: "sun", title: "Add the sun", text: "Add sunshine to the tree picture.", partText: "Part 3 of 4", palette: [COLORS.yellow, COLORS.orange],
-          colorIdeas: {[COLORS.yellow]: "the sun", [COLORS.orange]: "sun rays"},
-          colorSuggestion: "For the sun, yellow can work well for the circle and orange can work well for the rays.",
-          starLead: ["Now add a sun.", "Next, add sunshine near the tree.", "The tree can have a sun now."],
-          starChoice: ["The sun can go in any open spot.", "The sun can be big or small.", "Choose where the sun should go."],
-          teacherComment: ["A sun is a bright next part.", "That will make the tree picture feel warm.", "The picture is getting brighter."],
-          teacherWonder: ["I wonder if the sun will have rays.", "Maybe the sun can go near the top.", "I wonder if the sun will be yellow or orange."],
-          teacherToStar: ["Star, I wonder where the sun should go.", "Star, maybe the sun could have rays.", "Star, yellow and orange could both work here."],
-          teacherDirect: ["Where should the sun go?", "Should the sun have rays?", "Should the sun be big or small?"],
-          donePraise: ["Great job. That sun looks bright.", "Nice work adding the sun.", "Good job. The tree picture looks brighter now."]
+          id: "cow", title: "Add a cow", text: "Add a cow to the farm.", partText: "Part 3 of 4", palette: [COLORS.black, COLORS.gray, COLORS.brown, COLORS.pink],
+          colorIdeas: {[COLORS.black]: "cow spots", [COLORS.gray]: "the cow body", [COLORS.brown]: "cow spots", [COLORS.pink]: "the cow nose"},
+          colorSuggestion: "For the cow, gray or white space can work for the body, black or brown can work for spots, and pink can work for the nose.",
+          starLead: ["Now add a cow.", "Next, put a cow somewhere on the farm.", "The farm can have a cow now."],
+          starChoice: ["The cow can stand near the barn.", "You can make the cow big or small.", "Choose where the cow should go."],
+          teacherComment: ["A cow is a fun next part for a farm.", "That will make the farm feel lively.", "The picture is getting more fun."],
+          teacherWonder: ["I wonder if the cow will have spots, patches, or another pattern.", "I wonder if this cow will look friendly, sleepy, or silly.", "I wonder what sound this cow might make."],
+          teacherIndirect: ["Tell me which spots fit the cow: black spots or brown spots.", "Tell me how this cow should look: happy or sleepy."],
+          teacherToStar: ["Star, I wonder where the cow should go.", "Star, maybe the cow could have spots.", "Star, black, brown, gray, and pink could all help here."],
+          teacherDirect: ["Tell me which spots fit the cow: black spots or brown spots.", "Tell me how this cow should look: happy or sleepy.", "Tell me what sound this cow makes."],
+          donePraise: ["Great job. That cow looks nice.", "Nice work adding the cow.", "Good job. The farm picture looks lively now."]
         },
         {
-          id: "bird", title: "Add a bird", text: "Finish the tree picture with a small bird.", partText: "Part 4 of 4", palette: [COLORS.blue, COLORS.red, COLORS.yellow],
-          colorIdeas: {[COLORS.blue]: "bird wings", [COLORS.red]: "the bird body", [COLORS.yellow]: "the beak"},
-          colorSuggestion: "For the bird, blue can work well for wings, red can work well for the body, and yellow can work well for the beak.",
-          starLead: ["Let's finish this picture with a bird.", "Now add a small bird near the tree.", "One more part: add a bird."],
-          starChoice: ["The bird can sit near the tree or fly nearby.", "You can make the bird small.", "Choose where the bird should go."],
-          teacherComment: ["A bird is a nice final part.", "That will make the tree picture feel friendly.", "I like that final detail."],
-          teacherWonder: ["I wonder where the bird will go.", "Maybe the bird can sit near the tree.", "I wonder what color the bird will be."],
-          teacherToStar: ["Star, I wonder where the bird should go.", "Star, maybe the bird could sit near the tree.", "Star, blue, red, and yellow could all help here."],
-          teacherDirect: ["Where should the bird go?", "What color should the bird be?", "Should the bird be flying or sitting?"],
-          donePraise: ["Great job. The bird looks nice.", "Good job. The tree picture looks complete.", "Nice work. You made a great tree picture."]
+          id: "pig", title: "Add a pig", text: "Finish the farm picture with a pig.", partText: "Part 4 of 4", palette: [COLORS.pink, COLORS.brown, COLORS.gray],
+          colorIdeas: {[COLORS.pink]: "the pig", [COLORS.brown]: "mud or the pig's spot", [COLORS.gray]: "small farm details"},
+          colorSuggestion: "For the pig, pink can work well for the body, and brown can work well for mud or a small spot.",
+          starLead: ["Let's finish this picture with a pig.", "Now add a pig somewhere on the farm.", "One more part: add a pig."],
+          starChoice: ["The pig can go near the barn or in the grass.", "You can make the pig small or big.", "Choose where the pig should go."],
+          teacherComment: ["A pig is a sweet final part for the farm.", "That will make the farm picture feel friendly.", "I like that final detail."],
+          teacherWonder: ["I wonder if the pig will be pink, peach, or another color.", "I wonder if this pig will look happy, muddy, or sleepy.", "I wonder what name would fit this pig."],
+          teacherIndirect: ["Tell me which pig color feels better: pink or peach.", "Tell me which pig sound fits: oink or snort."],
+          teacherToStar: ["Star, I wonder where the pig should go.", "Star, maybe the pig could be near the barn.", "Star, pink and brown could both help here."],
+          teacherDirect: ["Tell me which pig color feels better: pink or peach.", "Tell me which pig sound fits: oink or snort.", "Tell me what sound this pig might make."],
+          donePraise: ["Great job. The pig looks nice.", "Good job. The farm picture looks complete.", "Nice work. You made a great farm picture."]
         }
       ]
     },
@@ -495,11 +499,16 @@ document.addEventListener("DOMContentLoaded", function () {
   let responseAnalyser = null;
   let responseMicSource = null;
   let responseMonitorFrame = null;
+  let responseSpeechRecognition = null;
+  let responseSpeechManuallyStopped = false;
+  let earlyResponseSpeechRecognition = null;
+  let earlyResponseQuestion = null;
   let heardSpeechInWindow = false;
   let lastSpeechTime = 0;
 
   let speechQueue = Promise.resolve();
   let stageCheckTimer = null;
+  let teacherIndirectQuestionTimer = null;
   let passiveDoneTimer = null;
   let passiveDoneEnabled = false;
   let passiveMediaRecorder = null;
@@ -552,6 +561,7 @@ document.addEventListener("DOMContentLoaded", function () {
       teacherQuestionsAsked: 0,
       teacherDirectResponses: 0,
       redirectedQuestions: 0,
+      teacherIndirectQuestionsThisStage: 0,
 
       isSpeaking: false,
       isListening: false,
@@ -597,6 +607,19 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function fillLine(template) {
     return String(template || "").replaceAll("{child}", childName);
+  }
+
+  function childPromptPrefix() {
+    return childName && childName.toLowerCase() !== "there" ? `${childName}, ` : "";
+  }
+
+  function makeDirectChildQuestion(question) {
+    const line = String(question || "").trim();
+    const prefix = childPromptPrefix();
+
+    if (!line || !prefix) return line;
+
+    return `${prefix}${line.charAt(0).toLowerCase()}${line.slice(1)}`;
   }
 
   function cleanLine(text) {
@@ -673,6 +696,26 @@ document.addEventListener("DOMContentLoaded", function () {
     if (quietStatusText) {
       quietStatusText.textContent = "";
     }
+  }
+
+  function redirectToDashboardWithFade() {
+    const fade = document.createElement("div");
+    fade.style.position = "fixed";
+    fade.style.inset = "0";
+    fade.style.background = "#000";
+    fade.style.opacity = "0";
+    fade.style.zIndex = "9999";
+    fade.style.transition = "opacity 0.55s ease";
+    fade.style.pointerEvents = "none";
+    document.body.appendChild(fade);
+
+    requestAnimationFrame(function () {
+      fade.style.opacity = "1";
+    });
+
+    setTimeout(function () {
+      window.location.href = "/dashboard";
+    }, 620);
   }
 
   async function loadSavedDrawingProgress() {
@@ -776,13 +819,29 @@ document.addEventListener("DOMContentLoaded", function () {
       return;
     }
 
-    const rawText = typeof text === "function" ? text() : text;
+    let rawText = typeof text === "function" ? text() : text;
+
+    if (actor === TEACHER_ACTOR && options.expectsResponse) {
+      rawText = String(rawText || "").replace(/\?+$/g, ".");
+    }
+
     const calmText = cleanLine(rawText);
 
     if (!calmText || state.gameCompleted) return;
 
     rememberLine(calmText);
     updateQuietStatus(`${actorLabel(actor)} is talking`);
+
+    const shouldPausePassiveForSpeech = passiveDoneEnabled;
+    const shouldResumePassiveAfterSpeech = shouldPausePassiveForSpeech && !options.expectsResponse;
+
+    if (shouldPausePassiveForSpeech) {
+      pausePassiveDoneListenForResponse();
+    }
+
+    const earlyQuestion = shouldCatchEarlyChoiceResponse(options)
+      ? buildResponseQuestion(actor, calmText, options)
+      : null;
 
     const tile = getTile(actor);
 
@@ -809,8 +868,10 @@ document.addEventListener("DOMContentLoaded", function () {
       }
 
       if (data.success && data.audio) {
+        if (earlyQuestion) startEarlyResponseSpeechRecognition(earlyQuestion, calmText);
         await playCharacterAudio(actor, data.audio);
       } else {
+        if (earlyQuestion) startEarlyResponseSpeechRecognition(earlyQuestion, calmText);
         await sleep(750);
       }
     } catch (error) {
@@ -823,10 +884,21 @@ document.addEventListener("DOMContentLoaded", function () {
 
       stopMouthAnimation();
       updateQuietStatus("Drawing together");
+
+      if (shouldResumePassiveAfterSpeech
+          && !state.gameCompleted
+          && !state.stageAdvanceLocked
+          && !state.pendingDoneConfirmation) {
+        schedulePassiveDoneListen(350);
+      }
+    }
+
+    if (earlyQuestion) {
+      stopEarlyResponseSpeechRecognition();
     }
 
     if (options.expectsResponse) {
-      await askForResponse(actor, calmText, options);
+      await askForResponse(actor, calmText, options, earlyQuestion);
     }
   }
 
@@ -1055,12 +1127,8 @@ document.addEventListener("DOMContentLoaded", function () {
     closeAllMouths();
   }
 
-  async function askForResponse(actor, message, options = {}) {
-    if (state.isListening || state.gameCompleted) return;
-
-    state.waitingForResponse = true;
-
-    state.currentQuestion = {
+  function buildResponseQuestion(actor, message, options = {}) {
+    return {
       actor,
       message,
       askType: options.askType || "one_word",
@@ -1068,8 +1136,18 @@ document.addEventListener("DOMContentLoaded", function () {
       source: options.source || actor,
       stageId: currentStage().id,
       sceneId: currentScene().id,
-      socialRound: getSocialRound()
+      socialRound: getSocialRound(),
+      questionIndex: Number.isFinite(options.questionIndex) ? options.questionIndex : null,
+      browserTranscript: "",
+      earlyTranscript: ""
     };
+  }
+
+  async function askForResponse(actor, message, options = {}, existingQuestion = null) {
+    if (state.isListening || state.gameCompleted) return;
+
+    const question = existingQuestion || buildResponseQuestion(actor, message, options);
+    question.message = message;
 
     if (actor === TEACHER_ACTOR) {
       state.teacherQuestionsAsked += 1;
@@ -1077,7 +1155,19 @@ document.addEventListener("DOMContentLoaded", function () {
       state.starQuestionsAsked += 1;
     }
 
-    await startResponseWindow(state.currentQuestion, options.responseSeconds || 5.2);
+    const earlyTranscript = cleanTranscript(question.earlyTranscript || question.browserTranscript || "");
+
+    if (earlyTranscript) {
+      state.currentQuestion = question;
+      await handleSpeech(earlyTranscript, question);
+      state.currentQuestion = null;
+      return;
+    }
+
+    state.waitingForResponse = true;
+    state.currentQuestion = question;
+
+    await startResponseWindow(question, options.responseSeconds || 5.2);
   }
 
   function getSupportedMimeType() {
@@ -1094,6 +1184,222 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     return "";
+  }
+
+  function getResponseSpeechRecognitionConstructor() {
+    return window.SpeechRecognition || window.webkitSpeechRecognition || null;
+  }
+
+  function stopResponseSpeechRecognition() {
+    responseSpeechManuallyStopped = true;
+
+    if (!responseSpeechRecognition) return;
+
+    const recognition = responseSpeechRecognition;
+    responseSpeechRecognition = null;
+
+    try {
+      recognition.stop();
+    } catch (error) {}
+  }
+
+  function startResponseSpeechRecognition(question) {
+    const Recognition = getResponseSpeechRecognitionConstructor();
+
+    if (!Recognition || !question) return false;
+
+    stopResponseSpeechRecognition();
+    responseSpeechManuallyStopped = false;
+    question.browserTranscript = "";
+
+    let recognition;
+
+    try {
+      recognition = new Recognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = "en-US";
+    } catch (error) {
+      return false;
+    }
+
+    responseSpeechRecognition = recognition;
+
+    recognition.onresult = function (event) {
+      let transcriptText = "";
+
+      for (let i = 0; i < event.results.length; i += 1) {
+        transcriptText += " " + (event.results[i][0]?.transcript || "");
+      }
+
+      const transcript = cleanTranscript(transcriptText);
+
+      if (transcript) {
+        question.browserTranscript = transcript;
+
+        if (shouldUseBrowserTranscriptImmediately(question)) {
+          scheduleResponseWindowStopAfterBrowserTranscript(question, 850);
+        }
+      }
+    };
+
+    recognition.onerror = function () {
+      responseSpeechRecognition = null;
+    };
+
+    recognition.onend = function () {
+      responseSpeechRecognition = null;
+    };
+
+    try {
+      recognition.start();
+      return true;
+    } catch (error) {
+      responseSpeechRecognition = null;
+      return false;
+    }
+  }
+
+  function scheduleResponseWindowStopAfterBrowserTranscript(question, delayMs = 850) {
+    if (!question || !state.waitingForResponse) return;
+
+    if (question.browserStopTimer) {
+      clearTimeout(question.browserStopTimer);
+    }
+
+    question.browserStopTimer = setTimeout(function () {
+      question.browserStopTimer = null;
+      stopResponseWindow();
+    }, delayMs);
+  }
+
+  function shouldUseBrowserTranscriptImmediately(question) {
+    return Boolean(question)
+      && ["stage_done", "scene_choice", "drawing_question"].includes(question.intent);
+  }
+
+  function shouldCatchEarlyChoiceResponse(options = {}) {
+    return Boolean(options.expectsResponse)
+      && (options.askType === "choice" || options.intent === "stage_done" || options.intent === "scene_choice");
+  }
+
+  function isLikelyEarlyChoiceResponse(text, promptText = "") {
+    const cleaned = cleanTranscript(text);
+    if (!cleaned) return "";
+
+    const lower = cleaned.toLowerCase();
+    const words = normalizedWords(lower);
+    const promptLower = cleanTranscript(promptText).toLowerCase();
+
+    if (!words.length || words.length > 9) return "";
+
+    const exactYesNo = new Set(["yes", "yeah", "yep", "yup", "sure", "okay", "ok", "no", "nope", "nah"]);
+    if (exactYesNo.has(lower)) return cleaned;
+
+    // Keep the early listener from reacting to the character's own prompt audio.
+    // Single-word answers like "yes" and "no" are still accepted above.
+    if (promptLower && promptLower.includes(lower)) return "";
+
+    if (words.length <= 3 && ["yes", "yeah", "yep", "yup", "sure", "okay", "ok", "no", "nope", "nah"].some(word => words.includes(word))) {
+      return cleaned;
+    }
+
+    const childOwnedStopPhrases = [
+      "i want to stop", "i want to be done", "i'm done for the day", "im done for the day",
+      "i am done for the day", "be done for the day", "done for the day", "stop for today",
+      "i want to end", "let's end", "lets end"
+    ];
+
+    if (childOwnedStopPhrases.some(phrase => lower.includes(phrase))) return cleaned;
+
+    const childOwnedMovePhrases = [
+      "i want to move on", "let's move on", "lets move on", "we can move on",
+      "i'm ready", "im ready", "i am ready", "go next", "next one", "next part", "next stage"
+    ];
+
+    if (childOwnedMovePhrases.some(phrase => lower.includes(phrase))) return cleaned;
+
+    const childOwnedKeepPhrases = [
+      "not yet", "more time", "keep drawing", "keep working", "i want more time", "a little more"
+    ];
+
+    if (childOwnedKeepPhrases.some(phrase => lower.includes(phrase))) return cleaned;
+
+    return "";
+  }
+
+  function stopEarlyResponseSpeechRecognition() {
+    if (!earlyResponseSpeechRecognition) return;
+
+    const recognition = earlyResponseSpeechRecognition;
+    earlyResponseSpeechRecognition = null;
+    earlyResponseQuestion = null;
+
+    try {
+      recognition.onresult = null;
+      recognition.onerror = null;
+      recognition.onend = null;
+      recognition.stop();
+    } catch (error) {}
+  }
+
+  function startEarlyResponseSpeechRecognition(question, promptText) {
+    const Recognition = getResponseSpeechRecognitionConstructor();
+    if (!Recognition || !question) return false;
+
+    stopEarlyResponseSpeechRecognition();
+    earlyResponseQuestion = question;
+
+    let recognition;
+
+    try {
+      recognition = new Recognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = "en-US";
+    } catch (error) {
+      return false;
+    }
+
+    earlyResponseSpeechRecognition = recognition;
+
+    recognition.onresult = function (event) {
+      if (!earlyResponseQuestion || state.gameCompleted) return;
+
+      for (let i = event.resultIndex; i < event.results.length; i += 1) {
+        const transcript = cleanTranscript(event.results[i][0]?.transcript || "");
+        const earlyChoice = isLikelyEarlyChoiceResponse(transcript, promptText);
+
+        if (!earlyChoice) continue;
+
+        earlyResponseQuestion.earlyTranscript = earlyChoice;
+        earlyResponseQuestion.browserTranscript = earlyChoice;
+
+        // Do not interrupt the character's audio. Store the response and let
+        // the prompt finish naturally, then handle the answer right after.
+        stopEarlyResponseSpeechRecognition();
+        return;
+      }
+    };
+
+    recognition.onerror = function () {
+      earlyResponseSpeechRecognition = null;
+      earlyResponseQuestion = null;
+    };
+
+    recognition.onend = function () {
+      earlyResponseSpeechRecognition = null;
+      earlyResponseQuestion = null;
+    };
+
+    try {
+      recognition.start();
+      return true;
+    } catch (error) {
+      earlyResponseSpeechRecognition = null;
+      earlyResponseQuestion = null;
+      return false;
+    }
   }
 
   async function startResponseWindow(question, seconds) {
@@ -1115,6 +1421,8 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     question.resumePassiveAfterResponse = shouldResumePassiveAfterResponse;
+    question.browserTranscript = "";
+    startResponseSpeechRecognition(question);
 
     const tile = getTile(question.actor || "star");
 
@@ -1192,7 +1500,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         const volume = Math.sqrt(sum / dataArray.length);
         const now = Date.now();
-        const speechThreshold = 9;
+        const speechThreshold = 6;
 
         if (volume > speechThreshold) {
           heardSpeechInWindow = true;
@@ -1200,7 +1508,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         const hasRecordedLongEnough = now - startedAt > 850;
-        const silenceAfterSpeech = heardSpeechInWindow && now - lastSpeechTime > 850;
+        const silenceAfterSpeech = heardSpeechInWindow && now - lastSpeechTime > 1100;
         const maxTimeReached = now - startedAt > maxWindowMs;
 
         if ((hasRecordedLongEnough && silenceAfterSpeech) || maxTimeReached) {
@@ -1238,6 +1546,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function stopResponseWindow() {
     stopSpeechEndDetector();
+    stopResponseSpeechRecognition();
 
     if (recordingTimeout) {
       clearTimeout(recordingTimeout);
@@ -1261,8 +1570,31 @@ document.addEventListener("DOMContentLoaded", function () {
 
     updateQuietStatus("Drawing together");
 
+    if (question?.browserStopTimer) {
+      clearTimeout(question.browserStopTimer);
+      question.browserStopTimer = null;
+    }
+
     try {
+      const fallbackTranscript = cleanTranscript(question?.browserTranscript || "");
+
+      if (fallbackTranscript && shouldUseBrowserTranscriptImmediately(question)) {
+        await handleSpeech(fallbackTranscript, question);
+        return fallbackTranscript;
+      }
+
+      if (!heardSpeechInWindow && !fallbackTranscript) {
+        recordingChunks = [];
+        await handleNoSpeech(question);
+        return null;
+      }
+
       if (!recordingChunks.length) {
+        if (fallbackTranscript) {
+          await handleSpeech(fallbackTranscript, question);
+          return fallbackTranscript;
+        }
+
         await handleNoSpeech(question);
         return null;
       }
@@ -1276,19 +1608,32 @@ document.addEventListener("DOMContentLoaded", function () {
       const formData = new FormData();
       formData.append("audio", blob, "drawing-response.webm");
 
+      const controller = new AbortController();
+      const timeoutId = setTimeout(function () {
+        controller.abort();
+      }, 5500);
+
       const response = await fetch("/api/drawing-game/transcribe", {
         method: "POST",
-        body: formData
+        body: formData,
+        signal: controller.signal
       });
+
+      clearTimeout(timeoutId);
 
       const data = await response.json();
 
       if (!data.success) {
+        if (fallbackTranscript) {
+          await handleSpeech(fallbackTranscript, question);
+          return fallbackTranscript;
+        }
+
         await handleNoSpeech(question);
         return null;
       }
 
-      const transcript = cleanTranscript(data.text || "");
+      const transcript = cleanTranscript(data.text || "") || fallbackTranscript;
 
       if (!transcript) {
         await handleNoSpeech(question);
@@ -1298,6 +1643,13 @@ document.addEventListener("DOMContentLoaded", function () {
       await handleSpeech(transcript, question);
       return transcript;
     } catch (error) {
+      const fallbackTranscript = cleanTranscript(question?.browserTranscript || "");
+
+      if (fallbackTranscript) {
+        await handleSpeech(fallbackTranscript, question);
+        return fallbackTranscript;
+      }
+
       console.error("Drawing transcription error:", error);
       await handleNoSpeech(question);
       return null;
@@ -1465,7 +1817,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
     const stopPhrases = [
       "done for the day", "be done for the day", "stop for today",
-      "stop now", "i want to stop", "go back", "dashboard", "no more"
+      "stop now", "i want to stop", "go back", "dashboard", "no more",
+      "end the call", "end call", "end this call", "call for now"
     ];
 
     const moveWords = [
@@ -1485,6 +1838,11 @@ document.addEventListener("DOMContentLoaded", function () {
     const asksForMoreDrawingTime = lower.includes("more time") || lower.includes("a little more") || lower.includes("more details");
 
     if (stopPhrases.some(phrase => lower.includes(phrase))) return "stop";
+
+    // For move-on prompts, a plain affirmative answer should mean "yes, move on."
+    if (["yes", "yeah", "yep", "yup", "sure", "okay", "ok"].some(word => words.has(word))) {
+      return "done";
+    }
 
     // After Star offers the next part/scene, answers like "draw the grass" or even
     // just "grass" should count as moving on, not as unclear or "keep drawing."
@@ -1584,6 +1942,156 @@ document.addEventListener("DOMContentLoaded", function () {
     schedulePassiveDoneListen(1200);
   }
 
+  function pickTeacherChildAnswerPraise(transcript, question) {
+    const stageId = question?.stageId || currentStage().id;
+    const source = question?.source || "";
+    const questionIndex = Number.isFinite(question?.questionIndex) ? question.questionIndex : null;
+    const words = new Set(normalizedWords(transcript || ""));
+
+    if ((source === "teacher-indirect" || source === "teacher-redirect") && stageId === "barn" && questionIndex === 0 && Math.random() < 0.55) {
+      return pickLine([
+        "Great choice. Oh, that's one of my favorites too.",
+        "Nice choice. That's my favorite too.",
+        "Great choice. I like that one too."
+      ]);
+    }
+
+    if (stageId === "barn" && questionIndex === 1) {
+      if (words.has("cow") || words.has("cows")) {
+        return pickLine([
+          "Great choice. Cows are fun to see on a farm.",
+          "Nice choice. Cow spots can look really cool.",
+          "Great choice. Cows make the farm feel lively."
+        ]);
+      }
+
+      if (words.has("pig") || words.has("pigs")) {
+        return pickLine([
+          "Great choice. Pigs can make a farm picture feel playful.",
+          "Nice choice. Pigs can be really cute in a farm picture.",
+          "Great choice. A little muddy pig can be fun to draw."
+        ]);
+      }
+    }
+
+    if (stageId === "grass" && questionIndex === 0) {
+      if (words.has("dark")) {
+        return pickLine([
+          "Great choice. Dark green can make the grass easy to see.",
+          "Nice choice. Dark green is a strong grass color.",
+          "Great choice. Dark green can look really nice for grass."
+        ]);
+      }
+
+      if (words.has("light")) {
+        return pickLine([
+          "Great choice. Light green can make the grass look bright.",
+          "Nice choice. Light green is a cheerful grass color.",
+          "Great choice. Light green can make the farm feel sunny."
+        ]);
+      }
+    }
+
+    if (stageId === "grass" && questionIndex === 1) {
+      if (words.has("short")) {
+        return pickLine([
+          "Great choice. Short grass makes sense near the barn.",
+          "Nice choice. Short grass can look neat.",
+          "Great choice. Short grass works well here."
+        ]);
+      }
+
+      if (words.has("tall")) {
+        return pickLine([
+          "Great choice. Tall grass can make the farm feel full.",
+          "Nice choice. Tall grass can look fun.",
+          "Great choice. Tall grass is a good farm detail."
+        ]);
+      }
+    }
+
+    if (stageId === "cow" && questionIndex === 0) {
+      if (words.has("black")) {
+        return pickLine([
+          "Great choice. Black spots are a classic cow look.",
+          "Nice choice. Black spots can look really clear.",
+          "Great choice. Black spots will make the cow easy to see."
+        ]);
+      }
+
+      if (words.has("brown")) {
+        return pickLine([
+          "Great choice. Brown spots can look nice on a cow.",
+          "Nice choice. Brown spots can make the cow look warm.",
+          "Great choice. Brown is a good cow spot color."
+        ]);
+      }
+    }
+
+    if (stageId === "cow" && questionIndex === 1) {
+      if (words.has("happy")) {
+        return pickLine([
+          "Great choice. A happy cow sounds nice.",
+          "Nice choice. A happy cow would feel friendly.",
+          "Great choice. Happy is a good look for this cow."
+        ]);
+      }
+
+      if (words.has("sleepy")) {
+        return pickLine([
+          "Great choice. A sleepy cow could be really sweet.",
+          "Nice choice. Sleepy can fit a calm farm.",
+          "Great choice. Sleepy is a gentle look for the cow."
+        ]);
+      }
+    }
+
+    if (stageId === "pig" && questionIndex === 0) {
+      if (words.has("pink")) {
+        return pickLine([
+          "Great choice. Pink is a good pig color.",
+          "Nice choice. Pink can look great for a pig.",
+          "Great choice. Pink will make the pig easy to see."
+        ]);
+      }
+
+      if (words.has("peach")) {
+        return pickLine([
+          "Great choice. Peach is a soft color for a pig.",
+          "Nice choice. Peach can look good for this pig.",
+          "Great choice. Peach is a good pig color too."
+        ]);
+      }
+    }
+
+    if (stageId === "pig" && questionIndex === 1) {
+      if (words.has("oink")) {
+        return pickLine([
+          "Great choice. Oink is a good pig sound.",
+          "Nice choice. Oink sounds just right for a pig.",
+          "Great choice. That pig sound fits."
+        ]);
+      }
+
+      if (words.has("snort")) {
+        return pickLine([
+          "Great choice. Snort is a funny pig sound.",
+          "Nice choice. Snort can fit a pig too.",
+          "Great choice. That sound makes the pig feel playful."
+        ]);
+      }
+    }
+
+    return pickLine([
+      "Great choice. That's a cool fact to know.",
+      "Nice choice. That's a cool fact to know.",
+      "Great choice. That's good to know.",
+      "Nice answer. I like hearing that.",
+      "Great choice. That is fun to know.",
+      "Nice answer. That works well."
+    ]);
+  }
+
   async function handleSpeech(transcript, question) {
     const words = countWords(transcript);
     const mode = getProgressMode();
@@ -1626,10 +2134,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
     if (question?.intent === "side_question") {
       await speakNow("star", pickLine([
-        "Thanks for telling me.",
         "That sounds nice.",
         "I like hearing about that.",
-        "That makes sense."
+        "That makes sense.",
+        "That's cool to know."
       ]));
 
       if (getProgressMode() !== "star_leads" && drawingHasBase()) {
@@ -1637,7 +2145,7 @@ document.addEventListener("DOMContentLoaded", function () {
         await speakNow(TEACHER_ACTOR, pickLine([
           "I liked hearing that.",
           "That was nice to hear.",
-          "Thank you for sharing that."
+          "That's a cool fact to know."
         ]));
       }
 
@@ -1656,13 +2164,21 @@ document.addEventListener("DOMContentLoaded", function () {
       return;
     }
 
+    if (question?.source === "teacher-indirect") {
+      await speakNow(TEACHER_ACTOR, pickTeacherChildAnswerPraise(transcript, question));
+
+      scheduleStageCheck(6500);
+      schedulePassiveDoneListen(1400);
+      return;
+    }
+
     if (question?.source === "teacher-direct") {
       await speakNow(TEACHER_ACTOR, pickLine([
         "Nice choice.",
         "Good choice.",
-        "Thanks for telling me. Good job.",
         "Okay. I like that idea.",
-        "That sounds good."
+        "That sounds good.",
+        "Wow, that's a cool fact to know."
       ]));
 
       await sleep(180);
@@ -1679,15 +2195,10 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     if (question?.source === "teacher-redirect") {
-      await speakNow("star", pickLine([
-        "Okay. Let's use that.",
-        "That works.",
-        "That sounds good.",
-        "Let's try that.",
-        "Keep going when you're ready."
-      ]));
+      await speakNow(TEACHER_ACTOR, pickTeacherChildAnswerPraise(transcript, question));
 
       scheduleStageCheck(6500);
+      schedulePassiveDoneListen(1400);
       return;
     }
 
@@ -1720,6 +2231,9 @@ document.addEventListener("DOMContentLoaded", function () {
       house: "house",
       yard: "yard",
       tree: "tree",
+      barn: "barn",
+      cow: "cow",
+      pig: "pig",
       school: "school",
       children: "children"
     };
@@ -1731,7 +2245,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const names = {
       flower_scene: "flower picture",
       house_scene: "house picture",
-      tree_scene: "tree picture",
+      farm_scene: "farm picture",
       school_scene: "school picture"
     };
 
@@ -1755,6 +2269,24 @@ document.addEventListener("DOMContentLoaded", function () {
     return friendlySceneNameForSpeech(nextScene);
   }
 
+  function sceneDrawingTargetForSpeech(scene) {
+    const targets = {
+      house_scene: "a house",
+      farm_scene: "a farm",
+      school_scene: "a school picture"
+    };
+
+    return targets[scene.id] || friendlySceneNameForSpeech(scene);
+  }
+
+  function nextSceneDrawingTargetForSpeech() {
+    const nextScene = drawingScenes[state.sceneIndex + 1];
+
+    if (!nextScene) return "the next picture";
+
+    return sceneDrawingTargetForSpeech(nextScene);
+  }
+
   function isLastStageInCurrentScene() {
     const scene = currentScene();
     return state.stageIndex >= scene.stages.length - 1;
@@ -1771,27 +2303,36 @@ document.addEventListener("DOMContentLoaded", function () {
     clearStageCheckTimer();
     clearPassiveDoneTimer();
 
+    if (colorReactionTimer) {
+      clearTimeout(colorReactionTimer);
+      colorReactionTimer = null;
+    }
+
     const stage = currentStage();
     const partName = friendlyStageNameForSpeech();
     const sceneName = friendlySceneNameForSpeech();
 
-    await speakNow(TEACHER_ACTOR, pickLine([
-      `Your ${partName} is looking great so far.`,
-      `I like how your ${partName} is coming together.`,
-      `This is looking really nice so far.`
-    ]));
+    if (isLastStageInCurrentScene() && !isLastSceneInGame()) {
+      await speakNow(TEACHER_ACTOR, pickLine(stage.donePraise));
+    } else {
+      await speakNow(TEACHER_ACTOR, pickLine([
+        `Your ${partName} is looking great so far.`,
+        `I like how your ${partName} is coming together.`,
+        `This is looking really nice so far.`
+      ]));
+    }
 
     await sleep(140);
 
     let options;
 
     if (isLastStageInCurrentScene() && !isLastSceneInGame()) {
-      const nextSceneName = nextSceneNameForSpeech();
+      const nextSceneTarget = nextSceneDrawingTargetForSpeech();
 
       options = [
-        `Do you want to be done with this ${sceneName} and draw the ${nextSceneName} now, or keep adding details?`,
-        `Should we start the ${nextSceneName} now, or do you want more time with this ${sceneName}?`,
-        `Do you want to move on to drawing the ${nextSceneName}, or keep working on this ${sceneName}?`
+        `Do you want to move on to drawing ${nextSceneTarget} now, or end the call for now?`,
+        `Should we start drawing ${nextSceneTarget} now, or end the call for now?`,
+        `Do you want to keep going and draw ${nextSceneTarget}, or end the call for now?`
       ];
     } else if (isLastStageInCurrentScene() && isLastSceneInGame()) {
       options = [
@@ -1818,6 +2359,29 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
+  async function saveNextSceneForReentryAfterCompletedScene() {
+    if (!isLastStageInCurrentScene() || isLastSceneInGame()) {
+      await saveDrawingProgress();
+      return false;
+    }
+
+    const alreadyMarkedComplete = state.scenesCompleted >= state.sceneIndex + 1;
+
+    if (!alreadyMarkedComplete) {
+      state.stagesCompleted += 1;
+      state.roundsCompleted = Math.max(state.roundsCompleted, getSocialRound());
+      state.scenesCompleted = Math.max(state.scenesCompleted, state.sceneIndex + 1);
+    }
+
+    state.sceneIndex += 1;
+    state.stageIndex = 0;
+    restoredCanvasData = false;
+    savedCanvasDataToRestore = "";
+
+    await saveDrawingProgress({ canvas_data: "" });
+    return true;
+  }
+
   async function handleStageDoneResponse(transcript) {
     const choice = classifyStageDoneResponse(transcript);
     const shouldMoveStraightToNextScene = isLastStageInCurrentScene() && !isLastSceneInGame();
@@ -1831,9 +2395,15 @@ document.addEventListener("DOMContentLoaded", function () {
         "Okay, we can stop here for today.",
         "Sure. We can be done for the day."
       ]));
-      await saveDrawingProgress();
+
+      if (shouldMoveStraightToNextScene) {
+        await saveNextSceneForReentryAfterCompletedScene();
+      } else {
+        await saveDrawingProgress();
+      }
+
       cleanupMedia();
-      window.location.href = "/dashboard";
+      redirectToDashboardWithFade();
       return;
     }
 
@@ -1846,9 +2416,9 @@ document.addEventListener("DOMContentLoaded", function () {
         ]));
       } else if (shouldMoveStraightToNextScene) {
         await speakNow("star", pickLine([
-          `Okay. Let's move on to drawing the ${nextSceneNameForSpeech()}.`,
-          `Got it. We can start the ${nextSceneNameForSpeech()} now.`,
-          `Okay. This ${friendlySceneNameForSpeech()} is ready, so we can go to the ${nextSceneNameForSpeech()}.`
+          `Okay. Let's move on to drawing ${nextSceneDrawingTargetForSpeech()}.`,
+          `Got it. We can start drawing ${nextSceneDrawingTargetForSpeech()} now.`,
+          `Okay. This ${friendlySceneNameForSpeech()} is ready, so we can go to drawing ${nextSceneDrawingTargetForSpeech()}.`
         ]));
       } else {
         await speakNow("star", pickLine([
@@ -1894,7 +2464,8 @@ document.addEventListener("DOMContentLoaded", function () {
     const stopPhrases = [
       "be done", "done for the day", "all done", "i'm done", "im done",
       "i am done", "stop", "finish", "finished", "no more", "go back",
-      "dashboard", "that's enough", "that is enough", "i want to stop"
+      "dashboard", "that's enough", "that is enough", "i want to stop",
+      "end the call", "end call", "end this call", "call for now"
     ];
 
     const continuePhrases = [
@@ -1919,9 +2490,9 @@ document.addEventListener("DOMContentLoaded", function () {
         "Okay, we can stop here for today.",
         "Sure. We can be done for the day."
       ]));
-      await saveDrawingProgress();
+      await saveNextSceneForReentryAfterCompletedScene();
       cleanupMedia();
-      window.location.href = "/dashboard";
+      redirectToDashboardWithFade();
       return;
     }
 
@@ -1941,6 +2512,18 @@ document.addEventListener("DOMContentLoaded", function () {
       "That's okay. We can wait here."
     ]));
     await offerContinueAfterScene();
+  }
+
+  function buildStageDoneRetryPrompt() {
+    if (isLastStageInCurrentScene() && !isLastSceneInGame()) {
+      return `I might have missed that. Do you want to move on to drawing ${nextSceneDrawingTargetForSpeech()} now, or end the call for now?`;
+    }
+
+    if (isLastStageInCurrentScene() && isLastSceneInGame()) {
+      return `I might have missed that. Do you want to finish drawing for today, or keep adding details?`;
+    }
+
+    return `I might have missed that. Do you want to move on to drawing the ${nextStageNameForSpeech()}, or keep working on this part?`;
   }
 
   async function handleNoSpeech(question) {
@@ -1967,6 +2550,17 @@ document.addEventListener("DOMContentLoaded", function () {
       state.pendingDoneConfirmation = false;
       state.noSpeechDoneChecksThisStage += 1;
 
+      if (state.noSpeechDoneChecksThisStage <= 1) {
+        await speakNow("star", buildStageDoneRetryPrompt(), {
+          expectsResponse: true,
+          askType: "choice",
+          source: "star-done-confirm-retry",
+          intent: "stage_done",
+          responseSeconds: 7.5
+        });
+        return;
+      }
+
       await speakNow("star", pickLine([
         "That's okay. Keep working on this part for now.",
         "No rush. You can add more when you want.",
@@ -1975,6 +2569,22 @@ document.addEventListener("DOMContentLoaded", function () {
 
       scheduleStageCheck(9000);
       schedulePassiveDoneListen(1600);
+      return;
+    }
+
+    if (question.source === "teacher-indirect") {
+      const questionIndex = Number.isFinite(question.questionIndex)
+        ? question.questionIndex
+        : Math.max(0, state.teacherIndirectQuestionsThisStage - 1);
+
+      await speakNow("star", pickStarFarmBridgeAnswer(currentStage(), questionIndex), {
+        expectsResponse: true,
+        askType: "gentle_redirect",
+        source: "teacher-redirect",
+        intent: "drawing_question",
+        questionIndex,
+        responseSeconds: 4.2
+      });
       return;
     }
 
@@ -2084,10 +2694,12 @@ document.addEventListener("DOMContentLoaded", function () {
   function getCanvasPoint(event) {
     const rect = canvas.getBoundingClientRect();
     const source = event.touches ? event.touches[0] : event;
+    const scaleX = canvas.width / Math.max(1, rect.width);
+    const scaleY = canvas.height / Math.max(1, rect.height);
 
     return {
-      x: (source.clientX - rect.left) * window.devicePixelRatio,
-      y: (source.clientY - rect.top) * window.devicePixelRatio
+      x: (source.clientX - rect.left) * scaleX,
+      y: (source.clientY - rect.top) * scaleY
     };
   }
 
@@ -2126,6 +2738,7 @@ document.addEventListener("DOMContentLoaded", function () {
     state.totalStrokeCount += 1;
 
     maybeReactDuringDrawing();
+    maybeAskTeacherIndirectQuestionDuringRoundThree();
 
     if (strokeCountThisStage >= 15) {
       scheduleStageCheck(10000);
@@ -2169,6 +2782,7 @@ document.addEventListener("DOMContentLoaded", function () {
     state.doneChecksThisStage = 0;
     state.doneRemindersThisStage = 0;
     state.noSpeechDoneChecksThisStage = 0;
+    state.teacherIndirectQuestionsThisStage = 0;
     state.lastGuidanceAt = 0;
     state.lastColorCommentAt = 0;
     state.lastColorCommentedColor = null;
@@ -2179,6 +2793,11 @@ document.addEventListener("DOMContentLoaded", function () {
     if (colorReactionTimer) {
       clearTimeout(colorReactionTimer);
       colorReactionTimer = null;
+    }
+
+    if (teacherIndirectQuestionTimer) {
+      clearTimeout(teacherIndirectQuestionTimer);
+      teacherIndirectQuestionTimer = null;
     }
 
     resetStageDrawingState();
@@ -2223,7 +2842,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
     if (!options.silent && previousColor !== color) {
       state.totalColorSelections += 1;
-      maybeReactToColorChange(color);
+
+      if (!state.pendingDoneConfirmation && !state.waitingForResponse && !state.isListening) {
+        maybeReactToColorChange(color);
+      }
+
       saveDrawingProgress({ total_color_selections: state.totalColorSelections });
     }
   }
@@ -2358,6 +2981,8 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function maybeReactToColorChange(color) {
+    if (getProgressMode() === "teacher_to_star_to_child") return;
+    if (state.pendingDoneConfirmation || state.waitingForResponse || state.isListening) return;
     if (state.colorCommentsThisStage >= 4) return;
     if (Date.now() - state.stageStartedAt < 900) return;
 
@@ -2406,6 +3031,8 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function maybeReactToDrawingStart() {
+    if (getProgressMode() === "teacher_to_star_to_child") return;
+    if (state.pendingDoneConfirmation || state.waitingForResponse || state.isListening) return;
     if (state.drawingCommentsThisStage > 0) return;
     if (!canCharacterChimeIn(3600)) return;
     if (!currentColor) return;
@@ -2452,11 +3079,11 @@ document.addEventListener("DOMContentLoaded", function () {
         "What makes a house feel cozy?",
         "What could be near a house outside?"
       ],
-      tree_scene: [
-        "What animals might visit a tree?",
-        "What would you do under a big tree?",
-        "What do you like seeing at a park?",
-        "What could grow near a tree?"
+      farm_scene: [
+        "What animals might live on a farm?",
+        "Would a cow or a pig live near a barn?",
+        "Would you use light green or dark green for grass?",
+        "Should a farm animal be big or small?"
       ],
       school_scene: [
         "What might kids do outside before school starts?",
@@ -2468,9 +3095,91 @@ document.addEventListener("DOMContentLoaded", function () {
 
     return pickLine(questionsByScene[scene.id] || [
       "What do you like about this kind of place?",
-      "What would you add outside?",
-      "What could happen in this scene?"
+      "Do you like this place in the daytime or nighttime?",
+      "Would you put it outside or inside?"
     ]);
+  }
+
+  function pickTeacherIndirectQuestion(stage) {
+    return pickLine(stage.teacherIndirect || stage.teacherWonder || stage.teacherDirect || []);
+  }
+
+  function pickStarFarmBridgeAnswer(stage, questionIndex) {
+    const childPart = childName && childName.toLowerCase() !== "there" ? `, ${childName}` : "";
+
+    const linesByStage = {
+      barn: [
+        `Hmm, my favorite farm animal is a pig. What's yours${childPart}?`,
+        `I like pigs better. Do you like pigs or cows better${childPart}?`
+      ],
+      grass: [
+        `I like dark green for grass. Which do you like better, light green or dark green${childPart}?`,
+        `I would make short grass near the barn. Should your grass be short or tall${childPart}?`
+      ],
+      cow: [
+        `I would give the cow black spots. Should your cow have black spots or brown spots${childPart}?`,
+        `I think this cow looks happy. Should your cow look happy or sleepy${childPart}?`
+      ],
+      pig: [
+        `I would make the pig pink. Should your pig be pink or peach${childPart}?`,
+        `I think this pig says oink. Should your pig say oink or snort${childPart}?`
+      ]
+    };
+
+    const lines = linesByStage[stage.id] || [
+      `I have one idea. Do you like that one${childPart}?`
+    ];
+
+    return lines[Math.min(questionIndex, lines.length - 1)] || lines[0];
+  }
+
+  function scheduleDelayedTeacherIndirectQuestion(delayMs = 3200) {
+    if (teacherIndirectQuestionTimer || state.teacherIndirectQuestionsThisStage >= 2) return;
+
+    teacherIndirectQuestionTimer = setTimeout(function () {
+      teacherIndirectQuestionTimer = null;
+      maybeAskTeacherIndirectQuestionDuringRoundThree();
+    }, delayMs);
+  }
+
+  function maybeAskTeacherIndirectQuestionDuringRoundThree() {
+    if (getProgressMode() !== "teacher_to_star_to_child") return;
+    if (state.gameCompleted || state.stageAdvanceLocked || state.pendingDoneConfirmation) return;
+
+    if (Date.now() - state.stageStartedAt < 3200) {
+      scheduleDelayedTeacherIndirectQuestion(1200);
+      return;
+    }
+
+    if (state.teacherIndirectQuestionsThisStage >= 2) return;
+
+    if (!canCharacterChimeIn(4200)) {
+      scheduleDelayedTeacherIndirectQuestion(1200);
+      return;
+    }
+
+    const stage = currentStage();
+    const questionIndex = state.teacherIndirectQuestionsThisStage;
+    const question = (stage.teacherIndirect && stage.teacherIndirect[questionIndex])
+      || pickTeacherIndirectQuestion(stage);
+
+    if (!question) return;
+
+    state.teacherIndirectQuestionsThisStage += 1;
+    state.lastGuidanceAt = Date.now();
+
+    queueSpeak(TEACHER_ACTOR, question, {
+      expectsResponse: true,
+      askType: "gentle_question",
+      source: "teacher-indirect",
+      intent: "drawing_question",
+      questionIndex,
+      responseSeconds: 3.8
+    });
+
+    if (state.teacherIndirectQuestionsThisStage < 2) {
+      scheduleDelayedTeacherIndirectQuestion(9000);
+    }
   }
 
   function maybeAskStarSideQuestion() {
@@ -2493,6 +3202,7 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function maybeReactDuringDrawing() {
+    if (getProgressMode() === "teacher_to_star_to_child") return;
     if (strokeCountThisStage < 18) return;
     if (state.drawingCommentsThisStage >= 2) return;
     if (!canCharacterChimeIn(10500)) return;
@@ -2507,10 +3217,34 @@ document.addEventListener("DOMContentLoaded", function () {
     await queueSpeak("star", pickLine(stage.starLead));
     await sleep(120);
 
+    if (mode === "teacher_wonders_star_bridges") {
+      await queueSpeak(TEACHER_ACTOR, pickLine(stage.teacherWonder));
+      await sleep(120);
+      await queueSpeak("star", pickLine(stage.starChoice));
+      return;
+    }
+
+    if (mode === "teacher_to_star_to_child") {
+      // Round 3 should give the child time to start drawing before any questions.
+      scheduleDelayedTeacherIndirectQuestion(3200);
+      return;
+    }
+
+    if (mode === "teacher_direct_with_star_support") {
+      await queueSpeak(TEACHER_ACTOR, makeDirectChildQuestion(pickLine(stage.teacherDirect)), {
+        expectsResponse: true,
+        askType: "direct_child_question",
+        source: "teacher-direct",
+        intent: "drawing_question",
+        responseSeconds: 5.8
+      });
+      return;
+    }
+
     await queueSpeak("star", pickLine([
-      "Use any colors you want. Tell me when this part feels ready.",
-      "You can draw it your way. Tell me whenever this part feels ready.",
-      "Take your time. Just tell me when this part feels ready."
+      "Use any colors you want. Let us know when this part feels ready.",
+      "You can draw it your way. Let us know whenever this part feels ready.",
+      "Take your time. Just let us know when this part feels ready."
     ]));
 
     await maybeTeacherSupportStarGuidance();
@@ -2539,7 +3273,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     await giveStageGuidance(stage, mode);
 
-    scheduleStageCheck(15000);
+    scheduleStageCheck(12000);
     schedulePassiveDoneListen(800);
   }
 
@@ -2703,9 +3437,7 @@ document.addEventListener("DOMContentLoaded", function () {
     passiveDoneEnabled = true;
     updateMicIndicator();
 
-    if (startPassiveSpeechRecognition(delayMs)) {
-      return;
-    }
+    startPassiveSpeechRecognition(delayMs);
 
     if (passiveRestartTimer) {
       clearTimeout(passiveRestartTimer);
@@ -2782,7 +3514,7 @@ document.addEventListener("DOMContentLoaded", function () {
       return;
     }
 
-    if (isExplicitRecorderActive() || state.isListening || state.waitingForResponse || passiveTranscribing) {
+    if (isExplicitRecorderActive() || state.isSpeaking || state.isListening || state.waitingForResponse || passiveTranscribing) {
       startContinuousPassiveDoneListen(300);
       return;
     }
@@ -2916,7 +3648,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function scheduleStageCheck(delayMs = 8000) {
     if (state.gameCompleted || state.stageAdvanceLocked) return;
-    if (!hasDrawnThisStage) return;
 
     clearStageCheckTimer();
 
@@ -2932,7 +3663,6 @@ document.addEventListener("DOMContentLoaded", function () {
     state.teacherSupportForStarCount += 1;
     await sleep(120);
     await queueSpeak(TEACHER_ACTOR, pickLine([
-      "That's a great point, Star.",
       "Good reminder, Star.",
       "I like that idea, Star.",
       "That makes sense, Star."
@@ -2951,42 +3681,36 @@ document.addEventListener("DOMContentLoaded", function () {
 
     if (isLastStageInCurrentScene() && !isLastSceneInGame()) {
       reminder = pickLine([
-        `Let me know whenever this ${sceneName} feels ready, and we can decide whether to draw the ${nextSceneNameForSpeech()} next.`,
-        `Whenever this ${sceneName} feels ready, tell me, and we can choose what to do next.`
+        `Whenever you think you're done with this ${sceneName}, just let us know and we can look at the final drawing together.`,
+        `When this ${sceneName} feels done, just let us know and we can see the final drawing together.`
       ]);
     } else if (isLastStageInCurrentScene() && isLastSceneInGame()) {
       reminder = pickLine([
-        `Let me know whenever this ${sceneName} feels ready, and we can finish drawing for today.`,
-        `Whenever this ${sceneName} feels ready, tell me, and we can wrap up for today.`
+        `Whenever you think you're done with this ${sceneName}, just let us know and we can look at the final drawing together.`,
+        `When this ${sceneName} feels done, just let us know and we can see the final drawing together.`
       ]);
     } else {
       reminder = pickLine([
-        `Let me know whenever the ${partName} feels ready, and we can move on to the ${nextStageNameForSpeech()}.`,
-        `Whenever the ${partName} feels ready, tell me, and we can decide about the ${nextStageNameForSpeech()}.`
+        `Whenever you think you're done with the ${partName}, just let us know and we can move on to the next part of this ${sceneName}.`,
+        `When the ${partName} feels done, just let us know and we can try the next part of this ${sceneName}.`
       ]);
     }
 
-    await queueSpeak("star", reminder);
-    await maybeTeacherSupportStarGuidance();
+    await queueSpeak(TEACHER_ACTOR, reminder);
 
-    scheduleStageCheck(15000);
+    scheduleStageCheck(22000);
     schedulePassiveDoneListen(800);
   }
 
   async function maybeAskStageDone() {
     if (state.gameCompleted || state.stageAdvanceLocked || state.pendingDoneConfirmation) return;
 
-    if (!hasDrawnThisStage || strokeCountThisStage < 12) {
-      scheduleStageCheck(9000);
-      return;
-    }
-
     if (state.isListening || state.waitingForResponse) {
       scheduleStageCheck(5000);
       return;
     }
 
-    if (Date.now() - state.stageStartedAt < 15000) {
+    if (Date.now() - state.stageStartedAt < 12000) {
       scheduleStageCheck(5000);
       return;
     }
@@ -3006,6 +3730,11 @@ document.addEventListener("DOMContentLoaded", function () {
     state.stageAdvanceLocked = true;
     clearStageCheckTimer();
     clearPassiveDoneTimer();
+
+    if (colorReactionTimer) {
+      clearTimeout(colorReactionTimer);
+      colorReactionTimer = null;
+    }
 
     const stage = currentStage();
 
@@ -3064,9 +3793,9 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     await queueSpeak("star", pickLine([
-      `Do you want to draw another scene now, or be done drawing for today?`,
-      `Should we start the ${nextSceneNameForSpeech()} now, or finish drawing for today?`,
-      `Do you want to keep going with another picture, or be done drawing for today?`
+      `Do you want to move on to drawing ${nextSceneDrawingTargetForSpeech()} now, or end the call for now?`,
+      `Should we start drawing ${nextSceneDrawingTargetForSpeech()} now, or end the call for now?`,
+      `Do you want to keep going and draw ${nextSceneDrawingTargetForSpeech()}, or end the call for now?`
     ]), {
       expectsResponse: true,
       askType: "choice",
@@ -3097,7 +3826,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     await speakNow(TEACHER_ACTOR, pickLine([
       "You made a whole set of pictures today. I loved seeing how each one came together.",
-      "You added so many nice details today. Thank you for showing me your drawings.",
+      "You added so many nice details today. I liked seeing your drawings.",
       "Your drawings looked thoughtful and creative today. I am glad I got to see them."
     ]));
 
@@ -3106,7 +3835,7 @@ document.addEventListener("DOMContentLoaded", function () {
     await speakNow("star", pickLine([
       "That was great drawing today. We can finish for now.",
       "You finished all the pictures. Nice work today.",
-      "We can be done drawing for today. Thanks for making these with us."
+      "We can be done drawing for today. I liked making these pictures with you."
     ]));
 
     await completeAndGoNext();
@@ -3219,12 +3948,18 @@ document.addEventListener("DOMContentLoaded", function () {
       colorReactionTimer = null;
     }
 
+    if (teacherIndirectQuestionTimer) {
+      clearTimeout(teacherIndirectQuestionTimer);
+      teacherIndirectQuestionTimer = null;
+    }
+
     if (canvasSaveTimer) {
       clearTimeout(canvasSaveTimer);
       canvasSaveTimer = null;
     }
 
     stopResponseWindow();
+    stopEarlyResponseSpeechRecognition();
     stopMouthAnimation();
 
     if (activeAudio) {

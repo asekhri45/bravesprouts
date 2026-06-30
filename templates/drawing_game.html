@@ -2,8 +2,8 @@
 
 {% block head %}
 {{ super() }}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/drawing_game.css') }}?v=9">
-<script src="{{ url_for('static', filename='js/drawing_game.js') }}?v=9" defer></script>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/drawing_game.css') }}?v=10">
+<script src="{{ url_for('static', filename='js/drawing_game.js') }}?v=12" defer></script>
 {% endblock %}
 
 {% block title %}Drawing Game{% endblock %}
@@ -146,7 +146,6 @@
 
         <button type="button" class="tool-btn light" id="clearCanvasBtn">Clear</button>
 
-        <!-- Hidden fallback: speech/auto-advance is the real flow. Keep this id so older JS/CSS does not break. -->
         <button type="button" class="done-btn hidden-done-btn" id="doneDrawingBtn" aria-hidden="true" tabindex="-1">
           Done Drawing
         </button>

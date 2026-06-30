@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}BraveSprouts Sign Up{% endblock %}
+{% block title %}MyBraveSprout Sign Up{% endblock %}
 
 {% block head %}
 <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
@@ -10,14 +10,14 @@
 {% block content %}
 <div class="page">
   <header class="topbar">
-    <img src="{{ url_for('static', filename='images/logo_v2.png') }}" class="logo" alt="BraveSprouts logo">
+    <img src="{{ url_for('static', filename='images/logo_v4.png') }}" class="logo" alt="MyBraveSprout logo">
     <a href="/" class="back-home">← Back to Home</a>
   </header>
 
   <main class="login-layout">
     <section class="login-card">
       <h1>Welcome!</h1>
-      <p class="subtitle">Create your BraveSprouts parent account</p>
+      <p class="subtitle">Create your MyBraveSprout parent account</p>
 
       <form method="POST" class="login-form" id="signupForm">
         {% if error %}

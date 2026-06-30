@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1814 1020" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="wall" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f7d8aa"/><stop offset="0.45" stop-color="#e6bd88"/><stop offset="1" stop-color="#c78958"/></linearGradient>
+    <linearGradient id="wood" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c88952"/><stop offset="1" stop-color="#73411f"/></linearGradient>
+    <radialGradient id="lampGlow" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#ffe9a7" stop-opacity="0.95"/><stop offset="0.52" stop-color="#ffc86d" stop-opacity="0.26"/><stop offset="1" stop-color="#ffc86d" stop-opacity="0"/></radialGradient>
+    <filter id="blur"><feGaussianBlur stdDeviation="2.5"/></filter>
+    <filter id="soft"><feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#3a1b09" flood-opacity=".22"/></filter>
+  </defs>
+  <rect width="1814" height="1020" fill="url(#wall)"/>
+  <rect y="0" width="1814" height="1020" fill="#fff" opacity=".08"/>
+  <g opacity=".55" filter="url(#blur)">
+    <rect x="650" y="150" width="360" height="130" rx="22" fill="#f4c891"/>
+    <rect x="1080" y="150" width="240" height="210" rx="22" fill="#d3ecff" opacity=".75"/>
+    <rect x="115" y="165" width="260" height="60" rx="30" fill="#b46a37" opacity=".26"/>
+    <rect x="520" y="350" width="420" height="42" rx="21" fill="#8b4d24" opacity=".42"/>
+    <rect x="410" y="300" width="520" height="25" rx="12" fill="#85451f" opacity=".32"/>
+  </g>
+  <g opacity=".78">
+    <rect x="0" y="482" width="1814" height="72" fill="#aa6334"/>
+    <rect x="0" y="520" width="1814" height="14" fill="#6c3618" opacity=".55"/>
+    <rect x="0" y="468" width="1814" height="18" fill="#e6b375" opacity=".72"/>
+  </g>
+  <g filter="url(#soft)">
+    <rect x="1390" y="148" width="235" height="315" rx="18" fill="#5b3a1f"/>
+    <rect x="1412" y="170" width="191" height="270" rx="10" fill="#233b25"/>
+    <text x="1507" y="218" text-anchor="middle" font-family="Nunito, Arial" font-size="32" fill="#ffd77a" font-weight="800">Today’s Specials</text>
+    <text x="1434" y="270" font-family="Nunito, Arial" font-size="27" fill="#ffe3a6">• Cheese Pizza</text>
+    <text x="1434" y="315" font-family="Nunito, Arial" font-size="27" fill="#ffe3a6">• Veggie Salad</text>
+    <text x="1434" y="360" font-family="Nunito, Arial" font-size="27" fill="#ffe3a6">• Grilled Cheese</text>
+    <text x="1434" y="405" font-family="Nunito, Arial" font-size="27" fill="#ffe3a6">• Lemonade</text>
+  </g>
+  <g filter="url(#soft)">
+    <rect x="1295" y="390" width="132" height="74" rx="10" fill="#2d2520"/>
+    <rect x="1310" y="402" width="102" height="44" rx="5" fill="#403832"/>
+    <rect x="1336" y="464" width="52" height="20" fill="#2d2520"/>
+    <rect x="1305" y="484" width="115" height="24" rx="6" fill="#241d18"/>
+  </g>
+  <g opacity=".85" filter="url(#soft)">
+    <circle cx="1505" cy="585" r="48" fill="#5ba65c"/>
+    <rect x="1464" y="596" width="82" height="92" rx="18" fill="#b76b37"/>
+    <path d="M1470 602 C1490 560, 1515 558, 1542 602" fill="#7ec36f"/>
+  </g>
+  <g filter="url(#soft)">
+    <rect x="1565" y="587" width="170" height="138" rx="14" fill="#8b4e2b"/>
+    <text x="1650" y="645" text-anchor="middle" font-family="Nunito, Arial" font-size="30" fill="#fff0d1" font-weight="900">WE ♥</text>
+    <text x="1650" y="684" text-anchor="middle" font-family="Nunito, Arial" font-size="25" fill="#fff0d1" font-weight="900">OUR</text>
+    <text x="1650" y="720" text-anchor="middle" font-family="Nunito, Arial" font-size="25" fill="#fff0d1" font-weight="900">CUSTOMERS!</text>
+  </g>
+  <g opacity=".95">
+    <ellipse cx="450" cy="78" rx="92" ry="80" fill="url(#lampGlow)"/>
+    <ellipse cx="900" cy="92" rx="92" ry="80" fill="url(#lampGlow)"/>
+    <ellipse cx="1325" cy="78" rx="92" ry="80" fill="url(#lampGlow)"/>
+    <path d="M395 0h110l20 78c8 38-22 75-75 75s-83-37-75-75z" fill="#b9431d"/>
+    <path d="M845 0h110l20 92c8 38-22 75-75 75s-83-37-75-75z" fill="#c4471e"/>
+    <path d="M1270 0h110l20 78c8 38-22 75-75 75s-83-37-75-75z" fill="#b9431d"/>
+  </g>
+  <rect x="0" y="510" width="1814" height="2" fill="#fff" opacity=".28"/>
+</svg>

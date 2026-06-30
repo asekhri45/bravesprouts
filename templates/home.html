@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %} Bravesprouts - Home {% endblock %}
+{% block title %} MyBraveSprout - Home {% endblock %}
 
 {% block head %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/home.css') }}">
@@ -10,7 +10,7 @@
     <header class="navbar">
         <div class="nav-inner">
 
-        <img src="{{ url_for('static', filename='images/logo_v2.png') }}" class="logo">
+        <img src="{{ url_for('static', filename='images/logo_v4.png') }}" class="logo">
 
         <div class="nav-buttons">
             <a href="/signup" class="hero-btn primary">Get Started</a>
@@ -24,19 +24,22 @@
         <div class="hero-container">
 
             <div class="hero-image">
-                <img src="{{ url_for('static', filename='images/heroimage_2.gif') }}" alt="BraveSprouts hero illustration">
+                <img src="{{ url_for('static', filename='images/heroimage_2.gif') }}" alt="MyBraveSprout hero illustration">
             </div>
 
             <div class="hero-text">
                 <h1>Help Kids Practice Real Conversations</h1>
 
                 <p>
-                    BraveSprouts helps children build confidence speaking through guided AI conversations, with evolving and interactive animated characters.
+                    MyBraveSprout is a free web application designed for children ages 8 and under with selective mutism, helping them gradually build confidence speaking through guided AI conversations with evolving, interactive animated characters.
                 </p>
-
+                
                 <div class="hero-buttons">
                     <a href="/signup" class="hero-btn primary">Get Started</a>
-                    <a href="/login" class="hero-btn secondary">I Already Have an Account</a>
+                    <a href="/login" class="hero-btn secondary">
+                        <span class="desktop-label">Already Have an Account</span>
+                        <span class="mobile-label">Log In</span>
+                    </a>
                 </div>
             </div>
 
@@ -184,7 +187,7 @@
                 <div class="approach-text">
                     <h2>start with the star</h2>
                     <p>
-                        With the help of a parent, children first interact with the BraveSprouts star through
+                        With the help of a parent, children first interact with the MyBraveSprout star through
                         simple games and playful activities. This stage focuses on helping the child feel
                         comfortable, safe, and familiar with the experience.
                     </p>
@@ -261,14 +264,14 @@
         </div>
 
         <div class="bottom-cta-image">
-            <img src="{{ url_for('static', filename='images/ctabottom.gif') }}" alt="BraveSprouts illustration">
+            <img src="{{ url_for('static', filename='images/ctabottom.gif') }}" alt="MyBraveSprout illustration">
         </div>
 
     <div class="bottom-cta-ground">
         <div class="footer-links">
             <a href="/terms-of-use">Terms of Use</a>
             <a href="/privacy-policy">Privacy Policy</a>
-            <p>© 2026 BraveSprouts</p>
+            <p>© 2026 MyBraveSprout</p>
         </div>
     </div>  
 

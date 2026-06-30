@@ -1,0 +1,2999 @@
+:root {
+  --cream: #fff8ec;
+  --paper: rgba(255, 250, 240, 0.96);
+  --text: #2c1b16;
+  --muted: #7a5b4e;
+  --brown: #7c4526;
+  --counter: #c88751;
+  --counter-dark: #7a4327;
+  --orange: #f97316;
+  --red: #ef3b2d;
+  --green: #22c55e;
+  --blue: #4f46e5;
+  --shadow: 0 24px 70px rgba(65, 33, 17, 0.24);
+  --soft-shadow: 0 14px 34px rgba(65, 33, 17, 0.16);
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  font-family: "Nunito", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--text);
+}
+
+.restaurant-page {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: linear-gradient(135deg, #fff7e9 0%, #fff0dd 48%, #f2efff 100%);
+}
+
+.hidden { display: none !important; }
+
+/* Intro / invite */
+.restaurant-invite {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  background: #180c06;
+  transition: opacity .42s ease, transform .42s ease;
+}
+
+.restaurant-invite.hide {
+  opacity: 0;
+  transform: scale(1.02);
+  pointer-events: none;
+}
+
+.invite-backdrop {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(rgba(48, 24, 12, .26), rgba(30, 16, 10, .62)),
+    url("/static/images/restaurant/restaurant-bg-top.png");
+  background-size: cover;
+  background-position: center;
+  filter: blur(2px) saturate(1.08);
+  transform: scale(1.035);
+}
+
+.invite-card {
+  position: relative;
+  z-index: 2;
+  width: min(620px, calc(100vw - 40px));
+  box-sizing: border-box;
+  padding: 40px;
+  border-radius: 34px;
+  text-align: center;
+  background: rgba(255, 252, 246, .96);
+  border: 2px solid rgba(255,255,255,.95);
+  box-shadow: 0 38px 105px rgba(0,0,0,.38);
+}
+
+.invite-kicker {
+  display: inline-flex;
+  padding: 8px 15px;
+  border-radius: 999px;
+  background: #fee2e2;
+  color: #991b1b;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  font-size: 12px;
+  font-weight: 1000;
+}
+
+.invite-card h1 {
+  margin: 16px 0 9px;
+  font-size: clamp(32px, 4vw, 50px);
+  line-height: .98;
+  letter-spacing: -1.4px;
+}
+
+.invite-card p {
+  margin: 0 auto 26px;
+  max-width: 510px;
+  color: var(--muted);
+  font-size: 20px;
+  line-height: 1.4;
+  font-weight: 850;
+}
+
+.invite-people {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  margin: 20px 0 30px;
+}
+
+.invite-person {
+  width: 114px;
+  height: 114px;
+  overflow: hidden;
+  border-radius: 50%;
+  border: 6px solid #fff;
+  background: #fff;
+  box-shadow: var(--soft-shadow);
+}
+
+.invite-person img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.invite-plus {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #fed7aa;
+  color: #9a3412;
+  font-size: 28px;
+  font-weight: 1000;
+}
+
+.invite-actions {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+}
+
+.invite-primary,
+.invite-secondary {
+  min-width: 150px;
+  border: 0;
+  border-radius: 999px;
+  padding: 15px 24px;
+  font-size: 17px;
+  font-weight: 1000;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.invite-primary {
+  color: #fff;
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  box-shadow: 0 14px 28px rgba(22, 163, 74, .3);
+}
+
+.invite-secondary {
+  color: #694231;
+  background: #f5eee5;
+}
+
+/* Full restaurant scene */
+.restaurant-stage {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  padding: 0;
+  box-sizing: border-box;
+  transition: opacity .36s ease, transform .36s ease;
+}
+
+.restaurant-stage.is-hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(12px);
+}
+
+.restaurant-topbar {
+  position: absolute;
+  z-index: 80;
+  top: 20px;
+  left: 24px;
+  right: 24px;
+  height: 74px;
+  display: grid;
+  grid-template-columns: 220px 1fr 190px;
+  align-items: start;
+  pointer-events: none;
+}
+
+.topbar-center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  pointer-events: auto;
+}
+
+.stage-chip,
+.mic-pill {
+  min-height: 48px;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 26px;
+  border-radius: 999px;
+  background: rgba(255, 251, 244, .94);
+  border: 2px solid rgba(255, 255, 255, .94);
+  box-shadow: 0 12px 26px rgba(40, 20, 10, .18);
+  color: var(--blue);
+  font-size: 19px;
+  font-weight: 1000;
+  line-height: 1;
+}
+
+.mic-pill {
+  gap: 10px;
+  color: #475569;
+}
+
+.mic-pill span {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #94a3b8;
+  box-shadow: 0 0 0 7px rgba(148, 163, 184, .18);
+}
+
+.mic-pill.listening span {
+  background: var(--green);
+  box-shadow: 0 0 0 7px rgba(34, 197, 94, .16);
+}
+
+.mic-pill.speaking span {
+  background: #f59e0b;
+  box-shadow: 0 0 0 7px rgba(245, 158, 11, .18);
+}
+
+.restaurant-back {
+  pointer-events: auto;
+  justify-self: end;
+  width: 168px;
+  min-height: 64px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #342018;
+  text-align: center;
+  text-decoration: none;
+  font-size: 19px;
+  line-height: 1.15;
+  font-weight: 1000;
+  background: rgba(255, 251, 244, .92);
+  border: 2px solid rgba(255, 255, 255, .96);
+  border-radius: 20px;
+  box-shadow: 0 12px 30px rgba(40, 20, 10, .22);
+}
+
+.kitchen-scene {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: #ba7a49;
+  isolation: isolate;
+}
+
+.scene-background {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-color: #ba7a49;
+  background-image: url("/static/images/restaurant/restaurant-bg-top.png");
+  background-repeat: no-repeat;
+  background-position: center top;
+  background-size: cover;
+  filter: saturate(1.05) contrast(1.02);
+}
+
+.scene-warmth {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 47% 4%, rgba(255, 215, 139, .22), transparent 22%),
+    linear-gradient(to bottom, rgba(45, 20, 7, .02) 0%, rgba(45,20,7,.01) 42%, rgba(76,35,14,.08) 100%);
+}
+
+.order-card-main {
+  position: absolute;
+  z-index: 70;
+  left: 30px;
+  top: 30px;
+  width: 346px;
+  min-height: 106px;
+  box-sizing: border-box;
+  padding: 18px 22px;
+  border-radius: 20px;
+  background: rgba(255, 249, 239, .96);
+  border: 3px solid rgba(255,255,255,.95);
+  box-shadow: 0 14px 32px rgba(45, 22, 10, .23);
+}
+
+.order-kicker {
+  color: #3b271e;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  font-size: 15px;
+  font-weight: 1000;
+}
+
+.order-kicker span { color: #15803d; }
+
+.order-card-row {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.order-card-row h1 {
+  margin: 0;
+  color: #2b1710;
+  font-size: 31px;
+  line-height: 1.05;
+  letter-spacing: -.45px;
+}
+
+.order-icon {
+  flex: 0 0 auto;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #fff2d4;
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,.72);
+  font-size: 34px;
+}
+
+.step-stack {
+  position: absolute;
+  z-index: 70;
+  left: 26px;
+  top: 154px;
+  width: 368px;
+}
+
+.step-card,
+.locked-step {
+  border-radius: 28px;
+  background: rgba(255, 251, 244, .98);
+  border: 2px solid rgba(237, 170, 86, .88);
+  box-shadow: 0 10px 28px rgba(51, 25, 12, .16);
+}
+
+.active-step-card {
+  min-height: 410px;
+  padding: 24px 28px 22px;
+  border-color: #f1a54f;
+  box-shadow: 0 14px 34px rgba(143, 70, 22, .18);
+}
+
+.step-kicker {
+  color: #c24f1e;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  font-size: 16px;
+  font-weight: 1000;
+}
+
+.active-step-card h2 {
+  margin: 8px 0 8px;
+  font-size: 30px;
+  line-height: 1.05;
+  letter-spacing: -.7px;
+}
+
+.active-step-card p {
+  margin: 0;
+  max-width: 265px;
+  font-size: 17px;
+  line-height: 1.25;
+  color: #6a4030;
+  font-weight: 900;
+}
+
+.step-art-wrap {
+  height: 154px;
+  margin: 16px auto 10px;
+  display: grid;
+  place-items: center;
+}
+
+.step-asset {
+  max-width: 204px;
+  max-height: 154px;
+  display: block;
+  filter: drop-shadow(0 12px 14px rgba(72, 36, 17, .16));
+}
+
+.step-dots {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 4px;
+}
+
+.step-dots span {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  box-sizing: border-box;
+  background: transparent;
+  border: 3px solid rgba(130, 91, 73, .45);
+}
+.step-dots span.active { border-color: var(--red); background: var(--red); }
+.step-dots span.done { border-color: #16a34a; background: #16a34a; }
+
+.locked-step-list {
+  display: grid;
+  gap: 18px;
+  margin-top: 20px;
+}
+
+.locked-step {
+  min-height: 100px;
+  display: grid;
+  grid-template-columns: 1fr 34px;
+  align-items: center;
+  gap: 8px;
+  padding: 18px 20px;
+  box-sizing: border-box;
+  color: #7b5a42;
+  background: rgba(255, 239, 205, .92);
+}
+.locked-step.done { background: rgba(229, 241, 218, .98); color: #14532d; }
+.locked-step.current { background: rgba(255, 251, 244, .98); color: #2b1710; border-color: rgba(241, 165, 79, .95); }
+.locked-step .mini-kicker { display:block; text-transform:uppercase; letter-spacing:.07em; font-size:13px; font-weight:1000; opacity:.84; }
+.locked-step strong { display:block; margin-top:2px; font-size:21px; line-height:1.08; font-weight:1000; }
+.lock-icon { width:34px; height:34px; border-radius:11px; display:grid; place-items:center; background:rgba(88,58,37,.15); font-size:16px; }
+
+/* Characters are your existing assets again. Nothing new gets written into /static/images/restaurant. */
+.character-layer {
+  position: absolute;
+  z-index: 3;
+  inset: 0;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.character-slot {
+  position: absolute;
+  bottom: 112px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.teacher-slot { left: 30%; bottom: 118px; transform: translateY(-60px)}
+.leo-slot { left: 66%; bottom: 108px; }
+
+.character-wrap {
+  position: relative;
+  display: block;
+  filter: drop-shadow(0 18px 22px rgba(39, 18, 10, .25));
+  transform-origin: bottom center;
+}
+
+.teacher-wrap { width: clamp(250px, 20vw, 330px); }
+.leo-wrap { width: clamp(320px, 26vw, 430px); }
+
+.character-img {
+  display: block;
+  width: 100%;
+  position: relative;
+  z-index: 1;
+}
+
+.mouth-img {
+  position: absolute;
+  z-index: 5;
+  pointer-events: none;
+  transform-origin: center;
+}
+
+.teacher-mouth-img {
+  left: 49.4%;
+  top: 13.9%;
+  width: 13%;
+  transform: translateX(-50%) scale(1);
+}
+
+.character-name {
+  position: relative;
+  z-index: 10;
+  margin-top: -20px;
+  color: #fff;
+  font-size: 20px;
+  font-weight: 1000;
+  padding: 8px 22px 9px;
+  border-radius: 14px;
+  box-shadow: 0 10px 26px rgba(40, 20, 12, .25);
+}
+.teacher-name { background: rgba(76, 105, 64, .94); }
+.leo-name { background: rgba(173, 45, 42, .94); }
+.character-slot.speaking .character-wrap { animation: characterTalkLift 1.1s ease-in-out infinite; }
+.character-slot.speaking .character-name { box-shadow: 0 0 0 6px rgba(255,255,255,.25), 0 10px 26px rgba(40,20,12,.25); }
+
+.counter-layer {
+  position: absolute;
+  z-index: 8;
+  left: 0;
+  right: 0;
+  top: 50.6%;
+  bottom: 0;
+  pointer-events: auto;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  overflow: hidden;
+}
+
+.counter-front-art {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background-image: url("/static/images/restaurant/restaurant-bg-bottom.png");
+  background-repeat: no-repeat;
+  background-position: center top;
+  background-size: cover;
+}
+
+.counter-back-edge { display: none !important; }
+
+.work-zone {
+  position: absolute;
+  z-index: 3;
+  left: 396px;
+  right: 58px;
+  top: 8px;
+  bottom: 118px;
+  display: grid;
+  place-items: center;
+  overflow: visible;
+  background: transparent !important;
+}
+
+.counter-ui-row {
+  position: absolute;
+  z-index: 4;
+  left: 420px;
+  right: 56px;
+  bottom: 20px;
+  height: 86px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 282px;
+  gap: 24px;
+  align-items: center;
+}
+
+.gentle-prompt {
+  min-width: 0;
+  min-height: 86px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 0 28px;
+  border-radius: 19px;
+  background: rgba(255, 249, 239, .96);
+  border: 3px solid rgba(255,255,255,.92);
+  box-shadow: 0 15px 34px rgba(50, 24, 10, .20);
+}
+.prompt-star { font-size: 42px; filter: drop-shadow(0 4px 4px rgba(169, 86, 0, .2)); }
+.gentle-prompt p { margin:0; font-size: clamp(23px, 2.15vw, 30px); font-weight:1000; color:#4a2b20; line-height:1.1; }
+
+.done-button {
+  height: 86px;
+  border-radius: 19px;
+  background: rgba(255, 249, 239, .97);
+  border: 3px solid rgba(255,255,255,.94);
+  box-shadow: 0 15px 34px rgba(50, 24, 10, .22);
+  color: #15803d;
+  font-size: 25px;
+  font-weight: 1000;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 13px;
+}
+.done-button span { width:54px; height:54px; display:grid; place-items:center; border-radius:50%; background:linear-gradient(135deg,#6fbd69,#2f8f3b); color:#fff; font-size:34px; }
+.done-button:disabled { opacity:.62; cursor:not-allowed; }
+
+.food-scene {
+  position: relative;
+  width: min(720px, 70vw);
+  height: min(390px, 38vh);
+  min-height: 250px;
+  display: grid;
+  place-items: center;
+  user-select: none;
+  touch-action: none;
+}
+
+.board-shadow {
+  display:none;
+  position: absolute;
+  width: 72%;
+  height: 36%;
+  bottom: 4%;
+  border-radius: 50%;
+  background: rgba(59, 30, 14, .22);
+  filter: blur(18px);
+}
+
+.round-board {
+  position: relative;
+  width: min(468px, 42vw, 50vh);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: transparent;
+  box-shadow: none;
+  display: grid;
+  place-items: center;
+}
+
+.pizza-base {
+  position: relative;
+  width: 76%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  overflow: hidden;
+  background: url("/static/images/restaurant/pizza-dough.png") center/contain no-repeat;
+  box-shadow: none;
+}
+
+.pizza-base::after {
+  content: "";
+  position: absolute;
+  inset: 9%;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.pizza-sauce-fill,
+.pizza-cheese-fill {
+  position: absolute;
+  inset: 9%;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.pizza-sauce-fill {
+  background: #c92e24;
+  opacity: .96;
+  filter: blur(.2px);
+}
+
+.pizza-cheese-fill {
+  background: radial-gradient(circle at center, rgba(255, 238, 159, .88), rgba(255, 205, 88, .72));
+  opacity: .0;
+}
+
+.pizza-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  cursor: none;
+  touch-action: none;
+  z-index: 4;
+}
+
+.brush-cursor {
+  position: absolute;
+  width: 42px;
+  height: 42px;
+  z-index: 9;
+  pointer-events: none;
+  transform: translate(-21px, -21px);
+  border-radius: 50%;
+  background: radial-gradient(circle at center, rgba(221, 46, 39, .22) 0 45%, rgba(221, 46, 39, .08) 46% 75%, rgba(221,46,39,.0) 76% 100%);
+  border: 2px solid rgba(221, 46, 39, .38);
+  box-shadow: 0 2px 8px rgba(80, 36, 14, .16);
+}
+
+.token-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  pointer-events: none;
+}
+
+.food-token {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  filter: drop-shadow(0 4px 3px rgba(50, 25, 15, .24));
+}
+
+.cheese-bit {
+  width: 20px;
+  height: 9px;
+  border-radius: 7px 4px 6px 4px;
+  background: #ffe17c;
+}
+
+.food-token.pepperoni {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 36% 30%, #f87171, #cf2c22 70%, #8b1c15 100%);
+  box-shadow: inset 0 0 0 4px rgba(255, 158, 122, .28);
+}
+
+.food-token.mushroom,
+.food-token.pepper,
+.food-token.tomato,
+.food-token.olive,
+.food-token.lettuce,
+.food-token.cucumber,
+.food-token.sprinkle {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  font-size: 31px;
+}
+
+.tool-palette {
+  position: absolute;
+  left: 5%;
+  top: 7%;
+  z-index: 12;
+  display: grid;
+  gap: 12px;
+}
+
+.tool-chip {
+  min-width: 118px;
+  min-height: 74px;
+  padding: 10px 12px;
+  box-sizing: border-box;
+  border: 0;
+  border-radius: 18px;
+  background: rgba(255,250,240,.92);
+  border: 2px solid rgba(255,255,255,.9);
+  box-shadow: 0 14px 30px rgba(60, 30, 16, .16);
+  color: #4a2b20;
+  font-weight: 1000;
+  cursor: pointer;
+}
+
+.tool-chip img {
+  display: block;
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  margin: 0 auto 4px;
+}
+
+.tool-chip.active {
+  outline: 4px solid rgba(249, 115, 22, .38);
+}
+
+.bowl-scene,
+.tray-scene,
+.pitcher-scene,
+.sandwich-scene,
+.sundae-scene {
+  position: relative;
+  width: min(720px, 70vw);
+  height: min(420px, 42vh);
+  min-height: 280px;
+  display: grid;
+  place-items: center;
+  user-select: none;
+  touch-action: none;
+}
+
+.big-bowl {
+  position: relative;
+  width: min(430px, 40vw, 46vh);
+  height: min(250px, 24vw, 26vh);
+  margin-top: 70px;
+  border-radius: 50% 50% 44% 44% / 34% 34% 58% 58%;
+  background: linear-gradient(180deg, #fff5e1 0 24%, #e7b875 25% 100%);
+  box-shadow: inset 0 -18px 28px rgba(100, 54, 20, .22), 0 24px 44px rgba(63, 30, 14, .25);
+  overflow: hidden;
+}
+
+.big-bowl::before {
+  content: "";
+  position: absolute;
+  left: 7%;
+  right: 7%;
+  top: 6%;
+  height: 34%;
+  border-radius: 50%;
+  background: #fffbf2;
+  box-shadow: inset 0 0 0 10px rgba(199, 137, 71, .28);
+}
+
+.salad-item,
+.tray-item,
+.sandwich-layer,
+.pitcher-item,
+.sundae-item {
+  position: absolute;
+  z-index: 5;
+  transform: translate(-50%, -50%) rotate(var(--rot, 0deg));
+  font-size: 42px;
+  filter: drop-shadow(0 5px 4px rgba(50,25,15,.2));
+  pointer-events: none;
+}
+
+.action-counter {
+  position: absolute;
+  right: 6%;
+  top: 8%;
+  min-width: 128px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(255,250,240,.94);
+  border: 2px solid rgba(255,255,255,.9);
+  box-shadow: var(--soft-shadow);
+  text-align: center;
+  font-weight: 1000;
+  color: #5b372b;
+}
+
+.sandwich-board,
+.tray-board,
+.pitcher-board,
+.sundae-board {
+  position: relative;
+  width: min(530px, 50vw, 56vh);
+  height: min(330px, 32vw, 34vh);
+  border-radius: 36px;
+  background: linear-gradient(135deg, #c8874d, #8b4c27);
+  box-shadow: inset 0 0 0 10px rgba(110, 55, 22, .35), 0 24px 44px rgba(63, 30, 14, .25);
+  overflow: hidden;
+}
+
+.bread-piece {
+  position: absolute;
+  left: 50%;
+  top: 54%;
+  width: 270px;
+  height: 190px;
+  transform: translate(-50%, -50%);
+  border-radius: 34px 34px 24px 24px;
+  background: linear-gradient(135deg, #ffe6a6, #d88b35);
+  box-shadow: inset 0 0 0 13px rgba(146, 77, 23, .22), 0 14px 22px rgba(59, 29, 14, .16);
+}
+
+.butter-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 6;
+  touch-action: none;
+}
+
+.pitcher {
+  position: absolute;
+  left: 50%;
+  top: 52%;
+  width: 210px;
+  height: 270px;
+  transform: translate(-50%, -50%);
+  border-radius: 28px 28px 48px 48px;
+  background: rgba(230, 250, 255, .42);
+  border: 10px solid rgba(224, 242, 254, .88);
+  box-shadow: inset 0 -20px 0 rgba(255, 244, 144, .55), 0 18px 36px rgba(63, 30, 14, .20);
+  overflow: hidden;
+}
+
+.pitcher-fill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 0%;
+  background: linear-gradient(180deg, #fff59d, #facc15);
+  transition: height .25s ease;
+}
+
+.sundae-cup {
+  position: absolute;
+  left: 50%;
+  top: 56%;
+  width: 230px;
+  height: 250px;
+  transform: translate(-50%, -50%);
+  border-radius: 42px 42px 80px 80px;
+  background: linear-gradient(180deg, rgba(255,255,255,.86), rgba(219,234,254,.65));
+  border: 8px solid rgba(255,255,255,.92);
+  box-shadow: 0 20px 38px rgba(63, 30, 14, .22);
+}
+
+.completion-toast {
+  position: absolute;
+  z-index: 40;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) scale(.96);
+  min-width: min(520px, calc(100vw - 56px));
+  padding: 26px 32px;
+  border-radius: 28px;
+  text-align: center;
+  background: rgba(255, 252, 246, .96);
+  border: 2px solid rgba(255,255,255,.95);
+  box-shadow: 0 30px 90px rgba(40, 20, 10, .3);
+  animation: popToast .38s ease forwards;
+}
+
+.completion-toast h2 {
+  margin: 0 0 8px;
+  font-size: 36px;
+}
+
+.completion-toast p {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 850;
+  color: #6f4534;
+}
+
+@keyframes characterTalkLift {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+@keyframes popToast {
+  to { transform: translate(-50%, -50%) scale(1); }
+}
+
+
+.round-board {
+  width: min(560px, 44vw, 40vh);
+  box-shadow: inset 0 0 0 12px rgba(119, 62, 26, .55), 0 24px 42px rgba(56, 27, 13, .28);
+}
+.pizza-base { width: 82%; }
+.brush-cursor { width: 92px; height: 92px; }
+.tool-palette { left: 4.5%; top: 9%; }
+.tool-chip { min-width: 126px; min-height: 78px; background: #fff9ef; }
+.sandwich-board,
+.tray-board,
+.pitcher-board,
+.sundae-board { width: min(555px, 46vw, 50vh); height: min(350px, 30vw, 31vh); }
+.big-bowl { width: min(450px, 39vw, 42vh); height: min(260px, 23vw, 24vh); }
+
+@keyframes characterTalkLift {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+@media (max-width: 1180px) {
+  .restaurant-topbar { grid-template-columns: 210px 1fr 160px; }
+  .stage-chip, .mic-pill { padding: 0 18px; font-size: 16px; }
+  .restaurant-back { width: 146px; min-height: 62px; font-size: 17px; }
+  .order-card-main, .step-stack { left: 18px; width: 292px; }
+  .step-stack { top: 136px; }
+  .active-step-card { min-height: 292px; padding: 20px 20px 17px; }
+  .active-step-card h2 { font-size: 25px; }
+  .step-art-wrap { height: 112px; }
+  .teacher-slot { left: 24%; }
+  .leo-slot { left: 57%; }
+  .teacher-wrap { width: clamp(210px, 21vw, 300px); }
+  .leo-wrap { width: clamp(225px, 23vw, 330px); }
+  .work-zone { left: 320px; right: 22px; }
+  .counter-ui-row { left: 330px; right: 24px; grid-template-columns: minmax(0, 1fr) 210px; }
+  .done-button { font-size: 20px; }
+}
+
+@media (max-height: 760px) {
+  .order-card-main { top: 22px; }
+  .step-stack { top: 132px; }
+  .active-step-card { min-height: 290px; padding: 20px 20px 16px; }
+  .step-art-wrap { height: 108px; }
+  .locked-step { min-height: 74px; padding: 12px 16px; }
+  .character-slot { bottom: 80px; }
+  .counter-layer { top: 52%; }
+  .counter-ui-row { height: 70px; bottom: 14px; }
+  .gentle-prompt { min-height: 68px; }
+  .done-button { height: 68px; }
+  .done-button span { width: 46px; height: 46px; }
+}
+
+
+/* v6 target-matching refinements */
+.order-card-main, .active-step-card, .locked-step, .gentle-prompt, .done-button, .restaurant-back, .stage-chip, .mic-pill { backdrop-filter: blur(1px); }
+.scene-background { background-color: #5d351c; }
+.order-card-row h1 { font-size: 32px; }
+.active-step-card h2 { font-size: 32px; }
+.active-step-card p { font-size: 16px; max-width: 280px; }
+.locked-step strong { font-size: 19px; }
+.lock-icon { background: rgba(223, 202, 164, .55); }
+.teacher-slot .character-name { margin-left: 8px; }
+.leo-slot .character-name { margin-left: -4px; }
+.teacher-img { transform: translateY(0px); }
+.leo-img { transform: translateY(12px); transform: scale(0.8);}
+.work-zone .pizza-scene { transform: translateY(18px); }
+.counter-front-art { background-position: center top; }
+@media (max-width: 1250px) { .teacher-slot{left:29%;} .leo-slot{left:67%;} .step-stack{width:340px;} .work-zone{left:372px;} .counter-ui-row{left:394px;} }
+
+
+/* v7: force real restaurant-bg-bottom.png to be the visible counter, not a CSS rectangle */
+.counter-layer {
+  background: transparent !important;
+}
+.counter-front-art {
+  display: block !important;
+  background-image: url("/static/images/restaurant/restaurant-bg-bottom.png") !important;
+  background-size: cover !important;
+  background-position: center top !important;
+  opacity: 1 !important;
+}
+.character-layer {
+  z-index: 3 !important;
+}
+.counter-layer {
+  z-index: 8 !important;
+}
+.work-zone {
+  z-index: 3 !important;
+}
+.counter-ui-row {
+  z-index: 4 !important;
+}
+
+
+/* v8 minimal fixes: use the real bottom PNG as a foreground image */
+.counter-layer {
+  top: 50.6% !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  z-index: 8 !important;
+  overflow: hidden !important;
+}
+
+.counter-front-art {
+  display: none !important;
+}
+
+.counter-front-img {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Characters behind the actual counter foreground image */
+.character-layer {
+  z-index: 3 !important;
+}
+
+.teacher-slot {
+  left: 30% !important;
+  bottom: 112px !important;
+}
+
+.leo-slot {
+  left: 65.5% !important;
+  bottom: 98px !important;
+}
+
+.teacher-wrap {
+  width: clamp(250px, 20vw, 330px) !important;
+}
+
+.leo-wrap {
+  width: clamp(350px, 31vw, 520px) !important;
+}
+
+/* Teacher mouth was too high; move it down from nose level */
+.teacher-mouth-img {
+  top: 16.9% !important;
+  left: 49.4% !important;
+  width: 12.5% !important;
+}
+
+/* Remove character labels/name tags */
+.character-name,
+.teacher-name,
+.leo-name {
+  display: none !important;
+}
+
+/* Food/work appears above the foreground counter image */
+.work-zone {
+  z-index: 3 !important;
+  left: 396px !important;
+  right: 58px !important;
+  top: 4px !important;
+  bottom: 116px !important;
+  background: transparent !important;
+}
+
+/* No done button */
+.done-button {
+  display: none !important;
+}
+
+.counter-ui-row {
+  z-index: 4 !important;
+  left: 420px !important;
+  right: 58px !important;
+  bottom: 20px !important;
+  height: 86px !important;
+  display: block !important;
+}
+
+.gentle-prompt {
+  width: 100% !important;
+  min-height: 86px !important;
+  box-sizing: border-box !important;
+}
+
+.gentle-prompt p {
+  font-size: clamp(24px, 2.05vw, 31px) !important;
+}
+
+/* Match the target card style more closely */
+.order-card-main {
+  left: 30px !important;
+  top: 30px !important;
+  width: 346px !important;
+  border-radius: 22px !important;
+  background: rgba(255, 251, 244, .97) !important;
+  border: 2px solid rgba(255,255,255,.95) !important;
+  box-shadow: 0 10px 26px rgba(51, 25, 12, .16) !important;
+}
+
+.step-stack {
+  left: 26px !important;
+  top: 154px !important;
+  width: 368px !important;
+}
+
+.step-card,
+.locked-step {
+  border-radius: 26px !important;
+  background: rgba(255, 251, 244, .97) !important;
+  border: 2px solid rgba(237, 170, 86, .78) !important;
+  box-shadow: 0 10px 28px rgba(51, 25, 12, .15) !important;
+}
+
+.active-step-card {
+  min-height: 410px !important;
+}
+
+.locked-step {
+  min-height: 100px !important;
+}
+
+/* Make sure no old rectangle leaks through */
+.counter-layer::before,
+.counter-layer::after {
+  content: none !important;
+}
+
+
+/* v9: make restaurant-bg-bottom.png work like the target reference.
+   It is a full-scene transparent foreground overlay, NOT a cropped bottom-half background. */
+
+.kitchen-scene {
+  background: #5d351c !important;
+}
+
+.scene-background {
+  background-image: url("/static/images/restaurant/restaurant-bg-top.png") !important;
+  background-size: cover !important;
+  background-position: center top !important;
+  background-repeat: no-repeat !important;
+}
+
+/* The counter layer now covers the whole stage so the top/bottom PNGs align pixel-for-pixel. */
+.counter-layer {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 8 !important;
+  pointer-events: none !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  overflow: hidden !important;
+}
+
+.counter-front-art {
+  display: none !important;
+}
+
+.counter-front-img {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 1 !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  object-position: center top !important;
+  pointer-events: none !important;
+  user-select: none !important;
+  display: block !important;
+}
+
+/* Characters stay behind the counter overlay. */
+.character-layer {
+  z-index: 3 !important;
+  pointer-events: none !important;
+}
+
+.teacher-slot {
+  left: 31% !important;
+  bottom: 116px !important;
+}
+
+.leo-slot {
+  left: 67% !important;
+  bottom: 105px !important;
+}
+
+.teacher-wrap {
+  width: clamp(250px, 19.8vw, 328px) !important;
+}
+
+.leo-wrap {
+  width: clamp(420px, 33vw, 550px) !important;
+}
+
+/* Teacher mouth: slightly higher than v8 but lower than the original nose-level position. */
+.teacher-mouth-img {
+  top: 15.8% !important;
+  left: 49.4% !important;
+  width: 12.3% !important;
+}
+
+/* Hide character labels */
+.character-name,
+.teacher-name,
+.leo-name {
+  display: none !important;
+}
+
+/* Interactive food layer sits above the visible foreground counter. */
+.work-zone {
+  position: absolute !important;
+  z-index: 3 !important;
+  left: 398px !important;
+  right: 58px !important;
+  top: 52.5% !important;
+  bottom: 112px !important;
+  display: grid !important;
+  place-items: center !important;
+  background: transparent !important;
+  pointer-events: auto !important;
+}
+
+.counter-ui-row {
+  position: absolute !important;
+  z-index: 4 !important;
+  left: 420px !important;
+  right: 58px !important;
+  bottom: 20px !important;
+  height: 86px !important;
+  display: block !important;
+  pointer-events: auto !important;
+}
+
+.done-button {
+  display: none !important;
+}
+
+.gentle-prompt {
+  width: 100% !important;
+  min-height: 86px !important;
+  box-sizing: border-box !important;
+  border-radius: 18px !important;
+  background: rgba(255, 249, 239, .97) !important;
+  border: 3px solid rgba(255,255,255,.94) !important;
+  box-shadow: 0 15px 34px rgba(50, 24, 10, .20) !important;
+}
+
+.gentle-prompt p {
+  font-size: clamp(23px, 2vw, 30px) !important;
+  line-height: 1.08 !important;
+}
+
+/* Smaller, target-like cards */
+.order-card-main {
+  left: 30px !important;
+  top: 30px !important;
+  width: 348px !important;
+  min-height: 106px !important;
+  padding: 18px 22px !important;
+  border-radius: 20px !important;
+  background: rgba(255, 251, 244, .97) !important;
+  border: 2px solid rgba(255,255,255,.95) !important;
+  box-shadow: 0 10px 26px rgba(51, 25, 12, .16) !important;
+}
+
+.order-card-row h1 {
+  font-size: 31px !important;
+}
+
+.step-stack {
+  left: 26px !important;
+  top: 154px !important;
+  width: 368px !important;
+}
+
+.step-card,
+.locked-step {
+  border-radius: 24px !important;
+  background: rgba(255, 251, 244, .97) !important;
+  border: 2px solid rgba(238, 177, 94, .78) !important;
+  box-shadow: 0 10px 28px rgba(51, 25, 12, .14) !important;
+}
+
+.active-step-card {
+  min-height: 388px !important;
+  padding: 24px 28px 20px !important;
+}
+
+.active-step-card h2 {
+  font-size: 31px !important;
+}
+
+.active-step-card p {
+  font-size: 16px !important;
+  line-height: 1.25 !important;
+  max-width: 285px !important;
+}
+
+.step-art-wrap {
+  height: 132px !important;
+  margin: 18px auto 12px !important;
+}
+
+/* No ugly brush/can art for sauce card. The card can just show text/dots. */
+.step-asset {
+  display: none !important;
+}
+
+.locked-step {
+  min-height: 94px !important;
+}
+
+.locked-step strong {
+  font-size: 19px !important;
+}
+
+/* Pizza/dough should be an oval using your PNG, not a CSS circle. */
+.food-scene {
+  width: min(720px, 58vw) !important;
+  height: min(330px, 34vh) !important;
+  min-height: 250px !important;
+}
+
+.board-shadow {
+  display: none !important;
+}
+
+.round-board {
+  width: min(520px, 42vw, 58vh) !important;
+  aspect-ratio: 1.35 / 1 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  display: grid !important;
+  place-items: center !important;
+}
+
+.pizza-base {
+  width: 86% !important;
+  aspect-ratio: 1.333 / 1 !important;
+  border-radius: 0 !important;
+  overflow: visible !important;
+  background: url("/static/images/restaurant/pizza-dough.png") center / contain no-repeat !important;
+  box-shadow: none !important;
+}
+
+.pizza-base::after {
+  content: none !important;
+}
+
+/* Small red dot cursor, not a target/ammo-looking marker */
+.brush-cursor {
+  width: 13px !important;
+  height: 13px !important;
+  transform: translate(-50%, -50%) !important;
+  border-radius: 50% !important;
+  background: #d62b24 !important;
+  border: 0 !important;
+  box-shadow: 0 0 0 4px rgba(214,43,36,.14) !important;
+  opacity: .9 !important;
+}
+
+/* Keep sauce canvas aligned to dough image. */
+.pizza-canvas {
+  inset: 0 !important;
+}
+
+/* Hide full old sauce fill from showing outside oval if any prior step renders it. */
+.pizza-sauce-fill,
+.pizza-cheese-fill {
+  inset: 16% 15% 19% 15% !important;
+  border-radius: 50% !important;
+  overflow: hidden !important;
+}
+
+/* Responsive nudge */
+@media (max-width: 1250px) {
+  .teacher-slot { left: 31% !important; }
+  .leo-slot { left: 67% !important; }
+  .leo-wrap { width: clamp(370px, 34vw, 490px) !important; }
+  .step-stack { width: 346px !important; }
+  .work-zone { left: 370px !important; }
+  .counter-ui-row { left: 392px !important; }
+}
+
+
+/* v10: make it more playable and closer to the reference */
+
+/* Hide all cooking UI and food during the character intro. */
+.restaurant-stage.pre-cooking .order-card-main,
+.restaurant-stage.pre-cooking .step-stack,
+.restaurant-stage.pre-cooking .work-zone {
+  display: none !important;
+}
+
+/* Remove bottom prompt card completely. */
+.counter-ui-row,
+.gentle-prompt,
+.done-button {
+  display: none !important;
+}
+
+/* Characters bigger and closer to the middle. */
+.teacher-slot {
+  left: 36.5% !important;
+  bottom: 116px !important;
+}
+
+.leo-slot {
+  left: 61.5% !important;
+  bottom: 104px !important;
+}
+
+.teacher-wrap {
+  width: clamp(330px, 27vw, 455px) !important;
+}
+
+.leo-wrap {
+  width: clamp(460px, 36vw, 620px) !important;
+}
+
+/* Teacher mouth: corrected from too low, but still below the nose. */
+.teacher-mouth-img {
+  top: 15.1% !important;
+  left: 49.4% !important;
+  width: 12.2% !important;
+}
+
+/* Left cards closer to the mockup: smaller, warmer, more compact. */
+.order-card-main {
+  left: 28px !important;
+  top: 28px !important;
+  width: 352px !important;
+  min-height: 112px !important;
+  padding: 18px 22px !important;
+  border-radius: 18px !important;
+  background: rgba(255, 251, 244, .98) !important;
+  border: 2px solid rgba(255,255,255,.96) !important;
+  box-shadow: 0 10px 24px rgba(51, 25, 12, .14) !important;
+}
+
+.order-kicker {
+  font-size: 14px !important;
+  letter-spacing: .075em !important;
+}
+
+.order-card-row h1 {
+  font-size: 30px !important;
+}
+
+.order-icon {
+  width: 54px !important;
+  height: 54px !important;
+  font-size: 31px !important;
+}
+
+.step-stack {
+  left: 28px !important;
+  top: 154px !important;
+  width: 358px !important;
+}
+
+.step-card,
+.locked-step {
+  border-radius: 20px !important;
+  background: rgba(255, 251, 244, .98) !important;
+  border: 2px solid rgba(239, 178, 100, .70) !important;
+  box-shadow: 0 10px 24px rgba(51, 25, 12, .13) !important;
+}
+
+.active-step-card {
+  min-height: 300px !important;
+  padding: 24px 26px 20px !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.step-kicker {
+  font-size: 15px !important;
+  letter-spacing: .075em !important;
+}
+
+.active-step-card h2 {
+  font-size: 29px !important;
+  line-height: 1.05 !important;
+  margin: 8px 0 10px !important;
+}
+
+.active-step-card p {
+  font-size: 15.5px !important;
+  line-height: 1.28 !important;
+  max-width: 285px !important;
+}
+
+/* Do not show the ugly sauce graphic. */
+.step-art-wrap,
+.step-asset {
+  display: none !important;
+}
+
+.step-dots {
+  margin-top: auto !important;
+  padding-bottom: 2px !important;
+}
+
+.locked-step-list {
+  gap: 16px !important;
+  margin-top: 18px !important;
+}
+
+.locked-step {
+  min-height: 80px !important;
+  padding: 15px 20px !important;
+  grid-template-columns: 1fr 32px !important;
+}
+
+.locked-step .mini-kicker {
+  font-size: 12px !important;
+}
+
+.locked-step strong {
+  font-size: 18px !important;
+}
+
+/* Align pizza with the wooden tray in restaurant-bg-bottom.png. */
+.work-zone {
+  left: 392px !important;
+  right: 250px !important;
+  top: 49.6% !important;
+  bottom: 18px !important;
+  align-items: center !important;
+  justify-items: center !important;
+}
+
+.food-scene {
+  width: min(610px, 47vw) !important;
+  height: min(330px, 35vh) !important;
+  min-height: 245px !important;
+  transform: translate(-16px, -10px) !important;
+}
+
+.round-board {
+  width: min(470px, 36vw, 520px) !important;
+  aspect-ratio: 1.35 / 1 !important;
+  transform: translate(-2px, -2px) !important;
+}
+
+/* The dough PNG itself */
+.pizza-base {
+  width: 82% !important;
+  aspect-ratio: 1.333 / 1 !important;
+  background: url("/static/images/restaurant/pizza-dough.png") center / contain no-repeat !important;
+  border-radius: 0 !important;
+  overflow: visible !important;
+}
+
+/* Small dot cursor only */
+.brush-cursor {
+  width: 9px !important;
+  height: 9px !important;
+  border-radius: 50% !important;
+  background: #d9342b !important;
+  box-shadow: 0 0 0 3px rgba(217, 52, 43, .12) !important;
+  border: none !important;
+  opacity: .95 !important;
+}
+
+/* If a completed sauce-fill layer appears later, keep it aligned to the same inner oval. */
+.pizza-sauce-fill,
+.pizza-cheese-fill {
+  inset: 27% 25% 28% 25% !important;
+  border-radius: 50% !important;
+}
+
+/* Responsive fallback */
+@media (max-width: 1250px) {
+  .teacher-slot { left: 35.5% !important; }
+  .leo-slot { left: 62% !important; }
+  .teacher-wrap { width: clamp(300px, 27vw, 400px) !important; }
+  .leo-wrap { width: clamp(410px, 37vw, 540px) !important; }
+  .step-stack { width: 340px !important; }
+  .work-zone { left: 365px !important; right: 210px !important; }
+}
+
+
+/* v11: interaction and art quality pass */
+
+/* Characters: much larger, lower, and shifted left. Mostly torso and above should be visible. */
+.teacher-slot {
+  left: 31.5% !important;
+  bottom: 56px !important;
+}
+.leo-slot {
+  left: 55.5% !important;
+  bottom: 45px !important;
+}
+.teacher-wrap {
+  width: clamp(410px, 33vw, 560px) !important;
+}
+.leo-wrap {
+  width: clamp(590px, 45vw, 760px) !important;
+}
+.teacher-mouth-img {
+  top: 15.1% !important;
+  left: 49.4% !important;
+  width: 12.2% !important;
+}
+
+/* Keep cooking area tucked onto the wooden round board. */
+.work-zone {
+  left: 388px !important;
+  right: 210px !important;
+  top: 50.0% !important;
+  bottom: 0px !important;
+  align-items: center !important;
+  justify-items: center !important;
+}
+.food-scene {
+  width: min(640px, 48vw) !important;
+  height: min(330px, 34vh) !important;
+  transform: translate(-18px, 10px) !important;
+}
+
+/* CSS pizza replaces the pizza-dough image completely. */
+.round-board {
+  width: min(520px, 39vw, 560px) !important;
+  aspect-ratio: 1.34 / 1 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.pizza-base {
+  position: relative !important;
+  width: 88% !important;
+  aspect-ratio: 1.34 / 1 !important;
+  border-radius: 50% !important;
+  overflow: hidden !important;
+  background:
+    radial-gradient(ellipse at 36% 24%, rgba(255,255,255,.22), transparent 18%),
+    radial-gradient(ellipse at center, #f8d46e 0 60%, #efb751 61% 68%, #d69234 69% 76%, #a55b20 77% 100%) !important;
+  box-shadow:
+    inset 0 -8px 18px rgba(126, 66, 18, .18),
+    inset 0 0 0 8px rgba(255, 223, 132, .42),
+    0 14px 22px rgba(75, 35, 14, .24) !important;
+}
+.pizza-base::before {
+  content: "";
+  position: absolute;
+  inset: 14% 12% 17% 12%;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 3px rgba(178, 99, 30, .18);
+  pointer-events: none;
+  z-index: 8;
+}
+.pizza-base::after { content: none !important; }
+.pizza-sauce-fill,
+.pizza-cheese-fill {
+  inset: 17% 14% 20% 14% !important;
+  border-radius: 50% !important;
+}
+.pizza-sauce-fill {
+  background: #d8342b !important;
+  opacity: .88 !important;
+  filter: none !important;
+}
+.pizza-cheese-fill {
+  background: repeating-linear-gradient(16deg, rgba(255,232,132,.75) 0 8px, rgba(255,213,87,.62) 8px 14px) !important;
+}
+.pizza-canvas { z-index: 4 !important; }
+.brush-cursor {
+  width: 8px !important;
+  height: 8px !important;
+  border-radius: 50% !important;
+  background: #d8342b !important;
+  box-shadow: 0 0 0 3px rgba(216,52,43,.12) !important;
+  border: 0 !important;
+}
+
+/* Cheese is CSS, not image/emoji. */
+.cheese-bit {
+  width: 22px !important;
+  height: 8px !important;
+  border-radius: 7px !important;
+  background: #ffe68a !important;
+  box-shadow: inset 0 -1px 0 rgba(201,140,34,.18), 0 1px 2px rgba(90,45,10,.12) !important;
+  font-size: 0 !important;
+}
+
+/* CSS-only pizza toppings. */
+.food-token,
+.salad-item,
+.sandwich-layer,
+.tray-item,
+.pitcher-item,
+.sundae-item {
+  position: absolute !important;
+  transform: translate(-50%, -50%) rotate(var(--rot, 0deg)) scale(var(--scale, 1)) !important;
+  font-size: 0 !important;
+  line-height: 0 !important;
+  text-indent: -9999px !important;
+  overflow: visible !important;
+}
+.food-token.pepperoni {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #f87171 0 18%, #dc2626 19% 70%, #991b1b 100%);
+  box-shadow: inset 0 0 0 3px rgba(255,255,255,.12), 0 2px 3px rgba(70,20,10,.18);
+}
+.food-token.mushroom { width: 34px; height: 28px; }
+.food-token.mushroom::before { content:""; position:absolute; left:2px; top:0; width:30px; height:18px; border-radius:18px 18px 9px 9px; background:#d8b082; box-shadow: inset 0 -3px 0 rgba(91,55,28,.16); }
+.food-token.mushroom::after { content:""; position:absolute; left:13px; top:13px; width:9px; height:15px; border-radius:4px; background:#f4dfbd; }
+.food-token.pepper { width: 33px; height: 23px; border-radius: 50% 50% 45% 45%; background:#22c55e; box-shadow: inset 0 -4px 0 rgba(21,128,61,.22); }
+.food-token.tomato { width: 28px; height: 28px; border-radius:50%; background:#ef4444; box-shadow: inset 0 0 0 4px rgba(255,255,255,.16); }
+.food-token.olive { width: 23px; height: 23px; border-radius:50%; background:#252f1b; box-shadow: inset 0 0 0 7px #6b7b3d; }
+
+/* No visible multi-option tool display. */
+.tool-palette { display: none !important; }
+
+/* Salad bowl: opaque bowl with items piling behind the front lip. */
+.big-bowl {
+  position: relative !important;
+  width: min(430px, 38vw) !important;
+  height: min(265px, 28vh) !important;
+  border-radius: 0 0 46% 46% / 0 0 68% 68% !important;
+  background: linear-gradient(180deg, #fff7e8 0%, #f1c987 50%, #c4863e 100%) !important;
+  box-shadow: inset 0 -18px 26px rgba(92,47,15,.18), 0 16px 22px rgba(62,32,13,.22) !important;
+  overflow: hidden !important;
+}
+.big-bowl::before {
+  content:""; position:absolute; left:7%; right:7%; top:5%; height:31%;
+  border-radius:50%; background:#fff6e4; box-shadow: inset 0 -7px 10px rgba(167,99,33,.16); z-index:1;
+}
+.big-bowl::after {
+  content:""; position:absolute; left:0; right:0; bottom:0; height:52%;
+  background: linear-gradient(180deg, rgba(238,184,106,.94), #c4863e);
+  border-radius: 0 0 46% 46% / 0 0 68% 68%;
+  z-index:50;
+  pointer-events:none;
+}
+.salad-pile { position:absolute; inset:0; z-index:10; }
+.salad-item.lettuce { width:50px; height:25px; border-radius:60% 40% 65% 35%; background:#72c35b; box-shadow: inset 0 -4px 0 rgba(34,120,44,.18); }
+.salad-item.tomato { width:28px; height:28px; border-radius:50%; background:#ef4444; box-shadow: inset 0 0 0 4px rgba(255,255,255,.13); }
+.salad-item.cucumber { width:34px; height:18px; border-radius:50%; background:#a7f3d0; box-shadow: inset 0 0 0 5px #22c55e; }
+.action-counter { display: none !important; }
+
+/* Better CSS grilled cheese / sandwich pieces. */
+.sandwich-board {
+  width: min(440px, 38vw) !important;
+  height: min(270px, 28vh) !important;
+  border-radius: 30px !important;
+  background: linear-gradient(135deg, #b77938, #8b4d24) !important;
+  box-shadow: inset 0 0 0 8px rgba(255,218,150,.18), 0 16px 24px rgba(62,32,13,.22) !important;
+}
+.bread-piece {
+  width: 250px !important;
+  height: 180px !important;
+  border-radius: 36px 36px 28px 28px !important;
+  background: linear-gradient(135deg, #ffe6a3, #f0b45c) !important;
+  box-shadow: inset 0 0 0 9px rgba(160,86,29,.22), 0 10px 18px rgba(60,30,12,.16) !important;
+}
+.sandwich-layer.cheese { width: 150px; height: 105px; border-radius: 14px; background:#ffd84d; box-shadow: inset 0 -5px 0 rgba(199,128,20,.16); }
+.sandwich-layer.bread { width: 165px; height: 120px; border-radius: 26px; background:linear-gradient(135deg,#ffe0a0,#da8f35); box-shadow: inset 0 0 0 6px rgba(117,65,21,.18); }
+.sandwich-layer.grilled-cheese { width: 180px; height: 118px; border-radius: 22px; background:linear-gradient(135deg,#f7c35e,#cb7223); box-shadow: inset 0 0 0 7px rgba(98,49,14,.22); }
+
+/* Other token CSS so nothing appears as emoji. */
+.tray-item.fries { width:70px; height:60px; background:#ef4444; border-radius:10px 10px 16px 16px; }
+.tray-item.fries::before { content:""; position:absolute; left:8px; right:8px; top:-22px; height:46px; background:repeating-linear-gradient(90deg,#ffd166 0 7px, transparent 7px 12px); }
+.tray-item.burger { width:82px; height:54px; border-radius: 40px 40px 18px 18px; background:linear-gradient(#e6a642 0 38%, #7c3f1d 39% 55%, #22c55e 56% 68%, #d68632 69% 100%); }
+.tray-item.drink { width:45px; height:70px; border-radius:10px; background:linear-gradient(#bfdbfe 0 22%,#60a5fa 23% 100%); }
+.tray-item.apple { width:44px; height:42px; border-radius:50%; background:#ef4444; }
+.pitcher-item.lemon { width:34px; height:28px; border-radius:50%; background:#fde047; }
+.pitcher-item.ice { width:30px; height:30px; border-radius:8px; background:#dbeafe; opacity:.85; }
+.pitcher-item.water { width:24px; height:32px; border-radius:50% 50% 55% 55%; background:#60a5fa; opacity:.75; }
+.sundae-item.scoop { width:64px; height:50px; border-radius:50% 50% 42% 42%; background:#fff1c6; box-shadow: inset 0 -6px 0 rgba(196,130,47,.12); }
+.sundae-item.syrup { width:56px; height:22px; border-radius:50%; background:#7c2d12; }
+.sundae-item.sprinkles { width:56px; height:36px; background:repeating-linear-gradient(30deg,#ef4444 0 3px,#fde047 3px 6px,#22c55e 6px 9px,#60a5fa 9px 12px); border-radius:50%; }
+.sundae-item.cherry { width:28px; height:28px; border-radius:50%; background:#dc2626; }
+
+/* Compact step cards remain visible once cooking begins. */
+.active-step-card { min-height: 286px !important; }
+.step-stack { width: 348px !important; }
+.order-card-main { width: 344px !important; }
+
+@media (max-width: 1250px) {
+  .teacher-slot { left: 30.5% !important; bottom: 54px !important; }
+  .leo-slot { left: 56% !important; bottom: 42px !important; }
+  .teacher-wrap { width: clamp(360px, 34vw, 480px) !important; }
+  .leo-wrap { width: clamp(520px, 47vw, 650px) !important; }
+}
+
+
+/* v12: usability + food interaction fixes */
+
+/* Characters much lower, bigger, and shifted left. */
+.teacher-slot {
+  left: 24.5% !important;
+  bottom: -88px !important;
+}
+.leo-slot {
+  left: 47.5% !important;
+  bottom: -112px !important;
+}
+.teacher-wrap {
+  width: clamp(520px, 41vw, 700px) !important;
+}
+.leo-wrap {
+  width: clamp(760px, 56vw, 940px) !important;
+}
+.teacher-mouth-img {
+  top: 15.1% !important;
+  left: 49.4% !important;
+  width: 12.2% !important;
+}
+
+/* Shift food left and up to sit better on the wooden tray. */
+.work-zone {
+  left: 330px !important;
+  right: 300px !important;
+  top: 47.2% !important;
+  bottom: 34px !important;
+}
+.food-scene {
+  transform: translate(-82px, -34px) !important;
+}
+
+/* Smooth sauce drawing. Do not hide the mouse. */
+.pizza-canvas {
+  cursor: crosshair !important;
+}
+.brush-cursor {
+  display: none !important;
+}
+.pizza-base {
+  cursor: crosshair !important;
+}
+.pizza-sauce-fill {
+  background: #d83a30 !important;
+  filter: none !important;
+  opacity: .88 !important;
+}
+
+/* Make pizza a bit more tray-friendly. */
+.round-board {
+  width: min(500px, 37vw, 540px) !important;
+}
+.pizza-base {
+  width: 86% !important;
+}
+
+/* Grilled cheese / sandwich interaction refresh */
+.sandwich-scene {
+  width: min(620px, 46vw) !important;
+}
+.sandwich-board,
+.stack-board,
+.butter-board {
+  position: relative !important;
+  width: min(430px, 35vw) !important;
+  height: min(260px, 28vh) !important;
+  border-radius: 30px !important;
+  display: grid !important;
+  place-items: center !important;
+  background:
+    radial-gradient(ellipse at 50% 42%, rgba(255,224,159,.22), transparent 45%),
+    linear-gradient(135deg, #bd7a3b, #8e4d24) !important;
+  box-shadow: inset 0 0 0 8px rgba(255,218,150,.18), 0 16px 24px rgba(62,32,13,.22) !important;
+}
+.sandwich-stack {
+  position: relative !important;
+  width: 250px !important;
+  height: 180px !important;
+  display: grid !important;
+  place-items: center !important;
+}
+.bread-piece,
+.base-bread,
+.butter-bread {
+  position: relative !important;
+  width: 245px !important;
+  height: 172px !important;
+  border-radius: 42px 42px 30px 30px !important;
+  background:
+    radial-gradient(circle at 28% 28%, rgba(255,255,255,.18), transparent 16%),
+    linear-gradient(135deg, #ffe6a3, #f0b45c 68%, #c9792e) !important;
+  box-shadow: inset 0 0 0 9px rgba(160,86,29,.22), 0 10px 18px rgba(60,30,12,.16) !important;
+}
+.butter-canvas {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  cursor: crosshair !important;
+}
+.sandwich-layer {
+  left: 50% !important;
+  top: calc(50% + var(--offset, 0px)) !important;
+}
+.sandwich-layer.cheese {
+  width: 185px !important;
+  height: 122px !important;
+  border-radius: 18px !important;
+  background:
+    linear-gradient(135deg, #ffe16d, #ffc83d) !important;
+  box-shadow: inset 0 -5px 0 rgba(199,128,20,.16), 0 5px 9px rgba(78,41,13,.13) !important;
+}
+.sandwich-layer.bread {
+  width: 245px !important;
+  height: 172px !important;
+  border-radius: 42px 42px 30px 30px !important;
+  background:
+    radial-gradient(circle at 28% 28%, rgba(255,255,255,.18), transparent 16%),
+    linear-gradient(135deg, #ffe0a0, #d88a31 70%, #ae5b20) !important;
+  box-shadow: inset 0 0 0 9px rgba(117,65,21,.18), 0 10px 18px rgba(60,30,12,.16) !important;
+}
+.sandwich-layer.grilled-cheese {
+  width: 256px !important;
+  height: 178px !important;
+  border-radius: 42px 42px 30px 30px !important;
+  background:
+    linear-gradient(135deg, rgba(105,55,18,.18) 0 10%, transparent 10% 24%, rgba(105,55,18,.14) 24% 34%, transparent 34% 100%),
+    linear-gradient(135deg, #f8c45d, #cb7223) !important;
+  box-shadow: inset 0 0 0 9px rgba(98,49,14,.22), 0 12px 18px rgba(60,30,12,.18) !important;
+}
+
+/* Lemonade station: clearer layers, lower caps, and actual mixing. */
+.pitcher-scene {
+  width: min(620px, 46vw) !important;
+  transform: translate(-70px, -42px) !important;
+}
+.lemonade-station {
+  position: relative !important;
+  width: min(500px, 38vw) !important;
+  height: min(320px, 34vh) !important;
+  display: grid !important;
+  place-items: center !important;
+}
+.modern-pitcher,
+.pitcher {
+  position: relative !important;
+  width: min(205px, 16vw) !important;
+  height: min(270px, 28vh) !important;
+  border-radius: 22px 22px 34px 34px / 20px 20px 40px 40px !important;
+  background:
+    linear-gradient(90deg, rgba(255,255,255,.48), rgba(255,255,255,.12) 30%, rgba(255,255,255,.28)) !important;
+  border: 7px solid rgba(255,255,255,.82) !important;
+  box-shadow: inset 0 0 0 2px rgba(94,54,19,.12), 0 16px 24px rgba(42,21,8,.18) !important;
+  overflow: hidden !important;
+  transform: none !important;
+}
+.modern-pitcher::after,
+.pitcher::after {
+  content: "";
+  position: absolute;
+  right: -44px;
+  top: 60px;
+  width: 68px;
+  height: 104px;
+  border: 13px solid rgba(255,255,255,.74);
+  border-left: 0;
+  border-radius: 0 42px 42px 0;
+}
+.lemon-juice-layer,
+.water-layer,
+.mixed-lemonade-layer {
+  position: absolute !important;
+  left: 8% !important;
+  right: 8% !important;
+  bottom: 0 !important;
+  border-radius: 13px 13px 24px 24px !important;
+  transition: height .24s ease, opacity .24s ease, bottom .24s ease !important;
+}
+.lemon-juice-layer {
+  background: #facc15 !important;
+}
+.water-layer {
+  background: rgba(96, 165, 250, .78) !important;
+}
+.mixed-lemonade-layer {
+  background: linear-gradient(180deg, #ffe86a, #facc15) !important;
+  opacity: 0;
+}
+.pitcher-shine {
+  position: absolute;
+  left: 18%;
+  top: 10%;
+  width: 18%;
+  height: 76%;
+  border-radius: 999px;
+  background: rgba(255,255,255,.22);
+  pointer-events: none;
+}
+.ice-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.css-ice-cube {
+  position: absolute;
+  width: 27px;
+  height: 27px;
+  border-radius: 7px;
+  background: rgba(219,234,254,.86);
+  border: 2px solid rgba(255,255,255,.72);
+  transform: rotate(var(--rot, 0deg));
+  box-shadow: 0 2px 4px rgba(37,99,235,.12);
+}
+.lemon-press {
+  position: absolute;
+  left: 18px;
+  top: 82px;
+  display: grid;
+  gap: 8px;
+  place-items: center;
+  font-weight: 1000;
+  color: #6b3b16;
+}
+.lemon-half {
+  width: 88px;
+  height: 54px;
+  border-radius: 54px 54px 18px 18px;
+  background:
+    radial-gradient(circle at 50% 80%, rgba(255,255,255,.35), transparent 30%),
+    linear-gradient(180deg, #fff59d, #facc15);
+  border: 4px solid #f59e0b;
+  box-shadow: 0 8px 14px rgba(60,30,10,.16);
+}
+.water-note {
+  position: absolute;
+  left: 8px;
+  bottom: 22px;
+  width: 140px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: rgba(255,249,239,.92);
+  color: #60412f;
+  font-weight: 1000;
+  text-align: center;
+  box-shadow: 0 8px 18px rgba(50,24,10,.14);
+}
+.lemon-stream,
+.water-stream {
+  position: absolute;
+  left: 48%;
+  top: 2%;
+  width: 12px;
+  height: 58%;
+  border-radius: 999px;
+  pointer-events: none;
+  animation: pourStream .42s ease-out forwards;
+}
+.lemon-stream { background: rgba(250, 204, 21, .78); }
+.water-stream { background: rgba(96, 165, 250, .70); }
+.stir-spoon {
+  position: absolute;
+  left: 50%;
+  top: 35%;
+  width: 16px;
+  height: 154px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #cbd5e1, #f8fafc, #94a3b8);
+  transform: translate(-50%, -50%) rotate(-18deg);
+  box-shadow: 0 6px 10px rgba(30,20,10,.18);
+  pointer-events: none;
+}
+.stir-spoon::after {
+  content: "";
+  position: absolute;
+  left: -13px;
+  bottom: -18px;
+  width: 42px;
+  height: 54px;
+  border-radius: 50%;
+  background: linear-gradient(90deg, #cbd5e1, #f8fafc, #94a3b8);
+}
+@keyframes pourStream {
+  0% { opacity: 0; transform: translateY(-20px) scaleY(.35); }
+  18% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(56px) scaleY(1); }
+}
+
+/* Responsive adjustments */
+@media (max-width: 1250px) {
+  .teacher-slot { left: 22.5% !important; bottom: -76px !important; }
+  .leo-slot { left: 45.5% !important; bottom: -96px !important; }
+  .teacher-wrap { width: clamp(470px, 42vw, 610px) !important; }
+  .leo-wrap { width: clamp(680px, 58vw, 820px) !important; }
+  .work-zone { left: 300px !important; right: 250px !important; }
+  .food-scene { transform: translate(-78px, -32px) !important; }
+}
+
+
+/* v13: placement + pizza interaction fixes */
+
+/* Characters: shift DOWN and LEFT a lot more. Only torso/upper body should show above the counter. */
+.teacher-slot {
+  left: 17.5% !important;
+  bottom: -250px !important;
+}
+.leo-slot {
+  left: 34.5% !important;
+  bottom: -292px !important;
+}
+.teacher-wrap {
+  width: clamp(620px, 48vw, 820px) !important;
+}
+.leo-wrap {
+  width: clamp(900px, 66vw, 1120px) !important;
+}
+
+/* Keep teacher mouth aligned after resizing. */
+.teacher-mouth-img {
+  top: 15.1% !important;
+  left: 49.4% !important;
+  width: 12.1% !important;
+}
+
+/* Pizza: move a little RIGHT and a little LOWER compared with v12. */
+.work-zone {
+  left: 395px !important;
+  right: 205px !important;
+  top: 49.8% !important;
+  bottom: 18px !important;
+}
+.food-scene {
+  transform: translate(-26px, -6px) !important;
+}
+.round-board {
+  width: min(515px, 38vw, 555px) !important;
+}
+.pizza-base {
+  width: 88% !important;
+}
+
+/* Sauce: easier surface and no shiny/beaded look. */
+.pizza-canvas {
+  cursor: crosshair !important;
+}
+.pizza-sauce-fill {
+  inset: 17% 10.5% 17% 10.5% !important;
+  border-radius: 50% !important;
+  background: #d83a30 !important;
+  opacity: .90 !important;
+  filter: none !important;
+  box-shadow: none !important;
+}
+.pizza-cheese-fill {
+  display: none !important;
+}
+
+/* Cheese pieces should visibly rotate at varied angles. */
+.cheese-bit {
+  width: 23px !important;
+  height: 8px !important;
+  border-radius: 7px 5px 6px 4px !important;
+  background: #ffe68a !important;
+  box-shadow: inset 0 -1px 0 rgba(201,140,34,.16), 0 1px 2px rgba(90,45,10,.12) !important;
+  transform: translate(-50%, -50%) rotate(var(--rot, 0deg)) scale(var(--scale, 1)) !important;
+}
+
+/* Do not show any 'ready check' counter/label that changes the look of the pizza. */
+.action-counter {
+  display: none !important;
+}
+
+/* Responsive fallback */
+@media (max-width: 1250px) {
+  .teacher-slot { left: 15.5% !important; bottom: -220px !important; }
+  .leo-slot { left: 32.5% !important; bottom: -258px !important; }
+  .teacher-wrap { width: clamp(560px, 50vw, 740px) !important; }
+  .leo-wrap { width: clamp(820px, 68vw, 990px) !important; }
+  .work-zone { left: 365px !important; right: 180px !important; top: 50.3% !important; }
+  .food-scene { transform: translate(-18px, -2px) !important; }
+}
+
+
+/* v14: respond to latest screenshot */
+
+/* Characters: a little smaller than v13, but shifted DOWN a lot and kept left. */
+.teacher-slot {
+  left: 18.5% !important;
+  bottom: -420px !important;
+}
+.leo-slot {
+  left: 35.5% !important;
+  bottom: -492px !important;
+}
+.teacher-wrap {
+  width: clamp(500px, 39vw, 640px) !important;
+}
+.leo-wrap {
+  width: clamp(710px, 54vw, 890px) !important;
+}
+
+/* Teacher mouth stays aligned after the character resize. */
+.teacher-mouth-img {
+  top: 15.1% !important;
+  left: 49.4% !important;
+  width: 12.1% !important;
+}
+
+/* Pizza: nudge to align with the wooden tray/plate in the background.
+   v13 was slightly off; this moves the pizza back toward the tray center and down. */
+.work-zone {
+  left: 360px !important;
+  right: 225px !important;
+  top: 51.2% !important;
+  bottom: 8px !important;
+}
+.food-scene {
+  transform: translate(-46px, 8px) !important;
+}
+.round-board {
+  width: min(510px, 37.5vw, 548px) !important;
+}
+.pizza-base {
+  width: 88% !important;
+}
+
+/* Sauce should cover nearly the full inner oval, not the smaller central oval. */
+.pizza-sauce-fill {
+  inset: 10.5% 5.5% 10.5% 5.5% !important;
+  border-radius: 50% !important;
+  background: #d83a30 !important;
+  opacity: .90 !important;
+  filter: none !important;
+  box-shadow: none !important;
+}
+
+/* Keep the canvas usable across the same larger inner oval. */
+.pizza-canvas {
+  inset: 0 !important;
+  cursor: crosshair !important;
+}
+
+/* Responsive fallback */
+@media (max-width: 1250px) {
+  .teacher-slot { left: 16.5% !important; bottom: -370px !important; }
+  .leo-slot { left: 33.5% !important; bottom: -435px !important; }
+  .teacher-wrap { width: clamp(460px, 40vw, 590px) !important; }
+  .leo-wrap { width: clamp(650px, 56vw, 820px) !important; }
+  .work-zone { left: 330px !important; right: 190px !important; top: 51.8% !important; }
+  .food-scene { transform: translate(-38px, 10px) !important; }
+}
+
+
+/* v15: targeted layout polish from latest screenshot */
+
+/* Teacher: slightly smaller. */
+.teacher-slot {
+  left: 18.5% !important;
+  bottom: -418px !important;
+}
+.teacher-wrap {
+  width: clamp(470px, 36.5vw, 600px) !important;
+}
+
+/* Leo: much bigger and a little higher. */
+.leo-slot {
+  left: 35.3% !important;
+  bottom: -455px !important;
+}
+.leo-wrap {
+  width: clamp(845px, 62vw, 1040px) !important;
+}
+
+/* Pizza: slightly smaller and nudged right/up so it fits the wooden tray better. */
+.work-zone {
+  left: 378px !important;
+  right: 215px !important;
+  top: 50.4% !important;
+  bottom: 10px !important;
+}
+.food-scene {
+  transform: translate(-28px, -4px) !important;
+}
+.round-board {
+  width: min(470px, 34.5vw, 505px) !important;
+}
+.pizza-base {
+  width: 83% !important;
+}
+
+/* Sauce visual follows the smaller pizza size and sits inside the inner circle better. */
+.pizza-sauce-fill {
+  inset: 12.8% 7.2% 12.8% 7.2% !important;
+}
+
+/* Responsive fallback */
+@media (max-width: 1250px) {
+  .teacher-wrap { width: clamp(430px, 37vw, 560px) !important; }
+  .leo-slot { left: 34.5% !important; bottom: -430px !important; }
+  .leo-wrap { width: clamp(770px, 63vw, 960px) !important; }
+  .work-zone { left: 352px !important; right: 185px !important; top: 50.9% !important; }
+  .food-scene { transform: translate(-22px, -1px) !important; }
+  .round-board { width: min(448px, 35vw, 485px) !important; }
+}
+
+
+/* v16 full interaction/style pass */
+
+/* Remove top stage label. Keep only the mic/talking chip and back button. */
+.stage-chip,
+#socialStageChip {
+  display: none !important;
+}
+.topbar-center {
+  gap: 0 !important;
+}
+
+/* Characters: visually balance Teacher and Leo, both torso-up behind counter. */
+.teacher-slot {
+  left: 22.5% !important;
+  bottom: -360px !important;
+}
+.leo-slot {
+  left: 32.5% !important;
+  bottom: -402px !important;
+}
+.teacher-wrap {
+  width: clamp(430px, 33vw, 575px) !important;
+}
+.leo-wrap {
+  width: clamp(835px, 63vw, 1080px) !important;
+}
+.teacher-mouth-img {
+  top: 15.2% !important;
+  left: 49.4% !important;
+  width: 12.1% !important;
+}
+
+/* Center food on the background tray consistently. */
+.work-zone {
+  left: 360px !important;
+  right: 210px !important;
+  top: 49.6% !important;
+  bottom: 12px !important;
+}
+.food-scene,
+.pitcher-scene,
+.sandwich-scene,
+.sundae-scene,
+.bowl-scene {
+  transform: translate(-34px, -14px) !important;
+}
+
+/* CSS pizza shell + shared boundary for sauce/cheese/toppings. */
+.round-board {
+  width: min(492px, 36vw, 540px) !important;
+  aspect-ratio: 1.33 / 1 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.pizza-base {
+  position: relative !important;
+  width: 86% !important;
+  aspect-ratio: 1.33 / 1 !important;
+  border-radius: 50% !important;
+  overflow: hidden !important;
+  background:
+    radial-gradient(ellipse at 50% 50%, #f8d46c 0 61%, #e3a84a 62% 78%, #bd742c 79% 100%) !important;
+  box-shadow:
+    inset 0 0 0 6px rgba(255, 232, 144, .38),
+    inset 0 -9px 13px rgba(132, 70, 21, .14),
+    0 12px 18px rgba(61, 31, 11, .14) !important;
+}
+.pizza-base::before {
+  content: "" !important;
+  position: absolute !important;
+  left: 11.5% !important;
+  right: 11.5% !important;
+  top: 12% !important;
+  bottom: 12% !important;
+  border-radius: 50% !important;
+  box-shadow: inset 0 0 0 4px rgba(170, 108, 37, .16) !important;
+  pointer-events: none !important;
+  z-index: 2 !important;
+}
+.pizza-base::after {
+  content: "" !important;
+  position: absolute !important;
+  left: 4% !important;
+  right: 4% !important;
+  top: 5% !important;
+  bottom: 5% !important;
+  border-radius: 50% !important;
+  box-shadow: inset 0 0 0 10px rgba(255, 226, 116, .32) !important;
+  pointer-events: none !important;
+  z-index: 3 !important;
+}
+.pizza-canvas {
+  inset: 0 !important;
+  cursor: crosshair !important;
+  z-index: 4 !important;
+}
+.saved-pizza-canvas {
+  z-index: 3 !important;
+}
+.pizza-sauce-fill {
+  left: 11.5% !important;
+  right: 11.5% !important;
+  top: 12% !important;
+  bottom: 12% !important;
+  border-radius: 50% !important;
+  background: #d83a30 !important;
+  opacity: .90 !important;
+  filter: none !important;
+  box-shadow: none !important;
+}
+.pizza-cheese-fill {
+  display: none !important;
+}
+.token-layer {
+  z-index: 7 !important;
+}
+
+/* CSS toppings/cheese, no emoji look. */
+.cheese-bit {
+  width: 22px !important;
+  height: 8px !important;
+  border-radius: 6px 5px 6px 4px !important;
+  background: #ffe58a !important;
+  box-shadow: inset 0 -1px 0 rgba(197, 133, 30, .16), 0 1px 2px rgba(90,45,10,.12) !important;
+  transform: translate(-50%, -50%) rotate(var(--rot, 0deg)) scale(var(--scale, 1)) !important;
+}
+.food-token.pepperoni {
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 50% !important;
+  background: #c72e27 !important;
+  border: 3px solid rgba(144, 30, 24, .42) !important;
+  box-shadow: inset 0 2px 0 rgba(255,255,255,.12), 0 2px 4px rgba(55,20,10,.18) !important;
+}
+.food-token.mushroom {
+  width: 34px !important;
+  height: 25px !important;
+  border-radius: 18px 18px 8px 8px !important;
+  background: #ead7bb !important;
+  box-shadow: inset 0 -7px 0 #c5a885 !important;
+}
+.food-token.pepper {
+  width: 36px !important;
+  height: 14px !important;
+  border-radius: 999px !important;
+  background: #22a35a !important;
+}
+.food-token.tomato {
+  width: 29px !important;
+  height: 29px !important;
+  border-radius: 50% !important;
+  background: #ef4444 !important;
+}
+.food-token.olive {
+  width: 25px !important;
+  height: 25px !important;
+  border-radius: 50% !important;
+  background: radial-gradient(circle, transparent 0 32%, #323b2f 34% 100%) !important;
+}
+
+/* Salad: side-view bowl, no top rim/bird's-eye bowl. */
+.bowl-scene.side-bowl-scene {
+  width: min(610px, 44vw) !important;
+  height: min(340px, 34vh) !important;
+}
+.big-bowl.side-bowl,
+.big-bowl {
+  position: relative !important;
+  width: min(420px, 32vw, 480px) !important;
+  height: min(235px, 22vh, 260px) !important;
+  margin-top: 40px !important;
+  border-radius: 0 0 190px 190px / 0 0 120px 120px !important;
+  background:
+    linear-gradient(180deg, #fff4dc 0%, #e9b46a 42%, #c87936 100%) !important;
+  box-shadow:
+    inset 0 -22px 30px rgba(100, 54, 20, .20),
+    inset 0 8px 0 rgba(255,255,255,.32),
+    0 20px 34px rgba(63, 30, 14, .22) !important;
+  overflow: hidden !important;
+}
+.big-bowl::before {
+  display: none !important;
+}
+.salad-pile {
+  position: absolute !important;
+  left: 4% !important;
+  right: 4% !important;
+  top: 8% !important;
+  bottom: 10% !important;
+  overflow: hidden !important;
+}
+.salad-item {
+  z-index: 5 !important;
+  transform: translate(-50%, -50%) rotate(var(--rot, 0deg)) scale(var(--scale, 1)) !important;
+  filter: drop-shadow(0 3px 3px rgba(50,25,15,.12)) !important;
+}
+.salad-item.lettuce {
+  width: 44px !important;
+  height: 24px !important;
+  border-radius: 60% 40% 55% 45% !important;
+  background: #6cc96d !important;
+}
+.salad-item.tomato {
+  width: 27px !important;
+  height: 27px !important;
+  border-radius: 50% !important;
+  background: #ef4444 !important;
+}
+.salad-item.cucumber {
+  width: 34px !important;
+  height: 18px !important;
+  border-radius: 999px !important;
+  background: #7ddc83 !important;
+  box-shadow: inset 0 0 0 4px #d7ffd4 !important;
+}
+.salad-item.falling {
+  animation: saladFall .42s cubic-bezier(.2,.8,.2,1) both !important;
+}
+@keyframes saladFall {
+  from { transform: translate(-50%, calc(-50% + var(--fall-start, -120px))) rotate(var(--rot, 0deg)) scale(.86); opacity: .65; }
+  to { transform: translate(-50%, -50%) rotate(var(--rot, 0deg)) scale(var(--scale, 1)); opacity: 1; }
+}
+
+/* Grilled cheese: same position all steps, white bread only. */
+.sandwich-scene {
+  width: min(610px, 44vw) !important;
+  height: min(340px, 34vh) !important;
+}
+.clean-sandwich-board,
+.sandwich-board,
+.stack-board,
+.butter-board {
+  width: min(430px, 32vw, 480px) !important;
+  height: min(270px, 27vh, 310px) !important;
+  display: grid !important;
+  place-items: center !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  overflow: visible !important;
+}
+.sandwich-stack {
+  position: relative !important;
+  width: 270px !important;
+  height: 190px !important;
+  display: grid !important;
+  place-items: center !important;
+}
+.bread-piece.white-bread,
+.bread-piece,
+.base-bread,
+.butter-bread,
+.top-bread {
+  position: absolute !important;
+  left: 50% !important;
+  top: 50% !important;
+  width: 260px !important;
+  height: 175px !important;
+  transform: translate(-50%, -50%) !important;
+  border-radius: 42px 42px 28px 28px !important;
+  background:
+    radial-gradient(circle at 28% 24%, rgba(255,255,255,.28), transparent 18%),
+    linear-gradient(135deg, #fff5d2, #f1c575 72%, #d99a3f) !important;
+  box-shadow:
+    inset 0 0 0 9px rgba(178, 98, 35, .18),
+    0 9px 16px rgba(60,30,12,.14) !important;
+}
+.bread-piece.buttered::after,
+.butter-bread.buttered::after {
+  content: "" !important;
+  position: absolute !important;
+  inset: 20% 16% 22% 16% !important;
+  border-radius: 25px !important;
+  background: rgba(255, 238, 140, .52) !important;
+  pointer-events: none !important;
+}
+.butter-canvas {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 7 !important;
+  cursor: crosshair !important;
+}
+.sandwich-layer.cheese {
+  width: 188px !important;
+  height: 116px !important;
+  border-radius: 16px !important;
+  background: linear-gradient(135deg, #ffe16d, #ffc83d) !important;
+  box-shadow: inset 0 -5px 0 rgba(199,128,20,.16), 0 4px 8px rgba(78,41,13,.10) !important;
+}
+.top-bread {
+  top: calc(50% - 23px) !important;
+}
+
+/* Lemonade side glass */
+.pitcher-scene {
+  width: min(610px, 44vw) !important;
+  height: min(350px, 35vh) !important;
+  transform: translate(-36px, -18px) !important;
+}
+.lemonade-station {
+  width: min(470px, 34vw, 520px) !important;
+  height: min(320px, 31vh, 360px) !important;
+  display: grid !important;
+  place-items: center !important;
+  position: relative !important;
+}
+.modern-pitcher,
+.pitcher {
+  position: relative !important;
+  left: auto !important;
+  top: auto !important;
+  width: 190px !important;
+  height: 265px !important;
+  transform: none !important;
+  border-radius: 22px 22px 34px 34px / 20px 20px 40px 40px !important;
+  background: linear-gradient(90deg, rgba(255,255,255,.46), rgba(255,255,255,.12) 30%, rgba(255,255,255,.26)) !important;
+  border: 7px solid rgba(255,255,255,.84) !important;
+  overflow: hidden !important;
+}
+.lemon-juice-layer,
+.water-layer,
+.mixed-lemonade-layer {
+  position: absolute !important;
+  left: 8% !important;
+  right: 8% !important;
+  bottom: 0 !important;
+  border-radius: 13px 13px 24px 24px !important;
+  transition: height .24s ease, opacity .24s ease, bottom .24s ease !important;
+}
+.lemon-juice-layer { background: #facc15 !important; }
+.water-layer { background: rgba(96, 165, 250, .72) !important; }
+.mixed-lemonade-layer { background: linear-gradient(180deg, #ffe86a, #facc15) !important; opacity: 0; }
+.css-ice-cube {
+  position: absolute !important;
+  width: 25px !important;
+  height: 25px !important;
+  border-radius: 7px !important;
+  background: rgba(219,234,254,.90) !important;
+  border: 2px solid rgba(255,255,255,.74) !important;
+  transform: rotate(var(--rot, 0deg)) !important;
+}
+.lemon-press {
+  left: 24px !important;
+  top: 82px !important;
+}
+.water-note {
+  left: 16px !important;
+  bottom: 28px !important;
+}
+.stir-spoon {
+  position: absolute !important;
+  width: 14px !important;
+  height: 148px !important;
+  transform: translate(-50%, -50%) rotate(-18deg) !important;
+}
+
+/* Sundae side-view cup */
+.side-sundae-scene {
+  width: min(610px, 44vw) !important;
+  height: min(350px, 35vh) !important;
+}
+.side-sundae-cup,
+.sundae-cup {
+  position: relative !important;
+  left: auto !important;
+  top: auto !important;
+  width: 320px !important;
+  height: 230px !important;
+  transform: none !important;
+  border-radius: 0 0 120px 120px / 0 0 80px 80px !important;
+  background: linear-gradient(180deg, #fff7e8 0%, #e6c6a1 52%, #b9895b 100%) !important;
+  border: 7px solid rgba(255,255,255,.86) !important;
+  box-shadow: inset 0 -18px 24px rgba(89,50,21,.18), 0 20px 34px rgba(63, 30, 14, .20) !important;
+  overflow: hidden !important;
+}
+.sundae-pile {
+  position: absolute !important;
+  inset: 0 !important;
+  overflow: hidden !important;
+}
+.sundae-item.scoop {
+  width: 84px !important;
+  height: 68px !important;
+  border-radius: 50% 50% 44% 44% !important;
+  background: #fff2d5 !important;
+  box-shadow: inset 0 -6px 0 rgba(201,160,100,.12), 0 3px 6px rgba(50,25,15,.12) !important;
+}
+.sundae-item.syrup {
+  width: 62px !important;
+  height: 16px !important;
+  border-radius: 999px !important;
+  background: #7c2d12 !important;
+}
+.sundae-item.sprinkles {
+  width: 11px !important;
+  height: 28px !important;
+  border-radius: 999px !important;
+  background: linear-gradient(180deg, #ef4444 0 33%, #22c55e 34% 66%, #3b82f6 67% 100%) !important;
+}
+.sundae-item.cherry {
+  width: 30px !important;
+  height: 30px !important;
+  border-radius: 50% !important;
+  background: #dc2626 !important;
+}
+
+.sandwich-board,
+.tray-board,
+.pitcher-board,
+.sundae-board {
+  box-shadow: none !important;
+}
+
+/* Responsive */
+@media (max-width: 1250px) {
+  .teacher-slot { left: 20.5% !important; bottom: -330px !important; }
+  .leo-slot { left: 40.5% !important; bottom: -354px !important; }
+  .teacher-wrap { width: clamp(390px, 34vw, 520px) !important; }
+  .leo-wrap { width: clamp(760px, 64vw, 980px) !important; }
+  .work-zone { left: 330px !important; right: 175px !important; }
+}
+
+
+/* v4 salad bowl refinement: true lower half-bowl shape, no rectangular upper block. */
+.bowl-scene.side-bowl-scene {
+  width: min(610px, 44vw) !important;
+  height: min(320px, 32vh) !important;
+}
+
+.big-bowl.side-bowl,
+.big-bowl {
+  position: relative !important;
+  width: min(430px, 34vw, 500px) !important;
+  height: min(205px, 20vh, 230px) !important;
+  margin-top: 62px !important;
+  border-radius: 0 0 999px 999px / 0 0 100% 100% !important;
+  clip-path: ellipse(50% 100% at 50% 0%) !important;
+  background: linear-gradient(180deg, #fff4dc 0%, #e9b46a 42%, #c87936 100%) !important;
+  box-shadow:
+    inset 0 -22px 30px rgba(100, 54, 20, .20),
+    inset 0 8px 0 rgba(255,255,255,.32),
+    0 20px 34px rgba(63, 30, 14, .22) !important;
+  overflow: hidden !important;
+}
+
+.big-bowl::before,
+.big-bowl::after {
+  content: none !important;
+  display: none !important;
+}
+
+.salad-pile {
+  position: absolute !important;
+  left: 3% !important;
+  right: 3% !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  overflow: hidden !important;
+}
+
+
+/* v5 salad bowl refinement: ingredients sit behind the front bowl and pile at the brim. */
+.bowl-scene.side-bowl-scene {
+  width: min(610px, 44vw) !important;
+  height: min(340px, 34vh) !important;
+  display: grid !important;
+  place-items: center !important;
+}
+
+.big-bowl.side-bowl,
+.big-bowl {
+  position: relative !important;
+  width: min(430px, 34vw, 500px) !important;
+  height: min(205px, 20vh, 230px) !important;
+  margin-top: 72px !important;
+  background: transparent !important;
+  clip-path: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  overflow: visible !important;
+  isolation: isolate !important;
+}
+
+.big-bowl::before {
+  content: "" !important;
+  display: block !important;
+  position: absolute !important;
+  left: 0 !important;
+  right: 0 !important;
+  top: 0 !important;
+  height: 100% !important;
+  border-radius: 0 0 999px 999px / 0 0 100% 100% !important;
+  clip-path: ellipse(50% 100% at 50% 0%) !important;
+  background: linear-gradient(180deg, #fff7df 0%, #f1c077 48%, #c87936 100%) !important;
+  box-shadow:
+    inset 0 -22px 30px rgba(100, 54, 20, .20),
+    inset 0 8px 0 rgba(255,255,255,.32),
+    0 20px 34px rgba(63, 30, 14, .22) !important;
+  z-index: 1 !important;
+}
+
+.big-bowl::after {
+  content: "" !important;
+  display: block !important;
+  position: absolute !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  height: 78% !important;
+  border-radius: 0 0 999px 999px / 0 0 100% 100% !important;
+  clip-path: ellipse(50% 100% at 50% 0%) !important;
+  background: linear-gradient(180deg, rgba(255,244,220,.96) 0%, #e9b46a 45%, #c87936 100%) !important;
+  box-shadow:
+    inset 0 -22px 30px rgba(100, 54, 20, .22),
+    inset 0 9px 0 rgba(255,255,255,.35) !important;
+  z-index: 18 !important;
+  pointer-events: none !important;
+}
+
+.salad-pile {
+  position: absolute !important;
+  left: 6% !important;
+  right: 6% !important;
+  top: -24% !important;
+  height: 70% !important;
+  bottom: auto !important;
+  overflow: visible !important;
+  z-index: 9 !important;
+  pointer-events: none !important;
+}
+
+.salad-item {
+  z-index: 10 !important;
+  filter: drop-shadow(0 4px 4px rgba(50,25,15,.14)) !important;
+}
+
+
+/* v6 salad bowl refinement: lower the salad so pieces sit half behind the bowl and half above the rim. */
+.bowl-scene.side-bowl-scene {
+  width: min(610px, 44vw) !important;
+  height: min(340px, 34vh) !important;
+  display: grid !important;
+  place-items: center !important;
+}
+
+.big-bowl.side-bowl,
+.big-bowl {
+  overflow: visible !important;
+  isolation: isolate !important;
+}
+
+.big-bowl::after {
+  height: 64% !important;
+  z-index: 18 !important;
+}
+
+.salad-pile {
+  position: absolute !important;
+  left: 6% !important;
+  right: 6% !important;
+  top: 0 !important;
+  height: 100% !important;
+  bottom: auto !important;
+  overflow: visible !important;
+  z-index: 9 !important;
+  pointer-events: none !important;
+}
+
+.salad-item {
+  z-index: 10 !important;
+  filter: drop-shadow(0 4px 4px rgba(50,25,15,.14)) !important;
+}
+
+
+/* v8 salad bowl fix: remove the second/back bowl and keep only one front bowl.
+   Salad pieces sit behind the visible bowl front, half tucked in and half above the rim. */
+.bowl-scene.side-bowl-scene {
+  width: min(610px, 44vw) !important;
+  height: min(340px, 34vh) !important;
+  display: grid !important;
+  place-items: center !important;
+}
+
+.big-bowl.side-bowl,
+.big-bowl.side-bowl.mixing {
+  position: relative !important;
+  width: min(430px, 34vw, 500px) !important;
+  height: min(205px, 20vh, 230px) !important;
+  margin-top: 72px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  clip-path: none !important;
+  overflow: visible !important;
+  isolation: isolate !important;
+}
+
+.big-bowl.side-bowl::before,
+.big-bowl.side-bowl.mixing::before {
+  content: none !important;
+  display: none !important;
+}
+
+.big-bowl.side-bowl::after,
+.big-bowl.side-bowl.mixing::after {
+  content: "" !important;
+  display: block !important;
+  position: absolute !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  height: 68% !important;
+  border-radius: 0 0 999px 999px / 0 0 100% 100% !important;
+  clip-path: ellipse(50% 100% at 50% 0%) !important;
+  background: linear-gradient(180deg, #fff7df 0%, #efbd72 48%, #c87936 100%) !important;
+  box-shadow:
+    inset 0 -22px 30px rgba(100, 54, 20, .22),
+    inset 0 9px 0 rgba(255,255,255,.35),
+    0 20px 34px rgba(63, 30, 14, .22) !important;
+  z-index: 18 !important;
+  pointer-events: none !important;
+}
+
+.big-bowl.side-bowl .salad-pile,
+.big-bowl.side-bowl.mixing .salad-pile {
+  position: absolute !important;
+  left: 6% !important;
+  right: 6% !important;
+  top: 0 !important;
+  height: 100% !important;
+  bottom: auto !important;
+  overflow: visible !important;
+  z-index: 9 !important;
+  pointer-events: none !important;
+}
+
+.big-bowl.side-bowl .salad-item,
+.big-bowl.side-bowl.mixing .salad-item {
+  z-index: 10 !important;
+  filter: drop-shadow(0 4px 4px rgba(50,25,15,.14)) !important;
+}

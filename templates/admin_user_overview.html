@@ -14,10 +14,9 @@
         <th>Parent Email</th>
         <th>Child Name</th>
         <th>Child Age</th>
-        <th>Unlocked</th>
-        <th>Completed</th>
-        <th>Words Spoken</th>
-        <th>Active Minutes</th>
+        <th>Unlocked Levels</th>
+        <th>Logins</th>
+        <th>Feedback</th>
         <th>Last Active</th>
       </tr>
     </thead>
@@ -29,14 +28,42 @@
         <td>{{ user.email }}</td>
         <td>{{ user.child_name or "Not added" }}</td>
         <td>{{ user.child_age or "Not added" }}</td>
-        <td>{{ user.unlocked_activities }}/{{ user.total_activities }}</td>
-        <td>{{ user.completed_activities }}/{{ user.total_activities }}</td>
-        <td>{{ user.total_words_spoken }}</td>
-        <td>{{ "%.1f"|format(user.total_active_minutes or 0) }}</td>
+        <td>{{ user.unlocked_levels }}/{{ user.total_levels or 9 }}</td>
+        <td>{{ user.login_count or 0 }}</td>
+        <td>
+          {% if user.has_submitted_feedback %}
+            <span class="feedback-status-pill submitted">Submitted</span>
+          {% else %}
+            <span class="feedback-status-pill missing">Not yet</span>
+          {% endif %}
+        </td>
         <td>{{ user.last_active or "No sessions yet" }}</td>
       </tr>
       {% endfor %}
     </tbody>
   </table>
 </div>
+
+<style>
+  .feedback-status-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 800;
+    white-space: nowrap;
+  }
+
+  .feedback-status-pill.submitted {
+    background: #ecfdf5;
+    color: #047857;
+  }
+
+  .feedback-status-pill.missing {
+    background: #f6f2ff;
+    color: #6d28d9;
+  }
+</style>
 {% endblock %}

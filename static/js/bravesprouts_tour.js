@@ -29,7 +29,7 @@ document.addEventListener("DOMContentLoaded", function () {
       path: "/dashboard",
       target: null,
       pillLabel: "Start guided tour",
-      title: "Welcome to BraveSprouts!",
+      title: "Welcome to MyBraveSprout!",
       text: "Let's take a quick 7-step tour before getting started. It takes about one minute and shows the activity path, parent resources, questions, profile setup, and permissions.",
       badge: "Required setup • About 1 minute",
       instruction: "Select Next to begin the guided tour.",
@@ -69,7 +69,7 @@ document.addEventListener("DOMContentLoaded", function () {
       path: "/parent-academy",
       target: "parent-academy",
       pillLabel: "Parent Resources",
-      title: "Parent Academy",
+      title: "Parent Resources",
       text: "Browse short articles that explain selective mutism concepts, family situations, and support strategies in parent-friendly language.",
       instruction: "Follow the highlighted area, then select Next to continue.",
       nextText: "Next",
@@ -80,8 +80,8 @@ document.addEventListener("DOMContentLoaded", function () {
       page: "ask-bravesprouts",
       path: "/ask-bravesprouts",
       target: "ask-input",
-      pillLabel: "Ask BraveSprouts",
-      title: "Ask BraveSprouts",
+      pillLabel: "MyBraveSprout AI",
+      title: "MyBraveSprout AI",
       text: "Use this space to ask questions and get general guidance, explanations, and practical ideas. It provides general information, not medical advice.",
       instruction: "Follow the highlighted area, then select Next to continue.",
       nextText: "Next",
@@ -94,7 +94,7 @@ document.addEventListener("DOMContentLoaded", function () {
       target: "settings-child-profile",
       pillLabel: "Child Profile",
       title: "Set Up Your Child's Profile",
-      text: "Add your child's name and age before getting started. BraveSprouts uses this to make activities feel more personal.",
+      text: "Add your child's name and age before getting started. MyBraveSprout uses this to make activities feel more personal.",
       instruction: "Complete the highlighted section, then select Next to continue.",
       nextText: "Next",
       sideImage: true,
@@ -236,7 +236,7 @@ document.addEventListener("DOMContentLoaded", function () {
       <h3>Tour complete!</h3>
 
       <p>
-        BraveSprouts is ready. You can start playing games from the dashboard and follow the recommended activity path.
+        MyBraveSprout is ready. You can start playing games from the dashboard and follow the recommended activity path.
       </p>
 
       <div class="bravesprouts-tour-actions bravesprouts-tour-complete-actions">

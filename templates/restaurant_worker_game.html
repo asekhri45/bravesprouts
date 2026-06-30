@@ -1,0 +1,96 @@
+{% extends "activity_layout.html" %}
+
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/restaurant_worker_game.css') }}?v=214">
+<script src="{{ url_for('static', filename='js/restaurant_worker_game.js') }}?v=214" defer></script>
+{% endblock %}
+
+{% block title %}Help Leo in the Restaurant{% endblock %}
+
+{% block content %}
+<div
+  class="restaurant-page"
+  data-activity-id="{{ activity.activity_id if activity else 10 }}"
+  data-child-name="{{ child|e }}"
+>
+  <div class="restaurant-invite" id="restaurantInvite">
+    <div class="invite-backdrop"></div>
+    <div class="invite-card">
+      <div class="invite-kicker">Restaurant Helper</div>
+      <h1>Teacher wants to introduce you to Leo.</h1>
+      <p>You already know the Teacher. Leo is new, and he works at the restaurant.</p>
+      <div class="invite-people" aria-hidden="true">
+        <div class="invite-person"><img src="{{ url_for('static', filename='images/librarianpfp.png') }}" alt=""></div>
+        <div class="invite-plus">+</div>
+        <div class="invite-person"><img src="{{ url_for('static', filename='images/restaurant/restaurant-worker-pfp.png') }}" alt=""></div>
+      </div>
+      <div class="invite-actions">
+        <a href="{{ url_for('dashboard') }}" class="invite-secondary">Not now</a>
+        <button type="button" class="invite-primary" id="startRestaurantBtn">Meet Leo</button>
+      </div>
+    </div>
+  </div>
+
+  <main class="restaurant-stage is-hidden" id="restaurantStage" aria-label="Restaurant helper game">
+    <header class="restaurant-topbar">
+      <div class="topbar-left"></div>
+      <div class="topbar-center" aria-live="polite">
+        <div class="stage-chip" id="socialStageChip">Stage 1 · Teacher leads</div>
+        <div class="mic-pill" id="micPill"><span></span><strong>Mic warming up</strong></div>
+      </div>
+      <a href="{{ url_for('dashboard') }}" class="restaurant-back">← Back to<br>Dashboard</a>
+    </header>
+
+    <section class="kitchen-scene" aria-label="In-person restaurant counter">
+      <div class="scene-background" aria-hidden="true"></div>
+      <div class="scene-warmth" aria-hidden="true"></div>
+
+      <div class="order-card-main" aria-live="polite">
+        <div class="order-kicker">Order <span id="orderIndexText">1</span> / 8</div>
+        <div class="order-card-row">
+          <h1 id="orderTitle">Cheese Pizza</h1>
+          <div class="order-icon" id="orderIcon">🍕</div>
+        </div>
+      </div>
+
+      <aside class="step-stack" aria-label="Current order steps">
+        <section class="step-card active-step-card" id="activeStepCard">
+          <div class="step-kicker" id="stepKicker">Step 1 / 3</div>
+          <h2 id="stepTitle">Spread the sauce</h2>
+          <p id="stepInstruction">Paint the sauce all over the crust.</p>
+          <div class="step-art-wrap">
+            <img id="stepAsset" class="step-asset" alt="" src="{{ url_for('static', filename='images/restaurant/sauce-brush.svg') }}">
+          </div>
+          <div class="step-dots" id="stepDots" aria-hidden="true"></div>
+        </section>
+        <div class="locked-step-list" id="stepList"></div>
+      </aside>
+
+      <section class="character-layer" aria-label="Teacher and Leo are helping at the counter">
+        <div class="character-slot teacher-slot" id="teacherSlot">
+          <div class="character-wrap teacher-wrap">
+            <img class="character-img teacher-img" src="{{ url_for('static', filename='images/librarian.png') }}" alt="Teacher">
+            <img class="mouth-img teacher-mouth-img" id="teacherMouth" src="{{ url_for('static', filename='images/librarian-mouth-closed.png') }}" alt="">
+          </div>
+          <div class="character-name teacher-name">Teacher</div>
+        </div>
+
+        <div class="character-slot leo-slot" id="workerSlot">
+          <div class="character-wrap leo-wrap">
+            <img class="character-img leo-img" id="workerCharacter" src="{{ url_for('static', filename='images/restaurant/restaurant-worker-mouth-closed.png') }}" alt="Leo">
+          </div>
+          <div class="character-name leo-name">Leo</div>
+        </div>
+      </section>
+
+      <section class="counter-layer" aria-label="Interactive food preparation area">
+        <img class="counter-front-img" src="{{ url_for('static', filename='images/restaurant/restaurant-bg-bottom.png') }}" alt="" aria-hidden="true">
+        <div class="work-zone" id="workZone"></div>
+        <div class="counter-ui-row">
+</div>
+      </section>
+    </section>
+  </main>
+</div>
+{% endblock %}
