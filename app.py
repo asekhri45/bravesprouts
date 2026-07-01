@@ -1371,17 +1371,19 @@ def unlock_activity():
         VALUES (?, ?, 0, 0, 0, 0, 0, 0)
     """, (session["user_id"], activity_id))
 
-    if activity["activity_order"] > 1:
+    activity_id_int = int(activity["activity_id"])
+
+    if activity_id_int > 1:
         cursor.execute("""
             SELECT p.is_unlocked
             FROM progress p
             JOIN activity a ON p.activity_id = a.activity_id
             WHERE p.user_id = ?
-              AND a.activity_order = ?
-              AND a.is_active = 1
+            AND a.activity_id = ?
+            AND a.is_active = 1
         """, (
             session["user_id"],
-            activity["activity_order"] - 1
+            activity_id_int - 1
         ))
 
         previous_row = cursor.fetchone()
@@ -2426,16 +2428,11 @@ def unlock_guessing_game_2_next_activity_for_user():
             SELECT activity_id
             FROM activity
             WHERE is_active = 1
-              AND (
-                scene_id > ?
-                OR (scene_id = ? AND activity_order > ?)
-              )
-            ORDER BY scene_id ASC, activity_order ASC
+                AND activity_id > ?
+            ORDER BY activity_id ASC
             LIMIT 1
         """, (
-            current_activity["scene_id"],
-            current_activity["scene_id"],
-            current_activity["activity_order"]
+            current_activity["activity_id"],
         ))
 
         next_activity = cursor.fetchone()
@@ -4314,16 +4311,11 @@ def matching_game_complete():
                 SELECT activity_id
                 FROM activity
                 WHERE is_active = 1
-                  AND (
-                    scene_id > ?
-                    OR (scene_id = ? AND activity_order > ?)
-                  )
-                ORDER BY scene_id ASC, activity_order ASC
+                 AND activity_id > ?
+                ORDER BY activity_id ASC
                 LIMIT 1
             """, (
-                activity["scene_id"],
-                activity["scene_id"],
-                activity["activity_order"]
+                activity["activity_id"],
             ))
 
             next_activity = cursor.fetchone()
@@ -4802,16 +4794,11 @@ def complete_mystery_animal_and_unlock_next_for_user(rounds_completed=None):
             SELECT activity_id
             FROM activity
             WHERE is_active = 1
-              AND (
-                scene_id > ?
-                OR (scene_id = ? AND activity_order > ?)
-              )
-            ORDER BY scene_id ASC, activity_order ASC
+            AND activity_id > ?
+            ORDER BY activity_id ASC
             LIMIT 1
         """, (
-            current_activity["scene_id"],
-            current_activity["scene_id"],
-            current_activity["activity_order"]
+            current_activity["activity_id"],
         ))
 
         next_activity = cursor.fetchone()
@@ -13216,17 +13203,13 @@ def complete_classroom_object_and_unlock_next_for_user(rounds_completed=None):
             SELECT activity_id
             FROM activity
             WHERE is_active = 1
-              AND (
-                scene_id > ?
-                OR (scene_id = ? AND activity_order > ?)
-              )
-            ORDER BY scene_id ASC, activity_order ASC
+            AND activity_id > ?
+            ORDER BY activity_id ASC
             LIMIT 1
         """, (
-            current_activity["scene_id"],
-            current_activity["scene_id"],
-            current_activity["activity_order"]
+            current_activity["activity_id"],
         ))
+
 
         next_activity = cursor.fetchone()
         next_activity_id = None
@@ -20327,16 +20310,11 @@ def drawing_game_complete():
             SELECT activity_id
             FROM activity
             WHERE is_active = 1
-              AND (
-                scene_id > ?
-                OR (scene_id = ? AND activity_order > ?)
-              )
-            ORDER BY scene_id ASC, activity_order ASC
+             AND activity_id > ?
+            ORDER BY activity_id ASC
             LIMIT 1
         """, (
-            activity["scene_id"],
-            activity["scene_id"],
-            activity["activity_order"]
+            activity["activity_id"],
         ))
 
         next_activity = cursor.fetchone()
@@ -20645,16 +20623,11 @@ def toy_sorting_game_complete():
             SELECT activity_id
             FROM activity
             WHERE is_active = 1
-              AND (
-                scene_id > ?
-                OR (scene_id = ? AND activity_order > ?)
-              )
-            ORDER BY scene_id ASC, activity_order ASC
+             AND activity_id > ?
+            ORDER BY activity_id ASC
             LIMIT 1
         """, (
-            activity["scene_id"],
-            activity["scene_id"],
-            activity["activity_order"]
+            activity["activity_id"],
         ))
 
         next_activity = cursor.fetchone()
@@ -21939,17 +21912,13 @@ def complete_mystery_food_and_unlock_next_for_user(rounds_completed=None):
             SELECT activity_id
             FROM activity
             WHERE is_active = 1
-              AND (
-                scene_id > ?
-                OR (scene_id = ? AND activity_order > ?)
-              )
-            ORDER BY scene_id ASC, activity_order ASC
+            AND activity_id > ?
+            ORDER BY activity_id ASC
             LIMIT 1
         """, (
-            current_activity["scene_id"],
-            current_activity["scene_id"],
-            current_activity["activity_order"]
+            current_activity["activity_id"],
         ))
+
 
         next_activity = cursor.fetchone()
         next_activity_id = None
@@ -23324,16 +23293,11 @@ def restaurant_game_complete():
             SELECT activity_id
             FROM activity
             WHERE is_active = 1
-              AND (
-                scene_id > ?
-                OR (scene_id = ? AND activity_order > ?)
-              )
-            ORDER BY scene_id ASC, activity_order ASC
+            AND activity_id > ?
+            ORDER BY activity_id ASC
             LIMIT 1
         """, (
-            current_activity["scene_id"],
-            current_activity["scene_id"],
-            current_activity["activity_order"]
+            current_activity["activity_id"],
         ))
         next_activity = cursor.fetchone()
 
