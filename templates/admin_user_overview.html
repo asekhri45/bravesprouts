@@ -16,6 +16,7 @@
         <th>Child Age</th>
         <th>Unlocked Levels</th>
         <th>Logins</th>
+        <th>Tour</th>
         <th>Feedback</th>
         <th>Last Active</th>
       </tr>
@@ -30,6 +31,13 @@
         <td>{{ user.child_age or "Not added" }}</td>
         <td>{{ user.unlocked_levels }}/{{ user.total_levels or 9 }}</td>
         <td>{{ user.login_count or 0 }}</td>
+        <td>
+  {% if user.has_seen_tour %}
+    <span class="tour-status-pill completed">Completed</span>
+  {% else %}
+    <span class="tour-status-pill incomplete">Not yet</span>
+  {% endif %}
+</td>
         <td>
           {% if user.has_submitted_feedback %}
             <span class="feedback-status-pill submitted">Submitted</span>

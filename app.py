@@ -416,6 +416,7 @@ def ensure_feedback_tables():
 
     user_columns_to_add = {
         "login_count": "ALTER TABLE users ADD COLUMN login_count INTEGER DEFAULT 0",
+        "has_seen_tour": "ALTER TABLE users ADD COLUMN has_seen_tour INTEGER DEFAULT 0",
         "feedback_prompt_dismissed_at": "ALTER TABLE users ADD COLUMN feedback_prompt_dismissed_at TEXT"
     }
 
@@ -625,6 +626,7 @@ def admin_user_overview():
             u.child_name,
             u.child_age,
             COALESCE(u.login_count, 0) AS login_count,
+            COALESCE(u.has_seen_tour, 0) AS has_seen_tour,
 
             COUNT(DISTINCT CASE
                 WHEN a.is_active = 1 THEN a.activity_id
