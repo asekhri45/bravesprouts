@@ -1380,3 +1380,48 @@ body.bravesprouts-tour-step-6-active .bravesprouts-tour-side-star {
     text-align: center !important;
   }
 }
+
+/* Make guided tour cards feel less skinny / condensed */
+.bravesprouts-tour-card.has-side-image {
+  width: min(520px, calc(100vw - 36px)) !important;
+  padding: 32px 34px 28px 118px !important;
+}
+
+.bravesprouts-tour-card.has-side-image .bravesprouts-tour-side-star {
+  left: 30px !important;
+  top: 34px !important;
+  width: 62px !important;
+  height: 62px !important;
+}
+
+.bravesprouts-tour-card.has-side-image h3 {
+  font-size: 28px !important;
+  line-height: 1.08 !important;
+  margin-bottom: 14px !important;
+}
+
+.bravesprouts-tour-card.has-side-image p {
+  font-size: 16px !important;
+  line-height: 1.55 !important;
+}
+
+.bravesprouts-tour-card p.bravesprouts-tour-instruction,
+.bravesprouts-tour-card.has-side-image p.bravesprouts-tour-instruction {
+  font-size: 13.5px !important;
+  line-height: 1.45 !important;
+  padding: 12px 14px !important;
+  margin-top: 16px !important;
+}
+
+.bravesprouts-tour-card .bravesprouts-tour-dots {
+  margin-top: 20px !important;
+}
+
+.bravesprouts-tour-actions {
+  margin-top: 24px !important;
+}
+
+.bravesprouts-tour-btn {
+  padding: 12px 18px !important;
+  font-size: 14.5px !important;
+}

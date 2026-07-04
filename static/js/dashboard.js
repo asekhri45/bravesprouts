@@ -1,4 +1,191 @@
 document.addEventListener("DOMContentLoaded", function () {
+
+  // ---------------------
+  // CHILD NAME REQUIRED BEFORE ACTIVITY
+  // ---------------------
+  const startActivityBtn = document.getElementById("startActivityBtn");
+
+  const childNameGateModal = document.getElementById("childNameGateModal");
+  const childNameGateInput = document.getElementById("childNameGateInput");
+  const childNameGateStatus = document.getElementById("childNameGateStatus");
+  const childNameGateSubtitle = document.getElementById("childNameGateSubtitle");
+
+  const closeChildNameGateBtn = document.getElementById("closeChildNameGateBtn");
+  const cancelChildNameGateBtn = document.getElementById("cancelChildNameGateBtn");
+  const saveChildNameAndStartBtn = document.getElementById("saveChildNameAndStartBtn");
+
+  let pendingActivityHref = null;
+
+  function hasRealChildName(value) {
+    const cleaned = String(value || "").trim().toLowerCase();
+
+    return (
+      cleaned.length > 0 &&
+      cleaned !== "child" &&
+      cleaned !== "none" &&
+      cleaned !== "null"
+    );
+  }
+
+  function openChildNameGate(activityHref, activityName) {
+    if (!childNameGateModal || !childNameGateInput) return;
+
+    pendingActivityHref = activityHref;
+
+    if (childNameGateSubtitle) {
+      childNameGateSubtitle.textContent =
+        `Before starting ${activityName || "this activity"}, add your child's name so Star can address them personally.`;
+    }
+
+    if (childNameGateStatus) {
+      childNameGateStatus.textContent = "";
+    }
+
+    childNameGateInput.value = "";
+    childNameGateModal.classList.add("active");
+    document.body.classList.add("child-name-gate-open");
+
+    setTimeout(() => {
+      childNameGateInput.focus();
+    }, 80);
+  }
+
+  function closeChildNameGate() {
+    if (childNameGateModal) {
+      childNameGateModal.classList.remove("active");
+    }
+
+    document.body.classList.remove("child-name-gate-open");
+    pendingActivityHref = null;
+  }
+
+  if (startActivityBtn) {
+    startActivityBtn.addEventListener("click", function (event) {
+      const childName = this.dataset.childName || "";
+
+      if (hasRealChildName(childName)) {
+        return;
+      }
+
+      event.preventDefault();
+
+      openChildNameGate(
+        this.href,
+        this.dataset.activityName || "this activity"
+      );
+    });
+  }
+
+  async function saveChildNameAndStart() {
+    if (!childNameGateInput || !saveChildNameAndStartBtn) return;
+
+    const childName = childNameGateInput.value.trim();
+
+    if (!hasRealChildName(childName)) {
+      if (childNameGateStatus) {
+        childNameGateStatus.textContent = "Please enter your child's name before starting.";
+      }
+
+      childNameGateInput.focus();
+      return;
+    }
+
+    const originalText = saveChildNameAndStartBtn.textContent;
+
+    saveChildNameAndStartBtn.disabled = true;
+    saveChildNameAndStartBtn.textContent = "Saving...";
+
+    if (childNameGateStatus) {
+      childNameGateStatus.textContent = "";
+    }
+
+    try {
+      const response = await fetch("/save-child-name-before-activity", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        credentials: "same-origin",
+        body: JSON.stringify({
+          child_name: childName
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || "Could not save child name.");
+      }
+
+      if (startActivityBtn) {
+        startActivityBtn.dataset.childName = data.child_name || childName;
+      }
+
+      window.location.href = pendingActivityHref || (startActivityBtn ? startActivityBtn.href : "/dashboard");
+    } catch (error) {
+      console.error("Child name save error:", error);
+
+      if (childNameGateStatus) {
+        childNameGateStatus.textContent = error.message || "Something went wrong. Please try again.";
+      }
+
+      saveChildNameAndStartBtn.disabled = false;
+      saveChildNameAndStartBtn.textContent = originalText;
+    }
+  }
+
+  if (saveChildNameAndStartBtn) {
+    saveChildNameAndStartBtn.addEventListener("click", saveChildNameAndStart);
+  }
+
+  if (childNameGateInput) {
+    childNameGateInput.addEventListener("keydown", function (event) {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        saveChildNameAndStart();
+      }
+    });
+  }
+
+  if (closeChildNameGateBtn) {
+    closeChildNameGateBtn.addEventListener("click", closeChildNameGate);
+  }
+
+  if (cancelChildNameGateBtn) {
+    cancelChildNameGateBtn.addEventListener("click", closeChildNameGate);
+  }
+
+  if (childNameGateModal) {
+    childNameGateModal.addEventListener("click", function (event) {
+      if (event.target === childNameGateModal) {
+        closeChildNameGate();
+      }
+    });
+  }
+
+  const childNameRequiredParams = new URLSearchParams(window.location.search);
+
+  if (
+    childNameRequiredParams.get("child_name_required") === "1" &&
+    startActivityBtn &&
+    !hasRealChildName(startActivityBtn.dataset.childName)
+  ) {
+    const forcedActivityId = childNameRequiredParams.get("activity_id");
+    const safeForcedHref =
+      forcedActivityId && /^\d+$/.test(forcedActivityId)
+        ? `/activity/${forcedActivityId}`
+        : startActivityBtn.href;
+
+    setTimeout(() => {
+      openChildNameGate(
+        safeForcedHref,
+        startActivityBtn.dataset.activityName || "this activity"
+      );
+    }, 350);
+
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
+
   // ---------------------
 // PROFILE DROPDOWN
 // ---------------------
@@ -296,19 +483,38 @@ if (profileDropdown && profileTrigger && dropdownMenu) {
 // CURRENT ACTIVITY INSTRUCTIONS MODAL
 // ---------------------
 const instructionsByActivityId = {
-  "1": `
+    "1": `
   <h3>Purpose</h3>
 
   <p>
     Match Cards is designed to help your child become comfortable interacting
-    with Star while participating in a simple, familiar activity.
+    with Star while playing a simple, familiar matching game.
   </p>
 
   <p>
-    The game begins as a traditional matching game between the child and parent.
-    As the activity progresses, Star gradually becomes more involved in the
-    interaction, moving from making observations about the game to participating
-    more directly in the conversation.
+    The activity begins as a traditional matching game between the child and
+    parent. Over time, Star gradually becomes more involved, first by watching
+    and commenting, then by gently including the child, and eventually by asking
+    simple questions.
+  </p>
+
+  <p>
+    There are <strong>12 official rounds</strong> in Match Cards. Your family
+    does not need to complete all 12 rounds in one sitting. Some families may
+    play a few rounds at a time, such as 3 rounds per day, while others may move
+    more quickly or slowly. It is entirely up to you and your child.
+  </p>
+
+  <p>
+    If your child ever seems uncomfortable, or if Star begins asking questions
+    before your child feels ready, you can restart the activity from the
+    dashboard. Restarting gives your child more time to become comfortable with
+    Star's voice, presence, timing, and questions.
+  </p>
+
+  <p>
+    The goal is for your child to feel comfortable responding to Star during
+    Match Cards before moving on to the next game.
   </p>
 
   <h3>How to Play</h3>
@@ -324,145 +530,133 @@ const instructionsByActivityId = {
   <h3>Your Role</h3>
 
   <p>
-    The most important thing is to keep the activity feeling relaxed and enjoyable.
+    The most important thing is to keep the activity relaxed and enjoyable.
   </p>
 
   <p>
-    During the first few rounds, Star will mostly observe and comment on what is
-    happening in the game. Later, Star may begin asking simple questions related
-    to the cards or the activity.
+    When Star speaks, give your child a moment to respond on their own. Avoid
+    repeating the same question multiple times or pressuring your child to
+    answer.
   </p>
 
-  <p>When Star speaks:</p>
+  <p>
+    If a question is directed to both of you, or is phrased generally, you can
+    casually involve your child by saying:
+  </p>
 
   <ul>
-    <li>Give your child a moment to respond on their own.</li>
-    <li>Avoid repeating the same question multiple times.</li>
-    <li>
-      If a question is directed to both of you, or is phrased generally, it can
-      be helpful to casually involve your child by saying:
-      <ul>
-        <li>"What do you think?"</li>
-        <li>"Which one should we look for next?"</li>
-        <li>"Hmm, what card do you think Star means?"</li>
-      </ul>
-    </li>
-    <li>If your child does not respond, simply continue playing.</li>
+    <li>"What do you think?"</li>
+    <li>"Which one should we look for next?"</li>
+    <li>"Hmm, what card do you think Star means?"</li>
   </ul>
 
   <p>
-    The goal is not to get your child to answer every question. The goal is to
-    help conversations that include Star feel increasingly familiar and comfortable.
+    If your child does not respond, simply continue playing. The goal is not to
+    get your child to answer every question right away. The goal is to make
+    conversations that include Star feel increasingly familiar and comfortable.
   </p>
 
   <h3>What to Expect During Each Round</h3>
 
-  <h4>Rounds 1–3: Star Watches and Comments</h4>
+  <h4>Rounds 1-3: Star Watches and Comments</h4>
 
   <p>
-    During the first few rounds, Star mostly acts like a friendly observer.
-    Star may comment when matches are found, notice what is happening, or
-    encourage the parent and child as a team.
+    During the first few rounds, Star acts like a friendly observer. Star may
+    comment when matches are found, notice what is happening, or encourage the
+    parent and child as a team.
   </p>
 
   <p>
-    During these rounds, Star is not trying to get your child to answer
-    questions yet. This stage helps your child get used to Star's voice,
-    timing, and presence while focusing primarily on the matching game itself.
+    Star is not trying to get your child to answer questions yet. This stage
+    helps your child get used to Star's voice, timing, and presence while
+    focusing mainly on the matching game.
   </p>
 
-  <p><strong>Parent role:</strong> Simply play the game. There is no need to encourage responses to Star yet.</p>
+  <p>
+    <strong>Parent role:</strong> Simply play the game. There is no need to
+    encourage responses to Star yet.
+  </p>
 
-  <h4>Rounds 4–6: Star Begins Including the Child</h4>
+  <h4>Rounds 4-6: Star Begins Including the Child</h4>
 
   <p>
     In these rounds, Star starts making comments that include your child more
-    directly, but these are still gentle observations and do not require a response.
+    directly, but these are still gentle and do not require a response.
   </p>
 
   <p>
-    These comments are meant to help your child become more accustomed to being
-    included in a conversation with Star nearby.
+    These comments help your child become more comfortable being included in a
+    conversation while Star is present.
   </p>
-
-  <p><strong>Parent role:</strong></p>
-
-  <ul>
-    <li>"What do you think?"</li>
-    <li>"Hmm, I wonder too."</li>
-  </ul>
 
   <p>
-    Do not push for an answer. If your child does not respond, simply keep playing.
+    <strong>Parent role:</strong> You may casually respond or involve your child
+    with simple comments such as "What do you think?" or "Hmm, I wonder too."
+    Do not push for an answer. If your child does not respond, simply keep
+    playing.
   </p>
 
-  <h4>Rounds 7–9: Star Asks for Help</h4>
+  <h4>Rounds 7-9: Star Asks for Help</h4>
 
   <p>
     In these rounds, Star begins asking simple questions connected to the cards.
   </p>
 
   <p>
-    This is the first stage where Star is creating more direct opportunities
-    for communication. The questions remain simple and concrete because they are
-    tied to what your child can already see on the screen.
-  </p>
-
-  <p><strong>Parent role:</strong></p>
-
-  <ul>
-    <li>Pause briefly after Star asks a question.</li>
-    <li>Give your child an opportunity to respond directly.</li>
-    <li>If appropriate, casually involve your child by asking "What do you think?" or "Can you help Star?"</li>
-  </ul>
-
-  <p>
-    Avoid making a big deal out of responses. Treat communication with Star as a
-    normal part of the game.
-  </p>
-
-  <h4>Rounds 10–12: Star Asks Direct Questions</h4>
-
-  <p>
-    In these rounds, Star begins asking clearer and more direct questions.
+    This is the first stage where Star creates more direct opportunities for
+    communication. The questions are simple and concrete because they are tied
+    to what your child can already see on the screen.
   </p>
 
   <p>
-    At this point, Star is becoming a more active participant in the conversation
+    <strong>Parent role:</strong> Pause briefly after Star asks a question and
+    give your child an opportunity to respond. If appropriate, casually involve
+    your child by asking "What do you think?" or "Can you help Star?"
+  </p>
+
+  <p>
+    Avoid making a big deal out of responses. Treat communication with Star as
+    a normal part of the game.
+  </p>
+
+  <h4>Rounds 10-12: Star Asks Direct Questions</h4>
+
+  <p>
+    In these rounds, Star asks clearer and more direct questions.
+  </p>
+
+  <p>
+    At this point, Star becomes a more active participant in the conversation
     rather than simply commenting on the game.
   </p>
 
-  <p><strong>Parent role:</strong></p>
-
-  <ul>
-    <li>Allow your child the first opportunity to respond.</li>
-    <li>Stay present and supportive without taking over the interaction.</li>
-    <li>Use simple prompts such as "What do you think?" if needed.</li>
-  </ul>
-
   <p>
-    The goal is for Star and your child to begin interacting more naturally with one another.
-  </p>
-
-  <h4>Rounds 13 and Beyond: Continued Direct Practice</h4>
-
-  <p>
-    After round 12, the game continues in a similar style. Star continues asking
-    simple, direct questions and responding naturally to what your child says.
+    <strong>Parent role:</strong> Allow your child the first opportunity to
+    respond. Stay present and supportive without taking over the interaction.
+    If needed, use a simple prompt such as "What do you think?"
   </p>
 
   <p>
-    This stage is not meant to introduce a new type of interaction. Instead, it
-    provides additional opportunities to practice the same direct communication
-    introduced in rounds 10–12.
+    The goal is for Star and your child to begin interacting more naturally with
+    one another.
   </p>
 
-  <p><strong>Parent role:</strong></p>
+  <h4>Rounds 13 and Beyond: Optional Continued Practice</h4>
 
-  <ul>
-    <li>Continue playing together.</li>
-    <li>Allow as much communication as possible to occur directly between your child and Star.</li>
-  </ul>
+  <p>
+    After round 12, the official round progression is complete.
+  </p>
+
+  <p>
+    If your child wants to keep playing, they can continue. Star will interact
+    in a similar style to rounds 10-12, with simple, direct questions and
+    natural responses.
+  </p>
+
+  <p>
+    These extra rounds are optional and simply provide more practice if your
+    child is enjoying the activity.
+  </p>
 
   <h4>If Your Child Does Not Respond</h4>
 
@@ -471,27 +665,56 @@ const instructionsByActivityId = {
   </p>
 
   <p>
-    Star is designed to continue the activity without making silence feel like a
-    failure. Additional opportunities for communication will naturally occur later.
+    Star is designed to keep the activity moving without making silence feel
+    like a failure. More opportunities for communication will naturally come up
+    as your child continues playing.
   </p>
 
   <p>
-    The goal is not perfect participation during a single session. The goal is to
-    help communication with Star feel increasingly natural and comfortable over time.
+    Match Cards can be played or restarted until your child feels comfortable
+    answering Star. Some children may feel comfortable after one session, while
+    others may need to repeat the activity several times.
+  </p>
+
+  <p>
+    The goal is not perfect participation in one session. The goal is for
+    communication with Star to feel familiar, relaxed, and comfortable enough
+    that your child is ready for the next activity.
   </p>
 `,
-  "2": `
+    "2": `
   <h3>Purpose</h3>
 
   <p>
-    Mystery Animal is designed to help your child practice speaking directly
-    with Star through a guessing game.
+    Mystery Animal is designed to help your child become comfortable giving
+    increasingly longer and less direct answers while talking with Star.
   </p>
 
   <p>
     Your child thinks of an animal, and Star asks questions to figure it out.
-    As the rounds continue, Star gradually asks questions that require more
-    information from your child.
+    As the activity progresses, Star gradually asks questions that require more
+    information, moving from simple one-word responses to more descriptive and
+    open-ended answers.
+  </p>
+
+  <p>
+    There are <strong>9 official rounds</strong> in Mystery Animal. Your child
+    does not need to complete all 9 rounds in one sitting. Some children may
+    complete a few rounds at a time before taking a break, while others may
+    continue for longer. The activity is designed to progress at whatever pace
+    feels comfortable for your child.
+  </p>
+
+  <p>
+    If your child ever seems uncomfortable, or if the questions become more
+    difficult before they feel ready, you can restart the activity from the
+    dashboard. Restarting gives your child more time practicing the earlier
+    rounds before moving on.
+  </p>
+
+  <p>
+    The goal is for your child to become comfortable giving increasingly longer
+    and more descriptive answers before moving on to the next activity.
   </p>
 
   <h3>How to Play</h3>
@@ -499,7 +722,7 @@ const instructionsByActivityId = {
   <ol>
     <li>Start the video call with Star.</li>
     <li>Have your child think of an animal silently in their head.</li>
-    <li>Star will ask questions about the animal.</li>
+    <li>Star asks questions about the animal.</li>
     <li>Your child answers Star out loud.</li>
     <li>Star uses the answers to guess the animal.</li>
     <li>After Star guesses correctly, your child can think of a new animal for the next round.</li>
@@ -508,131 +731,142 @@ const instructionsByActivityId = {
   <h3>Your Role</h3>
 
   <p>
-    In this activity, Star is the main conversation partner.
-    Your role is mostly to stay nearby and let the conversation happen directly
-    between your child and Star.
+    In this activity, Star is your child's primary conversation partner. Unlike
+    Match Cards, you do not need to actively participate in the game.
   </p>
 
   <p>
-    If your child seems unsure, you can give a small prompt like:
+    Instead, stay nearby while your child plays so you can make sure they feel
+    comfortable and supported. Whenever possible, allow the conversation to
+    happen directly between your child and Star.
+  </p>
+
+  <p>
+    If your child seems unsure, you can gently encourage them with simple prompts
+    such as:
   </p>
 
   <ul>
-    <li>"What should we tell Star?"</li>
-    <li>"What clue would help Star?"</li>
     <li>"What do you think?"</li>
+    <li>"Can you tell Star?"</li>
+    <li>"Take your time."</li>
   </ul>
 
   <p>
-    Try not to answer for your child right away. Also avoid making speaking
-    feel like a big event. The goal is for talking to Star to feel like a normal
-    part of the game.
+    Try not to answer for your child or guide the conversation yourself. If your
+    child does not respond, simply allow the activity to continue. The goal is to
+    help speaking with Star feel natural and comfortable.
   </p>
 
-  <h3>What to Expect During the Rounds</h3>
+  <h3>What to Expect During Each Round</h3>
 
-  <h4>Rounds 1–3: Simple Answers</h4>
-
-  <p>
-    In the first few rounds, Star asks mostly straightforward questions.
-    Many questions can be answered with one word or by choosing between options.
-  </p>
+  <h4>Rounds 1-3: Simple Answers</h4>
 
   <p>
-    Star may ask things like:
-  </p>
-
-  <ul>
-    <li>"Is it big or small?"</li>
-    <li>"Does it live on land or in water?"</li>
-    <li>"Is it a pet or a wild animal?"</li>
-  </ul>
-
-  <p>
-    The purpose of these rounds is to help your child answer Star directly in a
-    simple, predictable way.
-  </p>
-
-  <h4>Rounds 4–6: Giving More Information</h4>
-
-  <p>
-    In the next few rounds, Star may ask follow-up questions that require a
-    little more information.
+    During the first few rounds, Star asks straightforward questions that can
+    usually be answered with a single word or by choosing between two options.
   </p>
 
   <p>
-    For example, if your child says the animal has one main color, Star may ask:
-  </p>
-
-  <ul>
-    <li>"What is the animal's main color?"</li>
-  </ul>
-
-  <p>
-    These questions are still about clear, concrete details, but your child may
-    need to give more than a yes/no answer.
+    Questions might include whether the animal is big or small, whether it lives
+    on land or in water, or whether it is a pet or a wild animal.
   </p>
 
   <p>
-    The purpose of these rounds is to help your child practice giving Star
-    useful details.
+    <strong>Parent role:</strong> Stay nearby and allow your child time to
+    answer independently. There is no need to help unless they seem
+    uncomfortable.
   </p>
 
-  <h4>Rounds 7–9: Giving Hints</h4>
+  <h4>Rounds 4-6: Descriptive Answers</h4>
 
   <p>
-    In the later rounds, Star may occasionally ask more open-ended questions.
-  </p>
-
-  <p>
-    Star may ask things like:
-  </p>
-
-  <ul>
-    <li>"Can you give me a hint?"</li>
-    <li>"What's something important I should know about your animal?"</li>
-    <li>"Can you help me figure it out?"</li>
-  </ul>
-
-  <p>
-    These questions have many possible answers. Your child is no longer only
-    answering Star's questions; they are helping decide what information Star
-    needs.
+    In these rounds, Star begins asking follow-up questions that encourage your
+    child to give a little more information rather than just a one-word answer.
   </p>
 
   <p>
-    The purpose of these rounds is to help your child practice generating and
-    sharing information during a conversation.
+    For example, Star might ask about the animal's color, appearance, habitat,
+    or another simple detail.
+  </p>
+
+  <p>
+    <strong>Parent role:</strong> Continue allowing your child to answer first.
+    If needed, offer a gentle prompt such as "What do you think?" but avoid
+    answering for them.
+  </p>
+
+  <h4>Rounds 7-9: Giving Hints</h4>
+
+  <p>
+    During the final rounds, Star occasionally asks more open-ended questions,
+    such as asking your child to give a hint or share something important about
+    their animal.
+  </p>
+
+  <p>
+    Rather than simply answering a question, your child now decides what
+    information would be most helpful for Star.
+  </p>
+
+  <p>
+    <strong>Parent role:</strong> Stay nearby, but continue letting the
+    conversation happen directly between your child and Star whenever possible.
+  </p>
+
+  <h4>Rounds 10 and Beyond: Optional Continued Practice</h4>
+
+  <p>
+    After round 9, the official round progression is complete.
+  </p>
+
+  <p>
+    If your child wants to keep playing, they can continue. Star will continue
+    asking questions in a similar style, providing additional opportunities to
+    practice giving longer, descriptive answers.
   </p>
 
   <h4>If Your Child Does Not Respond</h4>
 
   <p>
-    If your child does not answer right away, give them time.
+    If your child does not answer, simply continue playing.
   </p>
 
   <p>
-    If they still do not respond, keep the mood calm and let the game continue.
-    The goal is repeated direct practice with Star, not forcing every response.
+    Star is designed to keep the conversation moving without making silence feel
+    like a failure. More opportunities to communicate will naturally come up as
+    your child continues playing.
+  </p>
+
+  <p>
+    Mystery Animal can be played or restarted until your child feels comfortable
+    giving longer, more descriptive answers. Some children may be ready after one
+    session, while others may benefit from repeating the activity several times.
+  </p>
+
+  <p>
+    The goal is not perfect participation in one session. The goal is for your
+    child to feel comfortable speaking directly with Star using increasingly
+    detailed responses before moving on to the next activity.
   </p>
 `,
-  "3": `
+    "3": `
   <h3>Purpose</h3>
 
   <p>
-    Guessing Game is designed to help your child practice asking questions and
-    leading a conversation with Star.
+    Guessing Game helps your child practice asking questions and leading a
+    conversation with Star.
   </p>
 
   <p>
-    Star thinks of an animal, and your child asks questions to figure out what
-    it is. The more information your child gathers, the easier it becomes to
-    make a good guess.
+    In Mystery Animal, Star asked the questions. In this activity, your child
+    switches roles: Star thinks of an animal, and your child asks questions to
+    figure out what it is.
   </p>
 
   <p>
-    Unlike Mystery Animal, where Star asks the questions, this activity encourages
-    your child to take the lead by deciding what they would like to ask next.
+    The goal is for your child to become more comfortable initiating
+    conversation, deciding what to ask next, and using clues to make a guess.
   </p>
 
   <h3>How to Play</h3>
@@ -640,119 +874,82 @@ const instructionsByActivityId = {
   <ol>
     <li>Star thinks of an animal.</li>
     <li>Your child asks Star questions.</li>
-    <li>Star answers the questions.</li>
+    <li>Star answers with clues.</li>
     <li>Your child uses the clues to figure out the animal.</li>
-    <li>Your child makes a guess.</li>
-    <li>If the guess is incorrect, the conversation continues.</li>
-    <li>If the guess is correct, the round is complete.</li>
+    <li>When ready, your child makes a guess.</li>
   </ol>
 
   <h3>Your Role</h3>
 
   <p>
-    In this activity, your child is encouraged to lead the conversation.
+    In this activity, your child is encouraged to lead the conversation. You do
+    not need to actively participate.
   </p>
 
   <p>
-    Whenever possible, allow your child to ask questions directly to Star.
+    Stay nearby so your child feels supported, but allow the conversation to
+    happen directly between your child and Star whenever possible.
   </p>
 
   <p>
-    If your child gets stuck, you can gently remind them that they can ask about:
-  </p>
-
-  <ul>
-    <li>What the animal looks like</li>
-    <li>Where the animal lives</li>
-    <li>What the animal eats</li>
-    <li>Whether the animal can fly, swim, or run</li>
-    <li>Any other clue they would like to know</li>
-  </ul>
-
-  <p>
-    If your child is unsure what to ask, they can always ask Star for a hint.
+    If your child gets stuck, you can gently remind them that they can ask about
+    what the animal looks like, where it lives, what it eats, or whether it can
+    fly, swim, or run.
   </p>
 
   <p>
-    Try to let the conversation happen directly between your child and Star
-    rather than asking questions on your child's behalf.
+    If your child is unsure what to ask, they can also ask Star for a hint.
   </p>
 
   <h3>What to Expect During the Rounds</h3>
 
-  <h4>Rounds 1–2: Learning the Game</h4>
+  <h4>Rounds 1-2: Learning How to Ask</h4>
 
   <p>
-    During the first two rounds, Star provides a lot of guidance and examples.
+    During the first rounds, Star gives more guidance and may suggest possible
+    questions your child can ask.
   </p>
 
   <p>
-    Star may say things like:
+    This helps your child learn the format of the game and become comfortable
+    asking Star questions directly.
   </p>
 
-  <ul>
-    <li>"You can ask me if it's big."</li>
-    <li>"You can ask me if it can fly."</li>
-    <li>"You can ask me what color it is."</li>
-    <li>"You can ask me where it lives."</li>
-  </ul>
+  <h4>Rounds 3-4: Choosing Questions</h4>
 
   <p>
-    If your child gets stuck, Star will often suggest specific questions they
-    can ask next.
+    In these rounds, Star gives less direct help. Your child is encouraged to
+    think about what information would help them figure out the animal.
   </p>
 
   <p>
-    The purpose of these rounds is to help your child learn the format of the
-    game and become comfortable asking Star questions.
+    The goal is for your child to begin choosing their own questions while still
+    receiving support when needed.
   </p>
 
-  <h4>Rounds 3–4: Generating Questions</h4>
+  <h4>Rounds 5-6: Leading the Conversation</h4>
 
   <p>
-    During the next two rounds, Star begins providing less direct guidance.
-  </p>
-
-  <p>
-    Instead of suggesting exact questions, Star may encourage your child to
-    think about what information would be helpful.
+    During the final official rounds, your child is encouraged to decide what
+    questions to ask, what clues are important, and when they are ready to make
+    a guess.
   </p>
 
   <p>
-    Star may say things like:
+    Star may still provide hints when asked, but your child is now leading most
+    of the conversation.
   </p>
 
-  <ul>
-    <li>"What would you like to ask first?"</li>
-    <li>"What would help you figure it out?"</li>
-    <li>"You could ask about what it looks like."</li>
-    <li>"You could ask where it lives."</li>
-  </ul>
+  <h4>Rounds 7 and Beyond: Optional Continued Practice</h4>
 
   <p>
-    The purpose of these rounds is to help your child begin coming up with
-    their own questions while still receiving some support from Star.
-  </p>
-
-  <h4>Rounds 5–6: Leading the Conversation</h4>
-
-  <p>
-    During the final rounds, Star provides only minimal guidance.
+    After round 6, the official round progression is complete.
   </p>
 
   <p>
-    Your child is encouraged to decide what questions to ask, what clues are
-    important, and when they are ready to make a guess.
-  </p>
-
-  <p>
-    Star may still provide hints when asked, but your child is now leading
-    most of the conversation.
-  </p>
-
-  <p>
-    The purpose of these rounds is to help your child independently initiate
-    questions and guide the interaction.
+    If your child wants to keep playing, they can continue. Star will keep
+    playing in a similar style, giving your child more practice asking
+    questions and guiding the conversation.
   </p>
 
   <h4>If Your Child Gets Stuck</h4>
@@ -767,565 +964,589 @@ const instructionsByActivityId = {
   </p>
 
   <p>
-    The goal is not to ask perfect questions. The goal is to practice taking
-    the lead in a conversation by asking questions and gathering information.
+    Guessing Game can be played or restarted until your child feels comfortable
+    asking Star questions and leading the interaction.
+  </p>
+
+  <p>
+    The goal is not to ask perfect questions. The goal is to practice starting
+    and guiding a conversation with Star before moving on to the next activity.
   </p>
 `,
   "4": `
-  <h3>Instructions Coming Soon</h3>
+<h3>Purpose</h3>
 
-  <p>
-    This activity is currently in active development.
-  </p>
+<p>
+  Drawing Game helps your child practice speaking naturally while working on a
+  creative activity with Star and the Teacher.
+</p>
 
-  <p>
-    We are continuing to refine the activity experience and will provide
-    detailed instructions, parent guidance, and activity goals once development
-    is complete.
-  </p>
+<p>
+  At this point, your child should already be comfortable talking with Star.
+  This activity introduces the Teacher while Star remains nearby as a familiar
+  and supportive presence.
+</p>
+
+<p>
+  This activity can be completed over multiple sessions. Your child does not
+  need to finish every drawing scene in one sitting. They can stop and continue
+  later whenever they feel ready.
+</p>
+
+<p>
+  If your child ever seems uncomfortable, you can restart the activity from the
+  dashboard to practice again. The goal is for your child to become comfortable
+  speaking naturally with both Star and the Teacher before moving on.
+</p>
+
+<h3>How to Play</h3>
+
+<ol>
+  <li>Start the video call.</li>
+  <li>Your child will complete four simple drawing scenes.</li>
+  <li>Each scene is broken into four small drawing steps.</li>
+  <li>Star and the Teacher will guide your child through each step.</li>
+  <li>Your child can draw using any of the available colors and drawing tools.</li>
+  <li>When a drawing step is finished, your child can say they are done or press the Done button.</li>
+</ol>
+
+<h4>The Drawing Scenes</h4>
+
+<p>
+  The activity includes four different drawing scenes:
+</p>
+
+<ul>
+  <li><strong>Flower Garden:</strong> Draw a flower, grass, the sun, and a butterfly.</li>
+  <li><strong>House:</strong> Draw a house, a yard, the sun, and a tree.</li>
+  <li><strong>Farm:</strong> Draw a barn, grass, a cow, and a pig.</li>
+  <li><strong>School:</strong> Draw a school, grass, the sun, and children outside.</li>
+</ul>
+
+<p>
+  Each scene is completed one drawing step at a time. As your child draws, Star
+  and the Teacher may comment on the picture, ask simple questions, or invite
+  your child to make small choices about what they are drawing.
+</p>
+
+<h3>Your Role</h3>
+
+<p>
+  By this point, your child should be able to complete the activity mostly
+  independently. You do not need to actively participate unless your child
+  needs support.
+</p>
+
+<p>
+  If your child seems unsure or uncomfortable, simply stay nearby and offer
+  reassurance if needed. Whenever possible, allow the conversation to happen
+  naturally between your child, Star, and the Teacher.
+</p>
+
+<p>
+  The goal is not to create a perfect drawing. The goal is to help your child
+  feel comfortable communicating while completing a fun, creative activity.
+</p>
+
+<h3>What to Expect</h3>
+
+<h4>How Conversations Change</h4>
+
+<p>
+  As your child progresses through the activity, the conversations gradually
+  become more natural. Early on, Star leads most of the interaction while the
+  Teacher mainly observes or comments on the drawing.
+</p>
+
+<p>
+  Later, the Teacher becomes more involved by asking simple questions and
+  joining the conversation, while Star continues providing familiar support.
+</p>
+
+<p>
+  By the final drawing scene, your child is encouraged to comfortably respond
+  to both Star and the Teacher while continuing to enjoy the activity.
+</p>
+
+<h4>If Your Child Does Not Respond</h4>
+
+<p>
+  If your child does not answer, the activity can still continue.
+</p>
+
+<p>
+  Star and the Teacher are designed to keep the experience calm and relaxed.
+  Silence should not feel like a failure, and additional opportunities to
+  communicate will naturally occur throughout the activity.
+</p>
+
+<p>
+  Drawing Game can be played or restarted until your child feels comfortable
+  speaking naturally with both Star and the Teacher before moving on to the
+  next activity.
+</p>
 `,
-  "5": `
+   "5": `
   <h3>Purpose</h3>
 
   <p>
-    Toy Trivia is designed to help your child practice speaking directly
-    with the Toy Store Worker through a guessing game.
+    Mystery Classroom Object helps your child continue practicing longer, more
+    descriptive answers in a new setting.
   </p>
 
   <p>
-    Your child thinks of a toy, and the Toy Store Worker asks questions to figure it out.
-    As the rounds continue, the Toy Store Worker gradually asks questions that require more
-    information from your child.
-  </p>
-
-  <h3>How to Play</h3>
-
-  <ol>
-    <li>Start the video call with the Toy Store Worker.</li>
-    <li>Have your child think of a toy silently in their head.</li>
-    <li>The Toy Store Worker will ask questions about the toy.</li>
-    <li>Your child answers out loud.</li>
-    <li>The Toy Store Worker uses the answers to guess the toy.</li>
-    <li>After the toy is guessed correctly, your child can think of a new toy for the next round.</li>
-  </ol>
-
-  <h3>Your Role</h3>
-
-  <p>
-    In this activity, the Toy Store Worker is the main conversation partner.
-    Your role is mostly to stay nearby and let the conversation happen directly
-    between your child and the Toy Store Worker.
+    This activity works like Mystery Animal, but the object is something that
+    might be found in a classroom or school. The Teacher asks questions, and
+    your child gives clues to help the Teacher figure it out.
   </p>
 
   <p>
-    If your child seems unsure, you can give a small prompt like:
-  </p>
-
-  <ul>
-    <li>"What should we tell the Toy Store Worker?"</li>
-    <li>"What clue would help?"</li>
-    <li>"What do you think?"</li>
-  </ul>
-
-  <p>
-    Try not to answer for your child right away. Also avoid making speaking
-    feel like a big event. The goal is for talking to the Toy Store Worker to feel like a normal
-    part of the game.
-  </p>
-
-  <h3>What to Expect During the Rounds</h3>
-
-  <h4>Rounds 1–3: Simple Answers</h4>
-
-  <p>
-    In the first few rounds, the Toy Store Worker asks mostly straightforward questions.
-    Many questions can be answered with one word or by choosing between options.
-  </p>
-
-  <p>
-    The Toy Store Worker may ask things like:
-  </p>
-
-  <ul>
-    <li>"Is it big or small?"</li>
-    <li>"Is it soft or hard?"</li>
-    <li>"Is it a toy people play with indoors or outdoors?"</li>
-  </ul>
-
-  <p>
-    The purpose of these rounds is to help your child answer directly in a
-    simple, predictable way.
-  </p>
-
-  <h4>Rounds 4–6: Giving More Information</h4>
-
-  <p>
-    In the next few rounds, the Toy Store Worker may ask follow-up questions that require a
-    little more information.
-  </p>
-
-  <p>
-    For example, if your child says the toy has one main color, the Toy Store Worker may ask:
-  </p>
-
-  <ul>
-    <li>"What is the toy's main color?"</li>
-  </ul>
-
-  <p>
-    These questions are still about clear, concrete details, but your child may
-    need to give more than a yes/no answer.
-  </p>
-
-  <p>
-    The purpose of these rounds is to help your child practice giving useful details.
-  </p>
-
-  <h4>Rounds 7–9: Giving Hints</h4>
-
-  <p>
-    In the later rounds, the Toy Store Worker may occasionally ask more open-ended questions.
-  </p>
-
-  <p>
-    The Toy Store Worker may ask things like:
-  </p>
-
-  <ul>
-    <li>"Can you give me a hint?"</li>
-    <li>"What's something important I should know about your toy?"</li>
-    <li>"Can you help me figure it out?"</li>
-  </ul>
-
-  <p>
-    These questions have many possible answers. Your child is no longer only
-    answering questions; they are helping decide what information is most useful.
-  </p>
-
-  <p>
-    The purpose of these rounds is to help your child practice generating and
-    sharing information during a conversation.
-  </p>
-
-  <h4>If Your Child Does Not Respond</h4>
-
-  <p>
-    If your child does not answer right away, give them time.
-  </p>
-
-  <p>
-    If they still do not respond, keep the mood calm and let the game continue.
-    The goal is repeated direct practice, not forcing every response.
-  </p>
-`,
-  "6": `
-  <h3>Purpose</h3>
-
-  <p>
-    Toy Guessing Game is designed to help your child practice asking questions and
-    leading a conversation with the Toy Store Worker.
-  </p>
-
-  <p>
-    The Toy Store Worker thinks of a toy, and your child asks questions to figure out what
-    it is. The more information your child gathers, the easier it becomes to
-    make a good guess.
-  </p>
-
-  <p>
-    Unlike Toy Trivia, where the Toy Store Worker asks the questions, this activity encourages
-    your child to take the lead by deciding what they would like to ask next.
-  </p>
-
-  <h3>How to Play</h3>
-
-  <ol>
-    <li>The Toy Store Worker thinks of a toy.</li>
-    <li>Your child asks questions.</li>
-    <li>The Toy Store Worker answers the questions.</li>
-    <li>Your child uses the clues to figure out the toy.</li>
-    <li>Your child makes a guess.</li>
-    <li>If the guess is incorrect, the conversation continues.</li>
-    <li>If the guess is correct, the round is complete.</li>
-  </ol>
-
-  <h3>Your Role</h3>
-
-  <p>
-    In this activity, your child is encouraged to lead the conversation.
-  </p>
-
-  <p>
-    Whenever possible, allow your child to ask questions directly to the Toy Store Worker.
-  </p>
-
-  <p>
-    If your child gets stuck, you can gently remind them that they can ask about:
-  </p>
-
-  <ul>
-    <li>What the toy looks like</li>
-    <li>What color the toy is</li>
-    <li>What the toy is used for</li>
-    <li>Whether the toy is soft, hard, big, or small</li>
-    <li>Any other clue they would like to know</li>
-  </ul>
-
-  <p>
-    If your child is unsure what to ask, they can always ask the Toy Store Worker for a hint.
-  </p>
-
-  <p>
-    Try to let the conversation happen directly between your child and the Toy Store Worker
-    rather than asking questions on your child's behalf.
-  </p>
-
-  <h3>What to Expect During the Rounds</h3>
-
-  <h4>Rounds 1–2: Learning the Game</h4>
-
-  <p>
-    During the first two rounds, the Toy Store Worker provides a lot of guidance and examples.
-  </p>
-
-  <p>
-    The Toy Store Worker may say things like:
-  </p>
-
-  <ul>
-    <li>"You can ask me if it's big."</li>
-    <li>"You can ask me what color it is."</li>
-    <li>"You can ask me what it is used for."</li>
-    <li>"You can ask me if it's soft."</li>
-  </ul>
-
-  <p>
-    If your child gets stuck, the Toy Store Worker will often suggest specific questions they
-    can ask next.
-  </p>
-
-  <p>
-    The purpose of these rounds is to help your child learn the format of the
-    game and become comfortable asking questions.
-  </p>
-
-  <h4>Rounds 3–4: Generating Questions</h4>
-
-  <p>
-    During the next two rounds, the Toy Store Worker begins providing less direct guidance.
-  </p>
-
-  <p>
-    Instead of suggesting exact questions, the Toy Store Worker may encourage your child to
-    think about what information would be helpful.
-  </p>
-
-  <p>
-    The Toy Store Worker may say things like:
-  </p>
-
-  <ul>
-    <li>"What would you like to ask first?"</li>
-    <li>"What would help you figure it out?"</li>
-    <li>"You could ask what it looks like."</li>
-    <li>"You could ask what people do with it."</li>
-  </ul>
-
-  <p>
-    The purpose of these rounds is to help your child begin coming up with
-    their own questions while still receiving some support.
-  </p>
-
-  <h4>Rounds 5–6: Leading the Conversation</h4>
-
-  <p>
-    During the final rounds, the Toy Store Worker provides only minimal guidance.
-  </p>
-
-  <p>
-    Your child is encouraged to decide what questions to ask, what clues are
-    important, and when they are ready to make a guess.
-  </p>
-
-  <p>
-    The Toy Store Worker may still provide hints when asked, but your child is now leading
-    most of the conversation.
-  </p>
-
-  <p>
-    The purpose of these rounds is to help your child independently initiate
-    questions and guide the interaction.
-  </p>
-
-  <h4>If Your Child Gets Stuck</h4>
-
-  <p>
-    If your child is unsure what to ask, encourage them to think about what
-    information would help them learn more about the toy.
-  </p>
-
-  <p>
-    They can also ask the Toy Store Worker for a hint at any time.
-  </p>
-
-  <p>
-    The goal is not to ask perfect questions. The goal is to practice taking
-    the lead in a conversation by asking questions and gathering information.
-  </p>
-`,
-"7": `
-  <h3>Instructions Coming Soon</h3>
-
-  <p>
-    This activity is currently in active development.
-  </p>
-
-  <p>
-    We are continuing to refine the activity experience and will provide
-    detailed instructions, parent guidance, and activity goals once development
-    is complete.
-  </p>
-`,
-"8": `
-  <h3>Purpose</h3>
-
-  <p>
-    Book Mystery is designed to help your child practice speaking directly
-    with the Teacher through a guessing game.
-  </p>
-
-  <p>
-    Your child thinks of a book, and the Teacher asks questions to figure it out.
-    As the rounds continue, the Teacher gradually asks questions that require more
-    information from your child.
+    The goal is for your child to become comfortable expanding their answers
+    with a less familiar conversation partner and in a more school-like context.
   </p>
 
   <h3>How to Play</h3>
 
   <ol>
     <li>Start the video call with the Teacher.</li>
-    <li>Have your child think of a book silently in their head.</li>
-    <li>The Teacher will ask questions about the book.</li>
-    <li>Your child answers out loud.</li>
-    <li>The Teacher uses the answers to guess the book.</li>
-    <li>After the book is guessed correctly, your child can think of a new book for the next round.</li>
+    <li>Have your child think of a classroom or school object silently in their head.</li>
+    <li>The Teacher asks questions about the object.</li>
+    <li>Your child answers out loud and gives clues.</li>
+    <li>The Teacher uses the answers to guess the object.</li>
+    <li>After the object is guessed correctly, your child can think of a new object for the next round.</li>
   </ol>
 
   <h3>Your Role</h3>
 
   <p>
-    In this activity, the Teacher is the main conversation partner.
-    Your role is mostly to stay nearby and let the conversation happen directly
-    between your child and the Teacher.
+    By this point, your child should be able to complete the activity mostly
+    independently. You do not need to actively participate unless your child
+    needs support.
   </p>
 
   <p>
-    If your child seems unsure, you can give a small prompt like:
+    If your child seems unsure or uncomfortable, you can stay nearby and offer
+    gentle reassurance. Whenever possible, allow the conversation to happen
+    directly between your child and the Teacher.
   </p>
 
-  <ul>
-    <li>"What should we tell the Teacher?"</li>
-    <li>"What clue would help?"</li>
-    <li>"What do you think?"</li>
-  </ul>
-
   <p>
-    Try not to answer for your child right away. Also avoid making speaking
-    feel like a big event.
+    Try not to answer for your child. The goal is for your child to practice
+    giving clues and descriptive answers on their own.
   </p>
 
   <h3>What to Expect During the Rounds</h3>
 
-  <h4>Rounds 1–3: Simple Answers</h4>
+  <h4>Rounds 1-3: Simple Answers</h4>
 
   <p>
-    In the first few rounds, the Teacher asks mostly straightforward questions.
+    During the first few rounds, the Teacher asks straightforward questions that
+    can usually be answered with a single word or by choosing between options.
   </p>
 
-  <ul>
-    <li>"Is it a fiction or nonfiction book?"</li>
-    <li>"Is it a long book or a short book?"</li>
-    <li>"Is it about animals, people, or something else?"</li>
-  </ul>
-
   <p>
-    The purpose of these rounds is to help your child answer directly in a
-    simple, predictable way.
+    Questions might include whether the object is big or small, what color it
+    is, where it is usually found, or what it is used for.
   </p>
 
-  <h4>Rounds 4–6: Giving More Information</h4>
+  <h4>Rounds 4-6: Descriptive Answers</h4>
 
   <p>
-    In the next few rounds, the Teacher may ask follow-up questions that require
-    a little more information.
+    In these rounds, the Teacher begins asking follow-up questions that
+    encourage your child to give a little more information.
   </p>
 
-  <ul>
-    <li>"What color is the cover?"</li>
-    <li>"Who is the main character?"</li>
-    <li>"What is the book mostly about?"</li>
-  </ul>
-
   <p>
-    The purpose of these rounds is to help your child practice giving useful details.
+    For example, the Teacher might ask what the object looks like, who uses it,
+    where it belongs, or why someone might need it.
   </p>
 
-  <h4>Rounds 7–9: Giving Hints</h4>
+  <h4>Rounds 7-9: Giving Hints</h4>
 
   <p>
-    In the later rounds, the Teacher may occasionally ask more open-ended questions.
+    During the final rounds, the Teacher may ask more open-ended questions, such
+    as asking your child to give a hint or share something important about the
+    object.
   </p>
 
-  <ul>
-    <li>"Can you give me a hint?"</li>
-    <li>"What's something important I should know about the book?"</li>
-    <li>"Can you help me figure it out?"</li>
-  </ul>
+  <p>
+    This helps your child practice deciding what information would be useful for
+    someone else to know.
+  </p>
+
+  <h4>Rounds 10 and Beyond: Optional Continued Practice</h4>
 
   <p>
-    The purpose of these rounds is to help your child practice generating and
-    sharing information during a conversation.
+    After round 9, the official round progression is complete. If your child
+    wants to keep playing, they can continue for more practice.
   </p>
 
   <h4>If Your Child Does Not Respond</h4>
 
   <p>
-    If your child does not answer right away, give them time.
+    If your child does not answer, the activity can still continue.
   </p>
 
   <p>
-    If they still do not respond, keep the mood calm and let the game continue.
+    The Teacher is designed to keep the conversation calm and relaxed. Silence
+    should not feel like a failure, and more opportunities to communicate will
+    naturally come up as your child continues playing.
+  </p>
+
+  <p>
+    Mystery Classroom Object can be played or restarted until your child feels
+    comfortable giving longer, more descriptive answers to the Teacher before
+    moving on to the next activity.
   </p>
 `,
+  "6": `
+<h3>Purpose</h3>
+
+<p>
+  Classroom Guessing Game helps your child practice asking questions and
+  leading a conversation with the Teacher.
+</p>
+
+<p>
+  This activity works like Guessing Game, but instead of talking with Star,
+  your child asks questions to the Teacher. The goal is to help your child
+  become comfortable leading conversations with someone new in a school-like
+  setting.
+</p>
+
+<p>
+  The goal is for your child to become more comfortable initiating
+  conversations, deciding what to ask next, and using clues to make a guess.
+</p>
+
+<h3>How to Play</h3>
+
+<ol>
+  <li>The Teacher thinks of a classroom or school object.</li>
+  <li>Your child asks the Teacher questions.</li>
+  <li>The Teacher answers with clues.</li>
+  <li>Your child uses the clues to figure out the object.</li>
+  <li>When ready, your child makes a guess.</li>
+</ol>
+
+<h3>Your Role</h3>
+
+<p>
+  By this point, your child should be able to complete the activity
+  independently. You do not need to actively participate unless your child
+  needs support.
+</p>
+
+<p>
+  If your child gets stuck, you can gently remind them to think about questions
+  they could ask, but try to let the conversation happen directly between your
+  child and the Teacher whenever possible.
+</p>
+
+<p>
+  The goal is for your child to confidently lead the conversation on their own.
+</p>
+
+<h3>What to Expect During the Rounds</h3>
+
+<h4>Rounds 1-2: Learning How to Ask</h4>
+
+<p>
+  During the first rounds, the Teacher provides more guidance and may suggest
+  possible questions your child can ask.
+</p>
+
+<p>
+  This helps your child become comfortable asking questions in a new setting.
+</p>
+
+<h4>Rounds 3-4: Choosing Questions</h4>
+
+<p>
+  In these rounds, the Teacher gives less direct help. Your child is encouraged
+  to think about what information would be most helpful for identifying the
+  object.
+</p>
+
+<p>
+  The goal is for your child to begin choosing their own questions while still
+  receiving support when needed.
+</p>
+
+<h4>Rounds 5-6: Leading the Conversation</h4>
+
+<p>
+  During the final official rounds, your child decides what questions to ask,
+  what clues are important, and when they are ready to make a guess.
+</p>
+
+<p>
+  The Teacher may still provide hints when asked, but your child is now leading
+  most of the conversation.
+</p>
+
+<h4>Rounds 7 and Beyond: Optional Continued Practice</h4>
+
+<p>
+  After round 6, the official round progression is complete.
+</p>
+
+<p>
+  If your child wants to keep playing, they can continue. The Teacher will keep
+  playing in a similar style, giving your child more opportunities to practice
+  asking questions and leading conversations.
+</p>
+
+<h4>If Your Child Gets Stuck</h4>
+
+<p>
+  If your child is unsure what to ask, encourage them to think about what
+  information would help them learn more about the object.
+</p>
+
+<p>
+  They can also ask the Teacher for a hint at any time.
+</p>
+
+<p>
+  Classroom Guessing Game can be played or restarted until your child feels
+  comfortable asking questions, leading the conversation, and interacting
+  confidently with the Teacher before moving on to the next activity.
+</p>
+`,
+"7": `
+<h3>Purpose</h3>
+
+<p>
+  Restaurant Worker Game helps your child become comfortable talking with a new
+  conversation partner in a restaurant setting.
+</p>
+
+<p>
+  During this activity, the Teacher remains nearby while gradually introducing
+  the Restaurant Worker into the conversation. As your child becomes more
+  comfortable, the Restaurant Worker takes a more active role while the Teacher
+  slowly steps into the background.
+</p>
+
+<p>
+  This activity can be completed over multiple sessions. Your child does not
+  need to finish every restaurant order in one sitting. They can stop and
+  continue later whenever they feel ready.
+</p>
+
+<p>
+  If your child ever seems uncomfortable, you can restart the activity from the
+  dashboard to practice again. The goal is for your child to become comfortable
+  speaking naturally with the Restaurant Worker before moving on.
+</p>
+
+<h3>How to Play</h3>
+
+<ol>
+  <li>Start the restaurant activity.</li>
+  <li>Your child will help prepare a variety of food and drink orders.</li>
+  <li>Each order is broken into small, simple steps.</li>
+  <li>The Teacher and Restaurant Worker will guide your child through each step.</li>
+  <li>Your child completes each step using the items on the screen.</li>
+  <li>When a step is finished, your child can say they are done or press the Done button.</li>
+</ol>
+
+<h4>The Restaurant Orders</h4>
+
+<p>
+  The activity includes several restaurant orders, including pizzas, a salad,
+  grilled cheese, lemonade, an ice cream sundae, and a kids meal.
+</p>
+
+<p>
+  As your child prepares each order, they will make simple choices, respond to
+  questions, and follow directions from the Teacher and the Restaurant Worker.
+</p>
+
+<h3>Your Role</h3>
+
+<p>
+  By this point, your child should be able to complete the activity mostly
+  independently. You do not need to actively participate unless your child
+  needs support.
+</p>
+
+<p>
+  If your child seems unsure or uncomfortable, you can stay nearby and offer
+  reassurance if needed. Whenever possible, allow the conversation to happen
+  naturally between your child, the Teacher, and the Restaurant Worker.
+</p>
+
+<p>
+  The goal is not to prepare each order perfectly. The goal is for your child
+  to feel comfortable communicating with a new person in a fun, real-world
+  activity.
+</p>
+
+<h3>What to Expect</h3>
+
+<h4>How Conversations Change</h4>
+
+<p>
+  Early in the activity, the Teacher leads most of the conversation while the
+  Restaurant Worker mainly observes or makes occasional comments.
+</p>
+
+<p>
+  As your child continues, the Restaurant Worker gradually becomes more
+  involved, asking questions, giving directions, and interacting more directly
+  with your child while the Teacher provides less support.
+</p>
+
+<p>
+  By the final restaurant orders, your child is encouraged to comfortably
+  respond to the Restaurant Worker with minimal support from the Teacher.
+</p>
+
+<h4>If Your Child Does Not Respond</h4>
+
+<p>
+  If your child does not answer, the activity can still continue.
+</p>
+
+<p>
+  The Teacher and Restaurant Worker are designed to keep the experience calm
+  and relaxed. Silence should not feel like a failure, and additional
+  opportunities to communicate will naturally occur throughout the activity.
+</p>
+
+<p>
+  Restaurant Worker Game can be played or restarted until your child feels
+  comfortable communicating naturally with the Restaurant Worker before moving
+  on to the next activity.
+</p>
+`,
+"8": `
+<h3>Purpose</h3>
+
+<p>
+  Mystery Food Item helps your child continue practicing longer, more
+  descriptive answers in a restaurant setting.
+</p>
+
+<p>
+  This activity works like Mystery Animal, but the object is a food item that
+  might be found at a restaurant. The Restaurant Worker asks questions, and
+  your child gives clues to help them figure it out.
+</p>
+
+<p>
+  The goal is for your child to become comfortable expanding their answers with
+  a less familiar conversation partner in a real-world setting.
+</p>
+
+<h3>How to Play</h3>
+
+<ol>
+  <li>Start the video call with the Restaurant Worker.</li>
+  <li>Have your child think of a food item silently in their head.</li>
+  <li>The Restaurant Worker asks questions about the food.</li>
+  <li>Your child answers out loud and gives clues.</li>
+  <li>The Restaurant Worker uses the answers to guess the food item.</li>
+  <li>After the food item is guessed correctly, your child can think of a new one for the next round.</li>
+</ol>
+
+<h3>Your Role</h3>
+
+<p>
+  By this point, your child should be able to complete the activity mostly
+  independently. You do not need to actively participate unless your child
+  needs support.
+</p>
+
+<p>
+  If your child seems unsure or uncomfortable, you can stay nearby and offer
+  gentle reassurance. Whenever possible, allow the conversation to happen
+  directly between your child and the Restaurant Worker.
+</p>
+
+<p>
+  Try not to answer for your child. The goal is for your child to practice
+  giving clues and descriptive answers on their own.
+</p>
+
+<h3>What to Expect During the Rounds</h3>
+
+<h4>Rounds 1-3: Simple Answers</h4>
+
+<p>
+  During the first few rounds, the Restaurant Worker asks straightforward
+  questions that can usually be answered with a single word or by choosing
+  between options.
+</p>
+
+<p>
+  Questions might include whether the food is sweet or savory, hot or cold,
+  or whether it is usually eaten for a meal, dessert, or snack.
+</p>
+
+<h4>Rounds 4-6: Descriptive Answers</h4>
+
+<p>
+  In these rounds, the Restaurant Worker begins asking follow-up questions that
+  encourage your child to give a little more information.
+</p>
+
+<p>
+  For example, they might ask what the food looks like, what it tastes like,
+  what ingredients it has, or when people usually eat it.
+</p>
+
+<h4>Rounds 7-9: Giving Hints</h4>
+
+<p>
+  During the final rounds, the Restaurant Worker may ask more open-ended
+  questions, such as asking your child to give a hint or share something
+  important about the food item.
+</p>
+
+<p>
+  This helps your child practice deciding what information would be useful for
+  someone else to know.
+</p>
+
+<h4>Rounds 10 and Beyond: Optional Continued Practice</h4>
+
+<p>
+  After round 9, the official round progression is complete. If your child
+  wants to keep playing, they can continue for more practice.
+</p>
+
+<h4>If Your Child Does Not Respond</h4>
+
+<p>
+  If your child does not answer, the activity can still continue.
+</p>
+
+<p>
+  The Restaurant Worker is designed to keep the conversation calm and relaxed.
+  Silence should not feel like a failure, and more opportunities to communicate
+  will naturally come up as your child continues playing.
+</p>
+
+<p>
+  Mystery Food Item can be played or restarted until your child feels
+  comfortable giving longer, more descriptive answers to the Restaurant Worker
+  before moving on to the next activity.
+</p>
+`,
 "9": `
-  <h3>Purpose</h3>
+  <h3>Instructions Coming Soon</h3>
 
   <p>
-    Classroom Guessing Game is designed to help your child practice asking questions and
-    leading a conversation with the Teacher.
+    This activity is currently in active development.
   </p>
 
   <p>
-    The Teacher thinks of an object that might be found in a classroom or at school,
-    and your child asks questions to figure out what it is.
-  </p>
-
-  <p>
-    Unlike Book Mystery, where the Teacher asks the questions, this activity encourages
-    your child to take the lead by deciding what they would like to ask next.
-  </p>
-
-  <h3>How to Play</h3>
-
-  <ol>
-    <li>The Teacher thinks of a classroom object.</li>
-    <li>Your child asks questions.</li>
-    <li>The Teacher answers the questions.</li>
-    <li>Your child uses the clues to figure out the object.</li>
-    <li>Your child makes a guess.</li>
-    <li>If the guess is incorrect, the conversation continues.</li>
-    <li>If the guess is correct, the round is complete.</li>
-  </ol>
-
-  <h3>Your Role</h3>
-
-  <p>
-    In this activity, your child is encouraged to lead the conversation.
-  </p>
-
-  <p>
-    Whenever possible, allow your child to ask questions directly to the Teacher.
-  </p>
-
-  <p>
-    If your child gets stuck, you can gently remind them that they can ask about:
-  </p>
-
-  <ul>
-    <li>What the object looks like</li>
-    <li>What color it is</li>
-    <li>What it is used for</li>
-    <li>Where it is usually found</li>
-    <li>Any other clue they would like to know</li>
-  </ul>
-
-  <p>
-    If your child is unsure what to ask, they can always ask the Teacher for a hint.
-  </p>
-
-  <h3>What to Expect During the Rounds</h3>
-
-  <h4>Rounds 1–2: Learning the Game</h4>
-
-  <p>
-    During the first two rounds, the Teacher provides a lot of guidance and examples.
-  </p>
-
-  <ul>
-    <li>"You can ask me what color it is."</li>
-    <li>"You can ask me what it is used for."</li>
-    <li>"You can ask me where it is usually found."</li>
-    <li>"You can ask me if students use it."</li>
-  </ul>
-
-  <p>
-    The purpose of these rounds is to help your child learn the format of the
-    game and become comfortable asking questions.
-  </p>
-
-  <h4>Rounds 3–4: Generating Questions</h4>
-
-  <p>
-    During the next two rounds, the Teacher begins providing less direct guidance.
-  </p>
-
-  <ul>
-    <li>"What would you like to ask first?"</li>
-    <li>"What would help you figure it out?"</li>
-    <li>"You could ask what it is used for."</li>
-    <li>"You could ask where you might see it."</li>
-  </ul>
-
-  <p>
-    The purpose of these rounds is to help your child begin coming up with
-    their own questions while still receiving some support.
-  </p>
-
-  <h4>Rounds 5–6: Leading the Conversation</h4>
-
-  <p>
-    During the final rounds, the Teacher provides only minimal guidance.
-  </p>
-
-  <p>
-    Your child is encouraged to decide what questions to ask, what clues are
-    important, and when they are ready to make a guess.
-  </p>
-
-  <p>
-    The Teacher may still provide hints when asked, but your child is now leading
-    most of the conversation.
-  </p>
-
-  <p>
-    The purpose of these rounds is to help your child independently initiate
-    questions and guide the interaction.
-  </p>
-
-  <h4>If Your Child Gets Stuck</h4>
-
-  <p>
-    If your child is unsure what to ask, encourage them to think about what
-    information would help them learn more about the object.
-  </p>
-
-  <p>
-    They can also ask the Teacher for a hint at any time.
-  </p>
-
-  <p>
-    The goal is not to ask perfect questions. The goal is to practice taking
-    the lead in a conversation by asking questions and gathering information.
+    We are continuing to refine the activity experience and will provide
+    detailed instructions, parent guidance, and activity goals once development
+    is complete.
   </p>
 `,
 };
@@ -1342,9 +1563,16 @@ if (viewInstructionsBtn && instructionsModal && instructionsTitle && instruction
     const activityName = this.dataset.activityName || "Activity";
 
     instructionsTitle.textContent = `${activityName} Instructions`;
-    instructionsContent.innerHTML =
-      instructionsByActivityId[activityId] ||
-      "<p>Follow the on-screen prompts and support your child through the activity.</p>";
+    const therapistNote = `
+  <div class="activity-instructions-note">
+    <strong>Important:</strong> These activities are intended for practice and are not a replacement for professional evaluation or treatment.
+  </div>
+`;
+
+instructionsContent.innerHTML =
+  therapistNote +
+  (instructionsByActivityId[activityId] ||
+    "<p>Follow the on-screen prompts and support your child through the activity.</p>");
 
     instructionsModal.classList.add("active");
   });

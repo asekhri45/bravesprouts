@@ -1,10 +1,11 @@
 {% extends "base.html" %}
 
-{% block title %}BraveSprouts{% endblock %}
+{% block title %}MyBraveSprout{% endblock %}
 
 {% block head %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard_layout.css') }}?v=6">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/bravesprouts_tour.css') }}?v=1">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}?v=20">
 
 <script src="{{ url_for('static', filename='js/chart.umd.js') }}" defer></script>
 <script src="{{ url_for('static', filename='js/dashboard.js') }}" defer></script>
@@ -17,22 +18,25 @@
 
   <aside class="sidebar">
     <div class="sidebar-logo">
-      <img
-        src="{{ url_for('static', filename='images/logo_v4.png') }}"
-        class="logo"
-        alt="BraveSprouts logo"
-      >
-    </div>
+      <a href="{{ url_for('home') }}" class="sidebar-logo-link" aria-label="Go to MyBraveSprout home">
+    <img
+      src="{{ url_for('static', filename='images/logo_v4.png') }}"
+      class="logo"
+      alt="BraveSprouts logo"
+    >
+  </a>
+</div>
 
     <nav class="sidebar-nav">
+
   <a href="{{ url_for('dashboard') }}" class="sidebar-item {% if active_page == 'dashboard' %}active{% endif %}">
     <img src="{{ url_for('static', filename='images/' + ('dashboard_selected.png' if active_page == 'dashboard' else 'dashboard_unselected.png')) }}" class="sidebar-icon">
     <span>Dashboard</span>
   </a>
 
-  <a href="{{ url_for('lessons') }}" class="sidebar-item {% if active_page == 'lessons' %}active{% endif %}">
-    <img src="{{ url_for('static', filename='images/' + ('progression_selected.png' if active_page == 'lessons' else 'progression_unselected.png')) }}" class="sidebar-icon">
-    <span>Progression</span>
+  <a href="{{ url_for('getting_started') }}" class="sidebar-item {% if active_page == 'getting_started' %}active{% endif %}">
+    <img src="{{ url_for('static', filename='images/' + ('progression_selected.png' if active_page == 'getting_started' else 'progression_unselected.png')) }}" class="sidebar-icon">
+    <span>Demo Videos</span>
   </a>
 
   <div class="sidebar-section-label">Support resources</div>
@@ -81,6 +85,183 @@
     </main>
   </div>
 
+</div>
+
+<div
+  class="feedback-system"
+  id="feedbackSystem"
+  data-user-id="{{ session.get('user_id') }}"
+  data-login-count="{{ login_count|default(0) }}"
+  data-show-feedback="{{ 1 if show_feedback_prompt else 0 }}"
+  data-show-widget="{{ 1 if show_feedback_widget else 0 }}"
+>
+  <div class="feedback-modal-overlay" id="feedbackOverlay">
+    <!-- STEP 1: Invite modal -->
+    <div class="feedback-panel feedback-panel-intro active" id="feedbackIntroPanel">
+      <button type="button" class="feedback-close-btn" id="closeFeedbackBtn" aria-label="Close">
+        ×
+      </button>
+
+      <div class="feedback-intro-grid">
+        <div class="feedback-intro-art">
+          <img
+            src="{{ url_for('static', filename='images/feedback_star_intro.png') }}"
+            alt="Star"
+            class="feedback-intro-star"
+          >
+        </div>
+
+        <div class="feedback-intro-copy">
+          <h2>Help us make MyBraveSprout even better</h2>
+
+          <p class="feedback-intro-body">
+            We're always working to make MyBraveSprout the best it can be for children with selective mutism.
+          </p>
+
+          <div class="feedback-highlight-card">
+            <div class="feedback-highlight-icon-wrap">
+              <img
+                src="{{ url_for('static', filename='images/feedback_icon_clock_purple.png') }}"
+                alt=""
+                class="feedback-highlight-icon"
+              >
+            </div>
+
+            <div class="feedback-highlight-text">
+              It only takes about <strong>30 seconds</strong> to answer
+              <strong>3 quick questions</strong>, and your feedback will truly go a long way in helping
+              <strong>your child</strong> and other children just like yours.
+            </div>
+
+            <div class="feedback-highlight-heart-wrap">
+              <img
+                src="{{ url_for('static', filename='images/feedback_icon_heart_purple.svg') }}"
+                alt=""
+                class="feedback-highlight-heart"
+              >
+            </div>
+          </div>
+
+          <div class="feedback-intro-actions">
+            <button type="button" class="feedback-primary-btn" id="feedbackYesBtn">
+              <img
+                src="{{ url_for('static', filename='images/feedback_icon_heart_white.svg') }}"
+                alt=""
+                class="feedback-primary-icon"
+              >
+              <span>Yes, I'll help!</span>
+            </button>
+
+            <button type="button" class="feedback-secondary-btn" id="feedbackLaterBtn">
+              Maybe later
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2: Actual survey -->
+    <div class="feedback-panel feedback-panel-form" id="feedbackFormPanel" hidden>
+      <button type="button" class="feedback-back-btn" id="feedbackBackBtn">
+        ← Back to dashboard
+      </button>
+
+      <button type="button" class="feedback-close-btn feedback-form-close-btn" id="closeFeedbackFormBtn" aria-label="Close">
+        ×
+      </button>
+
+      <div class="feedback-form-header">
+        <h2>3 quick questions</h2>
+        <p>Short answers are perfect. A sentence or two is more than enough.</p>
+      </div>
+
+      <form class="feedback-form" id="feedbackForm">
+        <label class="feedback-field">
+          <span class="feedback-field-label">
+            <span class="feedback-field-number">1</span>
+            What did your child enjoy?
+          </span>
+          <textarea
+            id="feedbackEnjoyed"
+            rows="1"
+            maxlength="600"
+            placeholder="For example: Star, the characters, the art, a specific activity..."
+          ></textarea>
+        </label>
+
+        <label class="feedback-field">
+          <span class="feedback-field-label">
+            <span class="feedback-field-number">2</span>
+            What didn't work?
+          </span>
+          <textarea
+            id="feedbackDidntWork"
+            rows="1"
+            maxlength="600"
+            placeholder="For example: too hard, too easy, confusing, technical issue..."
+          ></textarea>
+        </label>
+
+        <label class="feedback-field">
+          <span class="feedback-field-label">
+            <span class="feedback-field-number">3</span>
+            What would make it even better?
+          </span>
+          <textarea
+            id="feedbackBetter"
+            rows="1"
+            maxlength="600"
+            placeholder="Tell us one thing that would make MyBraveSprout even better for your family."
+          ></textarea>
+        </label>
+
+        <p class="feedback-status" id="feedbackStatus"></p>
+
+        <div class="feedback-form-actions">
+          <button type="button" class="feedback-secondary-btn" id="feedbackFormLaterBtn">
+            Maybe later
+          </button>
+
+          <button type="submit" class="feedback-primary-btn feedback-primary-btn-submit" id="submitFeedbackBtn">
+            Submit feedback
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Bottom-right widget -->
+  <div
+    class="feedback-widget {% if show_feedback_widget %}active{% endif %}"
+    id="feedbackFloatingBtn"
+    role="button"
+    tabindex="0"
+    aria-label="Open feedback survey"
+  >
+    <img
+      src="{{ url_for('static', filename='images/feedback_star_widget.png') }}"
+      alt="Star"
+      class="feedback-widget-star"
+    >
+
+    <div class="feedback-widget-card">
+      <div class="feedback-widget-copy">
+        <strong>Got 30 secs?</strong>
+        <span>Help make MyBraveSprout better!</span>
+        <small>Your feedback helps other children with selective mutism.</small>
+      </div>
+
+      <button type="button" class="feedback-widget-button" id="feedbackWidgetSurveyBtn">
+        Take Survey
+        <span aria-hidden="true">↗</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Thank-you toast -->
+  <div class="feedback-thanks-toast" id="feedbackThanks">
+    💜 Thank you! Your feedback will help us improve MyBraveSprout.
+  </div>
 </div>
 
 {% block page_js %}{% endblock %}

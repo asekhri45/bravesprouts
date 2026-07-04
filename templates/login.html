@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}BraveSprouts Login{% endblock %}
+{% block title %}MyBraveSprout Login{% endblock %}
 
 {% block head %}
 <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
@@ -17,7 +17,7 @@
   <main class="login-layout">
     <section class="login-card">
       <h1>Welcome back!</h1>
-      <p class="subtitle">Continue your child’s journey with BraveSprouts</p>
+      <p class="subtitle">Continue your child’s journey with MyBraveSprout</p>
 
       <form class="login-form" method="POST" id="loginForm">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

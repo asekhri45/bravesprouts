@@ -1,0 +1,92 @@
+{% extends "dashboard_layout.html" %}
+
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/getting_started.css') }}?v=12">
+{% endblock %}
+
+{% block title %}Getting Started{% endblock %}
+
+{% block dashboard_content %}
+
+<div class="getting-started-shell">
+
+  <section class="getting-started-hero">
+    <div class="getting-started-heading">
+      <h2>Demo Videos</h2>
+      <p>
+        Take 10 minutes to understand how to use MyBraveSprout and how to best
+        support your child during practice.
+      </p>
+    </div>
+
+    <div class="intro-star-scene" aria-hidden="true">
+  <img
+    src="{{ url_for('static', filename='images/intro_vid_star.png') }}"
+    alt=""
+    class="intro-star-img"
+  >
+</div>
+  </section>
+
+  <section class="video-guide-grid" data-tour-target="demo-videos">
+
+    <article class="video-guide-card">
+      <div class="video-guide-header">
+        <span class="video-guide-kicker">Start here</span>
+
+        <h3>Getting Started with MyBraveSprout</h3>
+
+        <p>
+          A complete overview of how MyBraveSprout works.
+        </p>
+      </div>
+
+      <div class="youtube-embed">
+        <iframe
+          width="100%"
+          height="100%"
+          src="https://www.youtube.com/embed/QN3GLChKneI?si=pVeEy9XiwrjerQ1c&rel=0&modestbranding=1"
+          title="Getting Started with BraveSprouts"
+          frameborder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          referrerpolicy="strict-origin-when-cross-origin"
+          allowfullscreen>
+        </iframe>
+      </div>
+
+      <span class="duration-pill">About 8 minutes</span>
+    </article>
+
+    <article class="video-guide-card">
+      <div class="video-guide-header">
+        <span class="video-guide-kicker">Quick tour</span>
+
+        <h3>Dashboard Walkthrough</h3>
+
+        <p>
+          A quick tour of the key features.
+        </p>
+      </div>
+
+      <div class="youtube-embed">
+        <iframe
+          width="100%"
+          height="100%"
+          src="https://www.youtube.com/embed/66-fb20aPPE?si=1DChjEDnkvNFXYxE&rel=0&modestbranding=1"
+          title="Dashboard Walkthrough"
+          frameborder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          referrerpolicy="strict-origin-when-cross-origin"
+          allowfullscreen>
+        </iframe>
+      </div>
+
+      <span class="duration-pill">About 2 minutes</span>
+    </article>
+
+  </section>
+
+</div>
+
+{% endblock %}

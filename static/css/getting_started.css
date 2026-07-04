@@ -1,0 +1,269 @@
+.getting-started-shell {
+  width: 100%;
+  padding: 4px 0 130px;
+}
+
+/* Hero */
+
+.getting-started-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 430px;
+  align-items: center;
+  gap: 42px;
+  margin-bottom: 25px;
+}
+
+.getting-started-heading h2 {
+  margin: 0;
+  color: #17152f;
+  font-size: 48px;
+  line-height: 1.02;
+  font-weight: 800;
+  letter-spacing: -1.2px;
+}
+
+.getting-started-heading p {
+  margin: 18px 0 0;
+  max-width: 780px;
+  color: #625d7e;
+  font-size: 20px;
+  line-height: 1.55;
+  font-weight: 560;
+}
+
+/* Uploaded intro star image only */
+
+.intro-star-scene {
+  position: relative;
+  height: 245px;
+  border-radius: 34px;
+  overflow: visible;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.intro-star-img {
+  width: 340px;
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 18px 24px rgba(80, 53, 150, 0.16));
+}
+
+/* Hide any old decorative CSS-generated scene pieces */
+
+.intro-cloud,
+.intro-cloud-one,
+.intro-cloud-two,
+.intro-hill,
+.intro-hill-back,
+.intro-hill-front,
+.intro-plant,
+.intro-plant-left,
+.intro-plant-right {
+  display: none !important;
+}
+
+/* Videos */
+
+.video-guide-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 28px;
+  align-items: start;
+}
+
+.video-guide-card {
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(231, 221, 255, 0.95);
+  border-radius: 28px;
+  padding: 30px;
+  box-shadow: 0 18px 44px rgba(52, 42, 106, 0.055);
+}
+
+.video-guide-header {
+  margin-bottom: 24px;
+}
+
+.video-guide-kicker {
+  display: block;
+  margin-bottom: 10px;
+  color: #7f51f2;
+  font-size: 13px;
+  line-height: 1;
+  font-weight: 750;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.video-guide-header h3 {
+  margin: 0;
+  color: #17152f;
+  font-size: 28px;
+  line-height: 1.12;
+  font-weight: 760;
+  letter-spacing: -0.45px;
+}
+
+.video-guide-header p {
+  margin: 9px 0 0;
+  color: #6f6b86;
+  font-size: 17px;
+  line-height: 1.4;
+  font-weight: 520;
+}
+
+.youtube-embed {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 18px;
+  overflow: hidden;
+  background: #f1ebff;
+  box-shadow: 0 12px 28px rgba(42, 30, 92, 0.065);
+}
+
+.youtube-embed iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+}
+
+.duration-pill {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  margin-top: 20px;
+  min-height: 36px;
+  padding: 8px 16px 8px 38px;
+  border-radius: 999px;
+  background: #f2edff;
+  color: #5c4a8d;
+  font-size: 14px;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.duration-pill::before {
+  content: "";
+  position: absolute;
+  left: 15px;
+  top: 50%;
+  width: 13px;
+  height: 13px;
+  border: 2px solid #7f51f2;
+  border-radius: 50%;
+  transform: translateY(-50%);
+}
+
+.duration-pill::after {
+  content: "";
+  position: absolute;
+  left: 22px;
+  top: 50%;
+  width: 5px;
+  height: 7px;
+  border-left: 2px solid #7f51f2;
+  border-bottom: 2px solid #7f51f2;
+  transform: translateY(-70%);
+}
+
+/* Remove older elements from previous versions */
+
+.getting-started-note,
+.getting-started-bottom-card,
+.note-icon,
+.bottom-card-icon,
+.go-dashboard-btn,
+.video-guide-icon,
+.video-guide-description {
+  display: none !important;
+}
+
+/* Hide survey popup on this page */
+
+.survey-widget,
+.survey-popup,
+.survey-card,
+.feedback-widget,
+#surveyWidget,
+#surveyPopup,
+#feedbackWidget {
+  display: none !important;
+}
+
+/* Responsive */
+
+@media (max-width: 1200px) {
+  .getting-started-hero {
+    grid-template-columns: minmax(0, 1fr) 360px;
+    gap: 34px;
+  }
+
+  .intro-star-scene {
+    height: 220px;
+  }
+
+  .intro-star-img {
+    width: 290px;
+  }
+
+  .video-guide-card {
+    padding: 26px;
+  }
+
+  .video-guide-header h3 {
+    font-size: 25px;
+  }
+}
+
+@media (max-width: 1000px) {
+  .getting-started-shell {
+    padding-bottom: 110px;
+  }
+
+  .getting-started-hero {
+    grid-template-columns: 1fr;
+    margin-bottom: 36px;
+  }
+
+  .intro-star-scene {
+    display: none;
+  }
+
+  .video-guide-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .getting-started-shell {
+    padding-bottom: 95px;
+  }
+
+  .getting-started-heading h2 {
+    font-size: 36px;
+  }
+
+  .getting-started-heading p {
+    font-size: 16.5px;
+  }
+
+  .video-guide-card {
+    padding: 22px;
+    border-radius: 24px;
+  }
+
+  .video-guide-header h3 {
+    font-size: 23px;
+  }
+
+  .video-guide-header p {
+    font-size: 15.5px;
+  }
+
+  .youtube-embed {
+    border-radius: 15px;
+  }
+}

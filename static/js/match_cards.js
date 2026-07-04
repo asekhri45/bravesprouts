@@ -49,7 +49,7 @@ document.addEventListener("DOMContentLoaded", function () {
 ];
 
   const gameInstructionLine =
-    "Let’s play matching cards. Flip two cards, try to find a pair, and take turns with your grown-up.";
+  "Let’s play Match Cards. Flip two cards each turn. If they match, they stay open. If not, they flip back over. Try to remember where each picture is, then find all the pairs.";
 
   let firstCard = null;
   let secondCard = null;
@@ -1100,7 +1100,7 @@ document.addEventListener("DOMContentLoaded", function () {
       starAudio.addEventListener("ended", finish);
       starAudio.addEventListener("error", finish);
 
-      fallbackTimer = setTimeout(finish, 9000);
+      fallbackTimer = setTimeout(finish, 20000);
 
       starAudio.play().catch(function () {
         finish();

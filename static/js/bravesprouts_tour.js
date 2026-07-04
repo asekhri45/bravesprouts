@@ -14,7 +14,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   const urlParams = new URLSearchParams(window.location.search);
   const urlStep = Number(urlParams.get("tour"));
-  const hasUrlStep = Number.isInteger(urlStep) && urlStep >= 1 && urlStep <= 7;
+  const hasUrlStep = Number.isInteger(urlStep) && urlStep >= 1 && urlStep <= 8;
 
   const hasSeenTour = layout.dataset.hasSeenTour === "1";
 
@@ -30,7 +30,7 @@ document.addEventListener("DOMContentLoaded", function () {
       target: null,
       pillLabel: "Start guided tour",
       title: "Welcome to MyBraveSprout!",
-      text: "Let's take a quick 7-step tour before getting started. It takes about one minute and shows the activity path, parent resources, questions, profile setup, and permissions.",
+      text: "Let's take a quick 1 minute tour before getting started. It shows the demo videos, activity path, parent resources, questions, profile setup, and permissions.",
       badge: "Required setup • About 1 minute",
       instruction: "Select Next to begin the guided tour.",
       nextText: "Next",
@@ -40,6 +40,20 @@ document.addEventListener("DOMContentLoaded", function () {
     },
     {
       step: 2,
+      page: "getting-started",
+      path: "/getting-started",
+      target: "demo-videos-tab",
+      selector: '.sidebar-nav a[href="/getting-started"], .sidebar-nav a[href$="/getting-started"]',
+      pillLabel: "Demo Videos",
+      title: "Find the Demo Videos",
+      text: "This tab has the short parent demo videos. You can come back here anytime to watch the overview or the quick dashboard walkthrough.",
+      instruction: "This keeps the tour card beside the navigation instead of covering the videos.",
+      nextText: "Next",
+      intro: true,
+      sideImage: true
+    },
+    {
+      step: 3,
       page: "dashboard",
       path: "/dashboard",
       target: "current-activity",
@@ -52,7 +66,7 @@ document.addEventListener("DOMContentLoaded", function () {
       sideImage: true
     },
     {
-      step: 3,
+      step: 4,
       page: "dashboard",
       path: "/dashboard",
       target: "journey",
@@ -64,7 +78,7 @@ document.addEventListener("DOMContentLoaded", function () {
       sideImage: true
     },
     {
-      step: 4,
+      step: 5,
       page: "parent-academy",
       path: "/parent-academy",
       target: "parent-academy",
@@ -76,7 +90,7 @@ document.addEventListener("DOMContentLoaded", function () {
       sideImage: true
     },
     {
-      step: 5,
+      step: 6,
       page: "ask-bravesprouts",
       path: "/ask-bravesprouts",
       target: "ask-input",
@@ -88,20 +102,19 @@ document.addEventListener("DOMContentLoaded", function () {
       sideImage: true
     },
     {
-      step: 6,
+      step: 7,
       page: "settings",
       path: "/settings",
       target: "settings-child-profile",
       pillLabel: "Child Profile",
       title: "Set Up Your Child's Profile",
-      text: "Add your child's name and age before getting started. MyBraveSprout uses this to make activities feel more personal.",
-      instruction: "Complete the highlighted section, then select Next to continue.",
+      text: "You can add your child's name and age now, or come back and fill this in later from the dashboard. MyBraveSprout can use this information to make activities feel more personal.",
+      instruction: "Fill this in now or later, then select Next to continue.",
       nextText: "Next",
-      sideImage: true,
-      required: "child-profile"
+      sideImage: true
     },
     {
-      step: 7,
+      step: 8,
       page: "settings",
       path: "/settings",
       target: "settings-permissions",
@@ -116,6 +129,7 @@ document.addEventListener("DOMContentLoaded", function () {
   ];
 
   function currentPage() {
+    if (path.startsWith("/getting-started")) return "getting-started";
     if (path.startsWith("/parent-academy")) return "parent-academy";
     if (path.startsWith("/ask-bravesprouts")) return "ask-bravesprouts";
     if (path.startsWith("/settings")) return "settings";
@@ -143,6 +157,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function getStep(stepNumber) {
     return steps.find((item) => item.step === stepNumber);
+  }
+
+  function getStepTargetSelector(step) {
+    if (step.selector) return step.selector;
+    return `[data-tour-target="${step.target}"]`;
   }
 
   function cleanUrl() {
@@ -565,8 +584,8 @@ document.addEventListener("DOMContentLoaded", function () {
     card.classList.toggle("is-intro", !!step.intro);
     card.classList.toggle("has-side-image", !!step.sideImage);
     card.classList.toggle("is-center-only", !!step.centerOnly);
-    card.classList.toggle("is-step-2", step.step === 3);
-    card.classList.toggle("is-step-7", step.step === 7);
+    card.classList.toggle("is-step-2", step.step === 4);
+    card.classList.toggle("is-step-7", step.step === 8);
 
     if (step.sideImage) {
       card.innerHTML = `
@@ -695,7 +714,7 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function getTourRect(step, target) {
-    if (step.step !== 3) {
+    if (step.step !== 4) {
       return target.getBoundingClientRect();
     }
 
@@ -733,7 +752,7 @@ document.addEventListener("DOMContentLoaded", function () {
   function positionImageArrow(step, rect, cardLeft, cardTop, cardWidth, cardHeight) {
     if (!imageArrow) return;
 
-    if (step.step === 2) {
+    if (step.step === 3) {
       imageArrow.classList.add("is-visible");
       imageArrow.classList.remove("is-step-2-arrow");
 
@@ -743,7 +762,7 @@ document.addEventListener("DOMContentLoaded", function () {
       return;
     }
 
-    if (step.step === 3) {
+    if (step.step === 4) {
       imageArrow.classList.add("is-visible");
       imageArrow.classList.add("is-step-2-arrow");
 
@@ -790,12 +809,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
     spotlight.style.display = "block";
 
-    const target = document.querySelector(`[data-tour-target="${step.target}"]`);
+    const target = document.querySelector(getStepTargetSelector(step));
 
     if (!target) return;
 
     const rect = getTourRect(step, target);
-    const padding = step.step === 3 ? 12 : step.intro ? 8 : 10;
+    const padding = step.step === 4 ? 12 : step.intro ? 8 : 10;
 
     const spotTop = Math.max(10, rect.top - padding);
     const spotLeft = Math.max(10, rect.left - padding);
@@ -807,7 +826,40 @@ document.addEventListener("DOMContentLoaded", function () {
     spotlight.style.width = `${spotWidth}px`;
     spotlight.style.height = `${spotHeight}px`;
 
-    const cardWidth = Math.min(TOUR_CARD_WIDTH, window.innerWidth - 36);
+    const isDemoSidebarStep = step.step === 2;
+
+    if (isDemoSidebarStep) {
+      const sidebar = document.querySelector(".sidebar");
+      const sidebarRect = sidebar ? sidebar.getBoundingClientRect() : rect;
+      const compactWidth = Math.min(315, Math.max(260, sidebarRect.width - 36), window.innerWidth - 36);
+
+      card.style.setProperty("width", `${compactWidth}px`, "important");
+      card.style.setProperty("padding", "22px 18px 20px 76px", "important");
+
+      const sideStar = card.querySelector(".bravesprouts-tour-side-star");
+      if (sideStar) {
+        sideStar.style.setProperty("left", "18px", "important");
+        sideStar.style.setProperty("top", "24px", "important");
+        sideStar.style.setProperty("width", "44px", "important");
+        sideStar.style.setProperty("height", "44px", "important");
+      }
+    } else {
+      card.style.removeProperty("width");
+      card.style.removeProperty("padding");
+
+      const sideStar = card.querySelector(".bravesprouts-tour-side-star");
+      if (sideStar) {
+        sideStar.style.removeProperty("left");
+        sideStar.style.removeProperty("top");
+        sideStar.style.removeProperty("width");
+        sideStar.style.removeProperty("height");
+      }
+    }
+
+    const cardWidth = isDemoSidebarStep
+      ? Math.min(315, Math.max(260, (document.querySelector(".sidebar")?.getBoundingClientRect().width || 315) - 36), window.innerWidth - 36)
+      : Math.min(TOUR_CARD_WIDTH, window.innerWidth - 36);
+
     const cardHeight = card.offsetHeight || 285;
 
     let top;
@@ -815,10 +867,17 @@ document.addEventListener("DOMContentLoaded", function () {
     let arrowClass = "arrow-left";
 
     if (step.step === 2) {
+      const sidebar = document.querySelector(".sidebar");
+      const sidebarRect = sidebar ? sidebar.getBoundingClientRect() : rect;
+
+      left = Math.max(18, sidebarRect.left + 18);
+      top = rect.bottom + 18;
+      arrowClass = "arrow-top";
+    } else if (step.step === 3) {
       left = rect.left + rect.width / 2 - cardWidth / 2;
       top = rect.bottom - 6;
       arrowClass = "arrow-top";
-    } else if (step.step === 7) {
+    } else if (step.step === 8) {
       /*
         Step 7 should sit ABOVE the permissions card.
         arrow-bottom means the pointer appears on the bottom of the tour card,
@@ -827,7 +886,7 @@ document.addEventListener("DOMContentLoaded", function () {
       left = rect.left + rect.width / 2 - cardWidth / 2;
       top = rect.top - cardHeight - 24;
       arrowClass = "arrow-bottom";
-    } else if (step.step === 3) {
+    } else if (step.step === 4) {
       const estimatedCardHeight = 210;
 
       left = rect.left + STEP_2_CARD_LEFT_OFFSET;
@@ -860,8 +919,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
     left = clamp(left, 18, window.innerWidth - cardWidth - 18);
 
-    if (step.step === 7) {
+    if (step.step === 8) {
       top = clamp(top, 76, Math.max(76, window.innerHeight - cardHeight - 18));
+    } else if (step.step === 2) {
+      top = clamp(top, rect.bottom + 12, Math.max(rect.bottom + 12, window.innerHeight - cardHeight - 18));
     } else {
       top = clamp(top, 86, Math.max(86, window.innerHeight - cardHeight - 18));
     }
@@ -911,7 +972,7 @@ document.addEventListener("DOMContentLoaded", function () {
     let target = null;
 
     if (!step.centerOnly) {
-      target = await waitForTarget(`[data-tour-target="${step.target}"]`);
+      target = await waitForTarget(getStepTargetSelector(step));
 
       if (!target) {
         console.warn("Tour target not found:", step.target);
@@ -920,14 +981,14 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     document.body.classList.toggle("bravesprouts-tour-center-active", !!step.centerOnly);
-    document.body.classList.toggle("bravesprouts-tour-step-2-active", step.step === 3);
-    document.body.classList.toggle("bravesprouts-tour-step-6-active", step.step === 6);
-    document.body.classList.toggle("bravesprouts-tour-step-7-active", step.step === 7);
+    document.body.classList.toggle("bravesprouts-tour-step-2-active", step.step === 4);
+    document.body.classList.toggle("bravesprouts-tour-step-6-active", step.step === 7);
+    document.body.classList.toggle("bravesprouts-tour-step-7-active", step.step === 8);
 
-    if (step.step === 3) {
+    if (step.step === 4) {
       scrollStep2Slightly();
     } else if (target) {
-      if (step.step === 7) {
+      if (step.step === 8) {
         /*
           Put permissions lower in the viewport so the tour card has room above it.
         */
@@ -954,10 +1015,10 @@ document.addEventListener("DOMContentLoaded", function () {
       positionTour();
       cleanUrl();
 
-      if (step.step === 7) {
+      if (step.step === 8) {
         setTimeout(positionTour, 250);
       }
-    }, step.step === 3 ? 220 : step.centerOnly ? 120 : step.step === 7 ? 420 : 300);
+    }, step.step === 4 ? 220 : step.centerOnly ? 120 : step.step === 8 ? 420 : 300);
   }
 
   renderStep();

@@ -83,11 +83,12 @@ Session(app)
 # HTTP Security Policies
 csp = {
     "default-src": "'self'",
-    "script-src": "'self'",
+    "script-src": "'self' https://www.youtube.com https://www.youtube-nocookie.com",
     "style-src": "'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src": "'self' https://fonts.gstatic.com data:",
-    "img-src": "'self' data:",
-    "media-src": "'self' data: blob:"
+    "img-src": "'self' data: https:",
+    "media-src": "'self' data: blob:",
+    "frame-src": "'self' https://www.youtube.com https://www.youtube-nocookie.com",
 }
 
 Talisman(app, content_security_policy=csp, force_https=False)
@@ -233,6 +234,9 @@ def home():
 @limiter.limit("10 per minute")
 def login():
     ensure_feedback_tables()
+
+    if request.method == "GET" and session.get("user_id"):
+        return redirect(url_for("dashboard"))
 
     if request.method == "POST":
         email = request.form["email"]
@@ -437,7 +441,53 @@ def ensure_feedback_tables():
 
     conn.commit()
     conn.close()
+@app.context_processor
+def inject_feedback_globals():
+    if "user_id" not in session:
+        return {
+            "show_feedback_widget": False,
+            "show_feedback_prompt": False,
+            "login_count": 0
+        }
 
+    ensure_feedback_tables()
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT
+            COALESCE(u.login_count, 0) AS login_count,
+            COALESCE(u.has_seen_tour, 0) AS has_seen_tour,
+            CASE
+                WHEN pf.feedback_id IS NULL THEN 0
+                ELSE 1
+            END AS has_submitted_feedback
+        FROM users u
+        LEFT JOIN parent_feedback pf
+            ON pf.user_id = u.user_id
+        WHERE u.user_id = ?
+    """, (session["user_id"],))
+
+    row = cursor.fetchone()
+    conn.close()
+
+    if not row:
+        return {
+            "show_feedback_widget": False,
+            "show_feedback_prompt": False,
+            "login_count": 0
+        }
+
+    login_count = row["login_count"]
+    has_seen_tour = bool(row["has_seen_tour"])
+    has_submitted_feedback = bool(row["has_submitted_feedback"])
+
+    return {
+        "login_count": login_count,
+        "show_feedback_widget": has_seen_tour and not has_submitted_feedback,
+        "show_feedback_prompt": has_seen_tour and login_count >= 2 and not has_submitted_feedback
+    }
 
 def bump_login_count(user_id):
     ensure_feedback_tables()
@@ -665,7 +715,8 @@ def dashboard():
     has_submitted_feedback = bool(user_row["has_submitted_feedback"]) if user_row else True
     feedback_prompt_dismissed = bool(user_row["feedback_prompt_dismissed_at"]) if user_row else False
 
-    show_feedback_prompt = login_count >= 3 and not has_submitted_feedback
+    show_feedback_prompt = has_seen_tour and login_count >= 2 and not has_submitted_feedback
+    show_feedback_widget = has_seen_tour and not has_submitted_feedback
 
     cursor.execute("""
     SELECT
@@ -759,7 +810,8 @@ def dashboard():
         recent_sessions=recent_sessions,
         show_feedback_prompt=show_feedback_prompt,
         feedback_prompt_dismissed=feedback_prompt_dismissed,
-        login_count=login_count
+        login_count=login_count,
+        show_feedback_widget=show_feedback_widget
     )
 
 @app.route("/dismiss-feedback-prompt", methods=["POST"])
@@ -782,6 +834,9 @@ def dismiss_feedback_prompt():
 
     return jsonify({"success": True})
 
+def has_real_child_name(value):
+    child_name = clean_short_setting(value, 40).lower()
+    return bool(child_name) and child_name not in {"child", "none", "null"}
 
 @app.route("/submit-feedback", methods=["POST"])
 @csrf.exempt
@@ -980,6 +1035,39 @@ def update_child_settings():
     session["child_name"] = child_name
 
     return redirect(url_for("settings", status="child_saved"))
+
+@app.route("/save-child-name-before-activity", methods=["POST"])
+@csrf.exempt
+@login_required
+def save_child_name_before_activity():
+    data = request.get_json(silent=True) or {}
+
+    child_name = clean_short_setting(data.get("child_name"), 40)
+
+    if not has_real_child_name(child_name):
+        return jsonify({
+            "success": False,
+            "error": "Please enter your child's name before starting."
+        }), 400
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        UPDATE users
+        SET child_name = ?
+        WHERE user_id = ?
+    """, (child_name, session["user_id"]))
+
+    conn.commit()
+    conn.close()
+
+    session["child_name"] = child_name
+
+    return jsonify({
+        "success": True,
+        "child_name": child_name
+    })
 
 @app.route("/admin/feedback")
 def admin_feedback():
@@ -1444,10 +1532,29 @@ def open_activity(activity_id):
     """, (session["user_id"], activity_id))
     progress = cursor.fetchone()
 
+    cursor.execute("""
+        SELECT child_name
+        FROM users
+        WHERE user_id = ?
+    """, (session["user_id"],))
+    user_row = cursor.fetchone()
+
     conn.close()
 
     if not progress or not progress["is_unlocked"]:
         return redirect(url_for("dashboard"))
+
+    child_name = user_row["child_name"] if user_row else session.get("child_name", "")
+
+    if not has_real_child_name(child_name):
+        session["child_name"] = ""
+        return redirect(url_for(
+            "dashboard",
+            child_name_required=1,
+            activity_id=activity_id
+        ))
+
+    session["child_name"] = child_name
 
     template_file = activity["template_file"]
 
@@ -2273,7 +2380,12 @@ def classify_guessing_game_2_round_choice(text):
 
     return "unclear"
 
-
+@app.route("/getting-started")
+def getting_started():
+    return render_template(
+        "getting_started.html",
+        active_page="getting_started"
+    )
 def maybe_add_guessing_game_2_good_question_prefix(message, game_state):
     import random
 
