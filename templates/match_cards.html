@@ -94,7 +94,7 @@
         <div class="turn-dot"></div>
         <div class="turn-avatar">🙂</div>
         <div>
-          <h2>Your Turn</h2>
+          <h2>{% if child %}{{ child|e }}’s Turn{% else %}Your Turn{% endif %}</h2>
           <p>Pick two cards</p>
         </div>
       </div>
