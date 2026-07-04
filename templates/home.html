@@ -10,14 +10,21 @@
     <header class="navbar">
         <div class="nav-inner">
 
-        <img src="{{ url_for('static', filename='images/logo_v4.png') }}" class="logo">
+            <a href="/" class="nav-logo-link">
+                <img src="{{ url_for('static', filename='images/logo_v4.png') }}" class="logo" alt="MyBraveSprout">
+            </a>
 
-        <div class="nav-buttons">
-            <a href="/signup" class="hero-btn primary">Get Started</a>
-            <a href="/login" class="hero-btn secondary">Login</a>
+            <nav class="top-tabs" aria-label="Main navigation">
+                <a href="/" class="top-tab active">Home</a>
+                <a href="/acknowledgments2" class="top-tab">Acknowledgments</a>
+            </nav>
+
+            <div class="nav-buttons">
+                <a href="/signup" class="hero-btn primary">Get Started</a>
+                <a href="/login" class="hero-btn secondary">Login</a>
+            </div>
+
         </div>
-
-    </div>
     </header>
 
     <main class="hero-section">

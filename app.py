@@ -1069,6 +1069,10 @@ def save_child_name_before_activity():
         "child_name": child_name
     })
 
+@app.route("/acknowledgments2")
+def acknowledgments2():
+    return render_template("acknowledgments2.html")
+
 @app.route("/admin/feedback")
 def admin_feedback():
     ensure_feedback_tables()

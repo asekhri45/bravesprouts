@@ -59,13 +59,54 @@ body::after {
 .nav-inner {
     width: var(--container-width);
     margin: 0 auto;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: 44px;
+}
+
+.nav-logo-link {
     display: flex;
     align-items: center;
+    text-decoration: none;
+}
+
+.logo {
+    width: 300px;
+}
+
+.top-tabs {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 38px;
+    min-width: 0;
+}
+
+.top-tab {
+    color: var(--color-text-dark);
+    text-decoration: none;
+    font-size: 1rem;
+    font-weight: 600;
+    padding: 10px 0 8px;
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+    transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.top-tab:hover {
+    color: var(--color-blue);
+}
+
+.top-tab.active {
+    color: var(--color-blue);
+    font-weight: 700;
+    border-bottom-color: var(--color-blue);
 }
 
 .nav-buttons {
-    margin-left: auto;
     display: flex;
+    align-items: center;
     gap: 12px;
     opacity: 0;
     transform: translateY(-6px);
@@ -90,10 +131,6 @@ body::after {
     font-size: 0.82rem;
     transform: translateY(-3px);
     line-height: 1.6;
-}
-
-.logo {
-    width: 300px;
 }
 
 /* ── Hero ── */
@@ -574,7 +611,7 @@ body::after {
 
 @media (max-width: 768px) {
     :root {
-        --nav-height: 86px;
+        --nav-height: 122px;
         --container-width: min(92%, 430px);
     }
 
@@ -584,15 +621,28 @@ body::after {
     }
 
     .navbar {
-        padding: 16px 0 10px;
+        padding: 14px 0 10px;
     }
 
     .nav-inner {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
         justify-content: center;
+        gap: 10px;
     }
 
     .logo {
-        width: min(82vw, 330px);
+        width: min(78vw, 300px);
+    }
+
+    .top-tabs {
+        gap: 22px;
+    }
+
+    .top-tab {
+        font-size: 0.88rem;
+        padding: 5px 0 7px;
     }
 
     .nav-buttons {
@@ -717,6 +767,14 @@ body::after {
 
     .mobile-label {
         display: inline;
+    }
+
+    .top-tabs {
+        gap: 16px;
+    }
+
+    .top-tab {
+        font-size: 0.8rem;
     }
 }
 
