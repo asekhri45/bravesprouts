@@ -139,11 +139,10 @@ document.addEventListener("DOMContentLoaded", function () {
       title: "Turn On Audio and Microphone",
       text: "Turn on audio and microphone access so your child can hear characters and practice speaking during activities.",
       mobileText: "Turn on audio and microphone so activities can work.",
-      instruction: "Turn on both highlighted permissions, then select Finish.",
+      instruction: "Turn these on now, or select Finish to continue.",
       mobileInstruction: "Turn both on, then Finish.",
       nextText: "Finish",
-      sideImage: true,
-      required: "permissions"
+      sideImage: true
     }
   ];
 
