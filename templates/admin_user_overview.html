@@ -41,6 +41,7 @@
   </div>
 </div>
 
+<div class="admin-table-scroll">
   <table class="admin-user-table">
     <thead>
       <tr>
@@ -111,6 +112,7 @@
       {% endfor %}
     </tbody>
   </table>
+  </div>
 </div>
 
 <style>
@@ -133,6 +135,33 @@
   .feedback-status-pill.missing {
     background: #f6f2ff;
     color: #6d28d9;
+  }
+</style>
+
+<style>
+  .admin-overview-page {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .admin-table-scroll {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: visible;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 12px;
+  }
+
+  .admin-user-table {
+    min-width: 1250px;
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .admin-user-table th,
+  .admin-user-table td {
+    white-space: nowrap;
   }
 </style>
 {% endblock %}

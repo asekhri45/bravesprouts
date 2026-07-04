@@ -1128,13 +1128,22 @@ body {
   padding: 32px;
 }
 
+.admin-table-scroll {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: visible;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 12px;
+  margin-top: 24px;
+}
+
 .admin-user-table {
+  min-width: 1250px;
   width: 100%;
   border-collapse: collapse;
-  margin-top: 24px;
   background: white;
   border-radius: 16px;
-  overflow: hidden;
 }
 
 .admin-user-table th,
@@ -1143,6 +1152,7 @@ body {
   text-align: left;
   border-bottom: 1px solid #eee;
   font-size: 14px;
+  white-space: nowrap;
 }
 
 .admin-user-table th {
@@ -1246,3 +1256,8 @@ body {
     font-weight: 900;
     white-space: nowrap;
   }
+
+  .admin-user-table th,
+.admin-user-table td {
+  white-space: nowrap;
+}
