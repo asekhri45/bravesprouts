@@ -4,8 +4,42 @@
 
 {% block dashboard_content %}
 <div class="admin-overview-page">
-  <h1>User Overview</h1>
-  <p>Private beta user progress dashboard.</p>
+  <div class="admin-stats-grid">
+  <div class="admin-stat-card">
+    <span>Total Users</span>
+    <strong>{{ admin_stats.total_users }}</strong>
+  </div>
+
+  <div class="admin-stat-card">
+    <span>Created Today</span>
+    <strong>{{ admin_stats.users_created_today }}</strong>
+  </div>
+
+  <div class="admin-stat-card">
+    <span>Interacted Today</span>
+    <strong>{{ admin_stats.users_interacted_today }}</strong>
+  </div>
+
+  <div class="admin-stat-card">
+    <span>Created This Week</span>
+    <strong>{{ admin_stats.users_created_this_week }}</strong>
+  </div>
+
+  <div class="admin-stat-card">
+    <span>Interacted This Week</span>
+    <strong>{{ admin_stats.users_interacted_this_week }}</strong>
+  </div>
+
+  <div class="admin-stat-card">
+    <span>Created This Month</span>
+    <strong>{{ admin_stats.users_created_this_month }}</strong>
+  </div>
+
+  <div class="admin-stat-card">
+    <span>Interacted This Month</span>
+    <strong>{{ admin_stats.users_interacted_this_month }}</strong>
+  </div>
+</div>
 
   <table class="admin-user-table">
     <thead>

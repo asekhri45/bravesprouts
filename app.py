@@ -13,7 +13,8 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
 from flask_talisman import Talisman
 from flask_limiter import Limiter
@@ -328,9 +329,10 @@ def signup():
                 child_dob,
                 child_age,
                 parent_pin,
-                terms_check
+                terms_check,
+                created_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
         """, (
             email,
             hashed_password,
@@ -417,7 +419,8 @@ def ensure_feedback_tables():
     user_columns_to_add = {
         "login_count": "ALTER TABLE users ADD COLUMN login_count INTEGER DEFAULT 0",
         "has_seen_tour": "ALTER TABLE users ADD COLUMN has_seen_tour INTEGER DEFAULT 0",
-        "feedback_prompt_dismissed_at": "ALTER TABLE users ADD COLUMN feedback_prompt_dismissed_at TEXT"
+        "feedback_prompt_dismissed_at": "ALTER TABLE users ADD COLUMN feedback_prompt_dismissed_at TEXT",
+        "created_at": "ALTER TABLE users ADD COLUMN created_at TEXT"
     }
 
     for column_name, alter_sql in user_columns_to_add.items():
@@ -618,6 +621,73 @@ def admin_user_overview():
     conn = get_db_connection()
     cursor = conn.cursor()
 
+    now_et = datetime.now(ZoneInfo("America/New_York"))
+
+    today_start_et = now_et.replace(hour=0, minute=0, second=0, microsecond=0)
+    week_start_et = today_start_et - timedelta(days=today_start_et.weekday())
+    month_start_et = today_start_et.replace(day=1)
+
+    def to_utc_sql(dt):
+        return dt.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+
+    today_start = to_utc_sql(today_start_et)
+    week_start = to_utc_sql(week_start_et)
+    month_start = to_utc_sql(month_start_et)
+
+    cursor.execute("""
+        SELECT
+            COUNT(*) AS total_users,
+
+            COUNT(CASE
+                WHEN created_at IS NOT NULL AND created_at >= ?
+                THEN 1
+            END) AS users_created_this_week,
+
+            COUNT(CASE
+                WHEN created_at IS NOT NULL AND created_at >= ?
+                THEN 1
+            END) AS users_created_today,
+
+            COUNT(CASE
+                WHEN created_at IS NOT NULL AND created_at >= ?
+                THEN 1
+            END) AS users_created_this_month
+        FROM users
+    """, (week_start, today_start, month_start))
+
+    user_stats = cursor.fetchone()
+
+    cursor.execute("""
+        SELECT
+            COUNT(DISTINCT CASE
+                WHEN completed_at >= ?
+                THEN user_id
+            END) AS users_interacted_this_week,
+
+            COUNT(DISTINCT CASE
+                WHEN completed_at >= ?
+                THEN user_id
+            END) AS users_interacted_today,
+
+            COUNT(DISTINCT CASE
+                WHEN completed_at >= ?
+                THEN user_id
+            END) AS users_interacted_this_month
+        FROM session_log
+    """, (week_start, today_start, month_start))
+
+    interaction_stats = cursor.fetchone()
+
+    admin_stats = {
+        "total_users": user_stats["total_users"] or 0,
+        "users_created_this_week": user_stats["users_created_this_week"] or 0,
+        "users_created_today": user_stats["users_created_today"] or 0,
+        "users_created_this_month": user_stats["users_created_this_month"] or 0,
+        "users_interacted_this_week": interaction_stats["users_interacted_this_week"] or 0,
+        "users_interacted_today": interaction_stats["users_interacted_today"] or 0,
+        "users_interacted_this_month": interaction_stats["users_interacted_this_month"] or 0
+    }
+
     cursor.execute("""
         SELECT
             u.user_id,
@@ -664,6 +734,7 @@ def admin_user_overview():
     return render_template(
         "admin_user_overview.html",
         users=users,
+        admin_stats=admin_stats,
         active_page="admin_user_overview"
     )
 
