@@ -4,6 +4,9 @@ document.addEventListener("DOMContentLoaded", function () {
   if (!layout) return;
 
   const TOUR_CARD_WIDTH = 455;
+  const MOBILE_TOUR_BREAKPOINT = 900;
+  const MOBILE_TARGET_MIN_VISIBLE_RATIO = 0.75;
+
 
   const STEP_2_HIGHLIGHT_EXTRA_LEFT = 60;
   const STEP_2_HIGHLIGHT_EXTRA_RIGHT = 110;
@@ -31,8 +34,10 @@ document.addEventListener("DOMContentLoaded", function () {
       pillLabel: "Start guided tour",
       title: "Welcome to MyBraveSprout!",
       text: "Let's take a quick 1 minute tour before getting started. It shows the demo videos, activity path, parent resources, questions, profile setup, and permissions.",
+      mobileText: "A quick setup tour for videos, activities, resources, profile, and permissions.",
       badge: "Required setup • About 1 minute",
       instruction: "Select Next to begin the guided tour.",
+      mobileInstruction: "Select Next to begin.",
       nextText: "Next",
       intro: true,
       sideImage: true,
@@ -47,7 +52,9 @@ document.addEventListener("DOMContentLoaded", function () {
       pillLabel: "Demo Videos",
       title: "Find the Demo Videos",
       text: "This tab has the short parent demo videos. You can come back here anytime to watch the overview or the quick dashboard walkthrough.",
+      mobileText: "Watch quick parent demo videos here anytime.",
       instruction: "This keeps the tour card beside the navigation instead of covering the videos.",
+      mobileInstruction: "Select Next when ready.",
       nextText: "Next",
       intro: true,
       sideImage: true
@@ -60,7 +67,9 @@ document.addEventListener("DOMContentLoaded", function () {
       pillLabel: "Current Activity",
       title: "Start Activities Here",
       text: "This is the recommended activity to begin with. Activities are designed to build comfort and confidence one small step at a time.",
+      mobileText: "Start with the recommended activity here.",
       instruction: "Follow the highlighted area, then select Next to continue.",
+      mobileInstruction: "Highlighted area stays visible.",
       nextText: "Next",
       intro: true,
       sideImage: true
@@ -73,7 +82,9 @@ document.addEventListener("DOMContentLoaded", function () {
       pillLabel: "Progression Path",
       title: "Your Child's Journey",
       text: "Activities unlock in a recommended order. Each one builds on the skills practiced in the previous activity.",
+      mobileText: "Activities unlock in order as your child builds comfort.",
       instruction: "Follow the highlighted area, then select Next to continue.",
+      mobileInstruction: "Select Next to continue.",
       nextText: "Next",
       sideImage: true
     },
@@ -85,7 +96,9 @@ document.addEventListener("DOMContentLoaded", function () {
       pillLabel: "Parent Resources",
       title: "Parent Resources",
       text: "Browse short articles that explain selective mutism concepts, family situations, and support strategies in parent-friendly language.",
+      mobileText: "Browse short parent-friendly articles and support ideas here.",
       instruction: "Follow the highlighted area, then select Next to continue.",
+      mobileInstruction: "Select Next to continue.",
       nextText: "Next",
       sideImage: true
     },
@@ -97,7 +110,9 @@ document.addEventListener("DOMContentLoaded", function () {
       pillLabel: "MyBraveSprout AI",
       title: "MyBraveSprout AI",
       text: "Use this space to ask questions and get general guidance, explanations, and practical ideas. It provides general information, not medical advice.",
+      mobileText: "Ask general questions and get practical ideas. Not medical advice.",
       instruction: "Follow the highlighted area, then select Next to continue.",
+      mobileInstruction: "Select Next to continue.",
       nextText: "Next",
       sideImage: true
     },
@@ -109,7 +124,9 @@ document.addEventListener("DOMContentLoaded", function () {
       pillLabel: "Child Profile",
       title: "Set Up Your Child's Profile",
       text: "You can add your child's name and age now, or come back and fill this in later from the dashboard. MyBraveSprout can use this information to make activities feel more personal.",
+      mobileText: "Add your child's name and age now, or skip this and come back later from Settings.",
       instruction: "Fill this in now or later, then select Next to continue.",
+      mobileInstruction: "Fill this in now or later, then select Next to continue.",
       nextText: "Next",
       sideImage: true
     },
@@ -121,7 +138,9 @@ document.addEventListener("DOMContentLoaded", function () {
       pillLabel: "Audio + Microphone",
       title: "Turn On Audio and Microphone",
       text: "Turn on audio and microphone access so your child can hear characters and practice speaking during activities.",
+      mobileText: "Turn on audio and microphone so activities can work.",
       instruction: "Turn on both highlighted permissions, then select Finish.",
+      mobileInstruction: "Turn both on, then Finish.",
       nextText: "Finish",
       sideImage: true,
       required: "permissions"
@@ -569,6 +588,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function renderCardContent(step) {
     const isLast = step.step === steps.length;
+    const displayText = getStepDisplayText(step);
+    const displayInstruction = getStepDisplayInstruction(step);
 
     if (stepPill) {
       stepPill.innerHTML = `
@@ -586,6 +607,7 @@ document.addEventListener("DOMContentLoaded", function () {
     card.classList.toggle("is-center-only", !!step.centerOnly);
     card.classList.toggle("is-step-2", step.step === 4);
     card.classList.toggle("is-step-7", step.step === 8);
+    card.classList.toggle("is-mobile-settings-step", step.step === 7 || step.step === 8);
 
     if (step.sideImage) {
       card.innerHTML = `
@@ -602,13 +624,13 @@ document.addEventListener("DOMContentLoaded", function () {
               : ""
           }
 
-          <p>${step.text.replace(/\n\n/g, "<br><br>")}</p>
+          <p>${displayText.replace(/\n\n/g, "<br><br>")}</p>
 
           <div class="bravesprouts-tour-dots">
             ${renderDots(step.step)}
           </div>
 
-          <p class="bravesprouts-tour-instruction">${step.instruction || "Select Next to continue."}</p>
+          <p class="bravesprouts-tour-instruction">${displayInstruction}</p>
 
           <div class="bravesprouts-tour-actions">
             <div class="bravesprouts-tour-left-actions"></div>
@@ -641,13 +663,13 @@ document.addEventListener("DOMContentLoaded", function () {
             : ""
         }
 
-        <p>${step.text}</p>
+        <p>${displayText}</p>
 
         <div class="bravesprouts-tour-dots">
           ${renderDots(step.step)}
         </div>
 
-        <p class="bravesprouts-tour-instruction">${step.instruction || "Select Next to continue."}</p>
+        <p class="bravesprouts-tour-instruction">${displayInstruction}</p>
 
         <div class="bravesprouts-tour-actions">
           <div class="bravesprouts-tour-left-actions"></div>
@@ -699,6 +721,332 @@ document.addEventListener("DOMContentLoaded", function () {
     return Math.min(Math.max(value, min), max);
   }
 
+
+  function isMobileTourScreen() {
+    return window.innerWidth <= MOBILE_TOUR_BREAKPOINT;
+  }
+
+  function getStepDisplayText(step) {
+    if (isMobileTourScreen() && step.mobileText) return step.mobileText;
+    return step.text;
+  }
+
+  function getStepDisplayInstruction(step) {
+    if (isMobileTourScreen() && step.mobileInstruction) return step.mobileInstruction;
+    return step.instruction || "Select Next to continue.";
+  }
+
+  function rectToPlain(rect) {
+    return {
+      left: rect.left,
+      top: rect.top,
+      right: rect.right,
+      bottom: rect.bottom,
+      width: rect.width,
+      height: rect.height
+    };
+  }
+
+  function overlapArea(a, b) {
+    const left = Math.max(a.left, b.left);
+    const right = Math.min(a.right, b.right);
+    const top = Math.max(a.top, b.top);
+    const bottom = Math.min(a.bottom, b.bottom);
+
+    if (right <= left || bottom <= top) return 0;
+    return (right - left) * (bottom - top);
+  }
+
+  function cardRectFromPosition(left, top, width, height) {
+    return {
+      left,
+      top,
+      right: left + width,
+      bottom: top + height,
+      width,
+      height
+    };
+  }
+
+
+  function unionRects(rects) {
+    const validRects = rects.filter((rect) => rect && rect.width > 0 && rect.height > 0);
+    if (!validRects.length) return null;
+
+    const left = Math.min(...validRects.map((rect) => rect.left));
+    const top = Math.min(...validRects.map((rect) => rect.top));
+    const right = Math.max(...validRects.map((rect) => rect.right));
+    const bottom = Math.max(...validRects.map((rect) => rect.bottom));
+
+    return {
+      left,
+      top,
+      right,
+      bottom,
+      width: right - left,
+      height: bottom - top
+    };
+  }
+
+  function expandedRect(rect, amount) {
+    if (!rect) return null;
+
+    const left = Math.max(10, rect.left - amount);
+    const top = Math.max(10, rect.top - amount);
+    const right = Math.min(window.innerWidth - 10, rect.right + amount);
+    const bottom = Math.min(window.innerHeight - 10, rect.bottom + amount);
+
+    return {
+      left,
+      top,
+      right,
+      bottom,
+      width: right - left,
+      height: bottom - top
+    };
+  }
+
+  function shiftRectLeftForStep8(rect) {
+    if (!rect) return null;
+
+    /*
+      Mobile Step 8 looked slightly too far right compared with the
+      permission sliders. Move only this highlighted permissions region
+      left without changing the rest of the v8 tour.
+    */
+    const shift = 24;
+    const width = rect.width;
+    const left = Math.max(10, rect.left - shift);
+    const right = Math.min(window.innerWidth - 10, left + width);
+
+    return {
+      left,
+      top: rect.top,
+      right,
+      bottom: rect.bottom,
+      width: right - left,
+      height: rect.height
+    };
+  }
+
+  function getTourControlRegion(element) {
+    if (!element) return null;
+
+    return (
+      element.closest(
+        '[data-tour-control-region], .settings-field, .settings-form-group, .settings-control-row, .settings-row, .form-group, .field-group, .permission-row, .permission-toggle-row, .settings-toggle-row, .settings-option, .permission-card, .toggle-setting, label'
+      ) ||
+      (element.parentElement && element.parentElement.parentElement) ||
+      element.parentElement ||
+      element
+    );
+  }
+
+  function getMobileSettingsImportantElements(step) {
+    if (step.step === 7) {
+      const childName = document.querySelector('input[name="child_name"]');
+      const childAge = document.querySelector('input[name="child_age"]');
+
+      return [
+        getTourControlRegion(childName),
+        getTourControlRegion(childAge)
+      ].filter(Boolean);
+    }
+
+    if (step.step === 8) {
+      const audioToggle = document.getElementById("audioPermissionToggle");
+      const micToggle = document.getElementById("microphonePermissionToggle");
+
+      return [
+        getTourControlRegion(audioToggle),
+        getTourControlRegion(micToggle)
+      ].filter(Boolean);
+    }
+
+    return [];
+  }
+
+  function getMobileSettingsImportantRect(step) {
+    if (!isMobileTourScreen() || (step.step !== 7 && step.step !== 8)) return null;
+
+    /*
+      Step 7 should focus tightly on the two real profile controls.
+      Step 8 should use the whole permissions card so there is only one
+      clean-looking highlighted region instead of a nested/double highlight.
+    */
+    if (step.step === 8) {
+      const target = document.querySelector(getStepTargetSelector(step));
+      if (target) {
+        const permissionRect = expandedRect(rectToPlain(target.getBoundingClientRect()), 8);
+        return shiftRectLeftForStep8(permissionRect);
+      }
+    }
+
+    const elements = getMobileSettingsImportantElements(step);
+    if (!elements.length) return null;
+
+    const rects = elements.map((element) => element.getBoundingClientRect());
+    return expandedRect(unionRects(rects), 14);
+  }
+
+  function applyMobileSettingsCardInlineStyles() {
+    if (!card) return;
+
+    card.classList.add("is-mobile-settings-step", "is-mobile-extra-compact");
+
+    card.style.setProperty("width", "calc(100vw - 24px)", "important");
+    card.style.setProperty("max-width", "calc(100vw - 24px)", "important");
+    card.style.setProperty("max-height", "none", "important");
+    card.style.setProperty("height", "auto", "important");
+    card.style.setProperty("bottom", "auto", "important");
+    card.style.setProperty("overflow", "visible", "important");
+    card.style.setProperty("padding", "10px 12px", "important");
+    card.style.setProperty("border-radius", "18px", "important");
+
+    const sideStar = card.querySelector(".bravesprouts-tour-side-star");
+    if (sideStar) sideStar.style.setProperty("display", "none", "important");
+
+    const sideContent = card.querySelector(".bravesprouts-tour-side-content");
+    if (sideContent) {
+      sideContent.style.setProperty("padding-left", "0", "important");
+      sideContent.style.setProperty("width", "100%", "important");
+    }
+
+    const dots = card.querySelector(".bravesprouts-tour-dots");
+    if (dots) dots.style.setProperty("display", "none", "important");
+  }
+
+  function positionMobileSettingsCardAtTop() {
+    if (!card) return;
+
+    applyMobileSettingsCardInlineStyles();
+
+    const margin = 12;
+    const pillRect = stepPill ? stepPill.getBoundingClientRect() : { bottom: 72 };
+    const measured = card.getBoundingClientRect();
+    const cardWidth = Math.min(measured.width || window.innerWidth - 24, window.innerWidth - 24);
+    const maxLeft = Math.max(margin, window.innerWidth - cardWidth - margin);
+    const left = clamp((window.innerWidth - cardWidth) / 2, margin, maxLeft);
+    const top = Math.max(76, pillRect.bottom + 8);
+
+    card.style.setProperty("left", `${left}px`, "important");
+    card.style.setProperty("top", `${top}px`, "important");
+    card.style.setProperty("bottom", "auto", "important");
+    card.style.setProperty("height", "auto", "important");
+    card.style.zIndex = "99997";
+
+    card.classList.remove("arrow-left", "arrow-right", "arrow-top", "arrow-bottom");
+    card.classList.add("arrow-bottom");
+  }
+
+  function scrollMobileSettingsControlsIntoView(step, target) {
+    if (!isMobileTourScreen() || (step.step !== 7 && step.step !== 8) || !target || !card) return;
+
+    unlockTourScrollForProgrammaticMove();
+    positionMobileSettingsCardAtTop();
+
+    const cardRect = card.getBoundingClientRect();
+    const currentScrollY = window.pageYOffset || document.documentElement.scrollTop || 0;
+    const importantRect = getMobileSettingsImportantRect(step) || target.getBoundingClientRect();
+
+    const safeTop = Math.min(window.innerHeight * 0.46, Math.max(cardRect.bottom + 10, 180));
+    const safeBottom = window.innerHeight - 22;
+    const availableHeight = Math.max(120, safeBottom - safeTop);
+
+    const importantAbsTop = importantRect.top + currentScrollY;
+    const importantHeight = importantRect.height;
+
+    let desiredScrollY;
+    if (importantHeight <= availableHeight) {
+      desiredScrollY = importantAbsTop - (safeTop + (availableHeight - importantHeight) / 2);
+    } else {
+      desiredScrollY = importantAbsTop - safeTop;
+    }
+
+    window.scrollTo({
+      top: Math.max(0, desiredScrollY),
+      behavior: "auto"
+    });
+  }
+
+  function lockTourScroll() {
+    document.documentElement.classList.add("bravesprouts-tour-no-scroll");
+  }
+
+  function unlockTourScrollForProgrammaticMove() {
+    document.documentElement.classList.remove("bravesprouts-tour-no-scroll");
+  }
+
+  function scrollTargetForTour(step, target) {
+    if (!target || step.centerOnly) return;
+
+    unlockTourScrollForProgrammaticMove();
+
+    const rect = target.getBoundingClientRect();
+    const currentScrollY = window.pageYOffset || document.documentElement.scrollTop || 0;
+    const absoluteTop = rect.top + currentScrollY;
+    const viewportHeight = window.innerHeight;
+
+    /*
+      Mobile tour targets should sit in the visual center/lower half so the
+      card can be placed above or below without hiding the important area.
+    */
+    const mobileAnchor = step.step >= 7 ? 0.58 : 0.52;
+    const desktopBlock = step.step === 8 ? "center" : "center";
+
+    if (isMobileTourScreen()) {
+      if (step.step === 7 || step.step === 8) {
+        /*
+          Settings tasks need the actual fields/toggles visible. Keep the
+          highlighted settings panel lower in the viewport so the compact
+          helper card can sit above it instead of covering the controls.
+        */
+        const desiredTargetTop = Math.min(360, Math.max(300, viewportHeight * 0.30));
+        const desiredTop = absoluteTop - desiredTargetTop;
+
+        window.scrollTo({
+          top: Math.max(0, desiredTop),
+          behavior: "smooth"
+        });
+        return;
+      }
+
+      const desiredTop = absoluteTop - (viewportHeight * mobileAnchor - rect.height / 2);
+      window.scrollTo({
+        top: Math.max(0, desiredTop),
+        behavior: "smooth"
+      });
+      return;
+    }
+
+    if (step.step === 4) {
+      scrollStep2Slightly();
+      return;
+    }
+
+    if (step.step === 8) {
+      /*
+        Desktop permissions step: push the highlighted permissions card into
+        the lower half before positioning the tooltip above it. This prevents
+        the tooltip bubble from covering the highlighted permission controls.
+      */
+      const desiredTargetTop = Math.min(430, Math.max(360, viewportHeight * 0.46));
+      const desiredTop = absoluteTop - desiredTargetTop;
+
+      window.scrollTo({
+        top: Math.max(0, desiredTop),
+        behavior: "smooth"
+      });
+      return;
+    }
+
+    target.scrollIntoView({
+      behavior: "smooth",
+      block: desktopBlock,
+      inline: "nearest"
+    });
+  }
+
   function positionStepPill() {
     if (!stepPill) return;
 
@@ -714,6 +1062,11 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function getTourRect(step, target) {
+    const mobileSettingsRect = getMobileSettingsImportantRect(step);
+    if (mobileSettingsRect) {
+      return mobileSettingsRect;
+    }
+
     if (step.step !== 4) {
       return target.getBoundingClientRect();
     }
@@ -777,6 +1130,109 @@ document.addEventListener("DOMContentLoaded", function () {
     imageArrow.style.transform = "rotate(0deg)";
   }
 
+  function positionMobileTourCard(step, rect, spotRect) {
+    if (!card) return;
+
+    if (imageArrow) {
+      imageArrow.classList.remove("is-visible");
+      imageArrow.classList.remove("is-step-2-arrow");
+    }
+
+    card.style.removeProperty("width");
+    card.style.removeProperty("padding");
+
+    const sideStar = card.querySelector(".bravesprouts-tour-side-star");
+    if (sideStar) {
+      sideStar.style.removeProperty("left");
+      sideStar.style.removeProperty("top");
+      sideStar.style.removeProperty("width");
+      sideStar.style.removeProperty("height");
+    }
+
+    card.classList.remove("is-mobile-extra-compact");
+
+    const margin = 12;
+    const gap = 12;
+    const pillRect = stepPill ? stepPill.getBoundingClientRect() : { bottom: 72 };
+    const minTop = Math.max(72, pillRect.bottom + 10);
+
+    if (step.step === 7 || step.step === 8) {
+      /*
+        Interactive Settings steps: keep the helper as a tiny top bar and
+        highlight only the actual controls so name/age and permission toggles
+        remain fully visible underneath it.
+      */
+      positionMobileSettingsCardAtTop();
+      return;
+    }
+
+    let measured = card.getBoundingClientRect();
+    let cardWidth = Math.min(measured.width || window.innerWidth - 24, window.innerWidth - 24);
+    let cardHeight = measured.height || 210;
+
+    if (cardHeight > cardWidth || window.innerHeight < 680) {
+      card.classList.add("is-mobile-extra-compact");
+      measured = card.getBoundingClientRect();
+      cardWidth = Math.min(measured.width || window.innerWidth - 24, window.innerWidth - 24);
+      cardHeight = measured.height || 190;
+    }
+
+    const maxLeft = Math.max(margin, window.innerWidth - cardWidth - margin);
+    const maxTop = Math.max(minTop, window.innerHeight - cardHeight - margin);
+
+    const centerLeft = rect.left + rect.width / 2 - cardWidth / 2;
+    const centerTop = rect.top + rect.height / 2 - cardHeight / 2;
+
+    const rawCandidates = [
+      { name: "below", left: centerLeft, top: rect.bottom + gap, arrowClass: "arrow-top" },
+      { name: "above", left: centerLeft, top: rect.top - cardHeight - gap, arrowClass: "arrow-bottom" },
+      { name: "bottom", left: centerLeft, top: window.innerHeight - cardHeight - margin, arrowClass: "arrow-top" },
+      { name: "top", left: centerLeft, top: minTop, arrowClass: "arrow-bottom" },
+      { name: "right", left: rect.right + gap, top: centerTop, arrowClass: "arrow-left" },
+      { name: "left", left: rect.left - cardWidth - gap, top: centerTop, arrowClass: "arrow-right" },
+      { name: "below-left", left: margin, top: rect.bottom + gap, arrowClass: "arrow-top" },
+      { name: "below-right", left: window.innerWidth - cardWidth - margin, top: rect.bottom + gap, arrowClass: "arrow-top" },
+      { name: "above-left", left: margin, top: rect.top - cardHeight - gap, arrowClass: "arrow-bottom" },
+      { name: "above-right", left: window.innerWidth - cardWidth - margin, top: rect.top - cardHeight - gap, arrowClass: "arrow-bottom" }
+    ];
+
+    const targetArea = Math.max(1, spotRect.width * spotRect.height);
+
+    const scored = rawCandidates.map((candidate) => {
+      const left = clamp(candidate.left, margin, maxLeft);
+      const top = clamp(candidate.top, minTop, maxTop);
+      const candidateRect = cardRectFromPosition(left, top, cardWidth, cardHeight);
+      const overlap = overlapArea(candidateRect, spotRect);
+      const visibleRatio = 1 - overlap / targetArea;
+      const cardCenterX = left + cardWidth / 2;
+      const cardCenterY = top + cardHeight / 2;
+      const targetCenterX = rect.left + rect.width / 2;
+      const targetCenterY = rect.top + rect.height / 2;
+      const distance = Math.hypot(cardCenterX - targetCenterX, cardCenterY - targetCenterY);
+      const meetsTarget = visibleRatio >= MOBILE_TARGET_MIN_VISIBLE_RATIO;
+
+      return {
+        ...candidate,
+        left,
+        top,
+        visibleRatio,
+        overlap,
+        distance,
+        score: (meetsTarget ? 100000 : 0) + visibleRatio * 10000 - distance
+      };
+    });
+
+    scored.sort((a, b) => b.score - a.score || a.overlap - b.overlap);
+    const best = scored[0];
+
+    card.style.left = `${best.left}px`;
+    card.style.top = `${best.top}px`;
+    card.style.zIndex = "99997";
+
+    card.classList.remove("arrow-left", "arrow-right", "arrow-top", "arrow-bottom");
+    card.classList.add(best.arrowClass);
+  }
+
   function positionTour() {
     if (tourCompleteShowing) {
       positionCompleteCard();
@@ -820,11 +1276,24 @@ document.addEventListener("DOMContentLoaded", function () {
     const spotLeft = Math.max(10, rect.left - padding);
     const spotWidth = Math.min(window.innerWidth - 20, rect.width + padding * 2);
     const spotHeight = Math.min(window.innerHeight - 20, rect.height + padding * 2);
+    const spotRect = {
+      left: spotLeft,
+      top: spotTop,
+      right: spotLeft + spotWidth,
+      bottom: spotTop + spotHeight,
+      width: spotWidth,
+      height: spotHeight
+    };
 
     spotlight.style.top = `${spotTop}px`;
     spotlight.style.left = `${spotLeft}px`;
     spotlight.style.width = `${spotWidth}px`;
     spotlight.style.height = `${spotHeight}px`;
+
+    if (isMobileTourScreen()) {
+      positionMobileTourCard(step, rectToPlain(rect), spotRect);
+      return;
+    }
 
     const isDemoSidebarStep = step.step === 2;
 
@@ -878,13 +1347,22 @@ document.addEventListener("DOMContentLoaded", function () {
       top = rect.bottom - 6;
       arrowClass = "arrow-top";
     } else if (step.step === 8) {
-      /*
-        Step 7 should sit ABOVE the permissions card.
-        arrow-bottom means the pointer appears on the bottom of the tour card,
-        pointing down toward the highlighted permissions section.
-      */
+      const pillRect = stepPill ? stepPill.getBoundingClientRect() : { bottom: 74 };
+      const gap = 16;
       left = rect.left + rect.width / 2 - cardWidth / 2;
-      top = rect.top - cardHeight - 24;
+      top = rect.top - cardHeight - gap;
+
+      /*
+        Keep the desktop Step 8 bubble fully above the highlighted permissions
+        card whenever the page has room. If the browser lands slightly short
+        after smooth scrolling, use the safest available top instead of letting
+        the bubble sit on top of the highlighted area.
+      */
+      const safestTop = Math.max(pillRect.bottom + 12, 86);
+      if (top < safestTop && rect.top - safestTop >= 190) {
+        top = safestTop;
+      }
+
       arrowClass = "arrow-bottom";
     } else if (step.step === 4) {
       const estimatedCardHeight = 210;
@@ -985,25 +1463,13 @@ document.addEventListener("DOMContentLoaded", function () {
     document.body.classList.toggle("bravesprouts-tour-step-6-active", step.step === 7);
     document.body.classList.toggle("bravesprouts-tour-step-7-active", step.step === 8);
 
-    if (step.step === 4) {
-      scrollStep2Slightly();
-    } else if (target) {
-      if (step.step === 8) {
-        /*
-          Put permissions lower in the viewport so the tour card has room above it.
-        */
-        target.scrollIntoView({
-          behavior: "smooth",
-          block: "end",
-          inline: "nearest"
-        });
-      } else {
-        target.scrollIntoView({
-          behavior: "smooth",
-          block: "center",
-          inline: "nearest"
-        });
-      }
+    const isMobileSettingsStep =
+      target && isMobileTourScreen() && (step.step === 7 || step.step === 8);
+
+    if (target && !isMobileSettingsStep) {
+      scrollTargetForTour(step, target);
+    } else {
+      unlockTourScrollForProgrammaticMove();
     }
 
     setTimeout(() => {
@@ -1012,13 +1478,28 @@ document.addEventListener("DOMContentLoaded", function () {
       }
 
       renderCardContent(step);
+
+      if (isMobileSettingsStep) {
+        scrollMobileSettingsControlsIntoView(step, target);
+
+        requestAnimationFrame(() => {
+          lockTourScroll();
+          positionTour();
+          cleanUrl();
+          setTimeout(positionTour, 80);
+        });
+
+        return;
+      }
+
+      lockTourScroll();
       positionTour();
       cleanUrl();
 
       if (step.step === 8) {
         setTimeout(positionTour, 250);
       }
-    }, step.step === 4 ? 220 : step.centerOnly ? 120 : step.step === 8 ? 420 : 300);
+    }, step.step === 4 ? 220 : step.centerOnly ? 120 : step.step === 8 ? 380 : 300);
   }
 
   renderStep();
