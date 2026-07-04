@@ -3013,3 +3013,32 @@ body.feedback-open {
 .activity-instructions-note strong {
   color: #5b34d6;
 }
+
+.dashboard-banner-mobile {
+  display: none;
+}
+
+@media (max-width: 520px) {
+  .dashboard-top-banner {
+    width: calc(100% + 32px);
+    margin-left: -16px;
+    margin-top: -16px;
+    margin-bottom: 18px;
+
+    padding: 7px 8px;
+    font-size: clamp(10.5px, 3.15vw, 12px);
+    line-height: 1.15;
+
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .dashboard-banner-full {
+    display: none;
+  }
+
+  .dashboard-banner-mobile {
+    display: inline;
+  }
+}
