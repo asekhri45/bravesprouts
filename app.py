@@ -729,12 +729,63 @@ def admin_user_overview():
     """)
 
     users = cursor.fetchall()
+
+    cursor.execute("""
+        SELECT
+            u.user_id,
+            a.activity_id,
+            a.activity_name,
+            a.activity_order,
+            a.level_of_realism,
+
+            COALESCE(p.time_spent_on_activity, 0) AS progress_time_spent,
+            COALESCE(p.active_minutes, 0) AS progress_active_minutes,
+
+            COALESCE(SUM(sl.active_minutes), 0) AS logged_active_minutes,
+            COALESCE(SUM(sl.minutes_spoken), 0) AS logged_minutes_spoken,
+            COUNT(sl.session_id) AS session_count,
+            MAX(sl.completed_at) AS last_played
+
+        FROM users u
+        JOIN progress p
+            ON p.user_id = u.user_id
+        JOIN activity a
+            ON a.activity_id = p.activity_id
+            AND a.is_active = 1
+        LEFT JOIN session_log sl
+            ON sl.user_id = u.user_id
+            AND sl.activity_id = a.activity_id
+
+        GROUP BY u.user_id, a.activity_id
+        ORDER BY u.parent_name, a.level_of_realism, a.activity_order
+    """)
+
+    level_time_rows = cursor.fetchall()
+
+    level_times_by_user = {}
+
+    for row in level_time_rows:
+        row_dict = dict(row)
+
+        logged_active = float(row_dict["logged_active_minutes"] or 0)
+        progress_active = float(row_dict["progress_active_minutes"] or 0)
+        progress_time = float(row_dict["progress_time_spent"] or 0)
+
+        # Prefer session_log, then fall back to progress fields.
+        display_minutes = logged_active or progress_active or progress_time
+
+        row_dict["display_minutes"] = round(display_minutes, 1)
+        row_dict["logged_minutes_spoken"] = round(float(row_dict["logged_minutes_spoken"] or 0), 1)
+
+        level_times_by_user.setdefault(row["user_id"], []).append(row_dict)
+
     conn.close()
 
     return render_template(
         "admin_user_overview.html",
         users=users,
         admin_stats=admin_stats,
+        level_times_by_user=level_times_by_user,
         active_page="admin_user_overview"
     )
 

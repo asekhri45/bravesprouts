@@ -1196,3 +1196,53 @@ body {
       grid-template-columns: 1fr;
     }
   }
+
+  .level-time-details {
+    min-width: 220px;
+  }
+
+  .level-time-details summary {
+    cursor: pointer;
+    color: #6d28d9;
+    font-size: 13px;
+    font-weight: 800;
+  }
+
+  .level-time-list {
+    margin-top: 10px;
+    display: grid;
+    gap: 8px;
+  }
+
+  .level-time-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 10px;
+    border-radius: 12px;
+    background: #faf8ff;
+    border: 1px solid #eee8ff;
+  }
+
+  .level-time-row strong {
+    display: block;
+    color: #17152f;
+    font-size: 12px;
+    font-weight: 850;
+    white-space: nowrap;
+  }
+
+  .level-time-row span {
+    display: block;
+    margin-top: 3px;
+    color: #77718f;
+    font-size: 11px;
+    white-space: nowrap;
+  }
+
+  .level-time-row b {
+    color: #17152f;
+    font-size: 13px;
+    font-weight: 900;
+    white-space: nowrap;
+  }

@@ -49,6 +49,7 @@
         <th>Child Name</th>
         <th>Child Age</th>
         <th>Unlocked Levels</th>
+        <th>Level Time</th>
         <th>Logins</th>
         <th>Tour</th>
         <th>Feedback</th>
@@ -64,6 +65,32 @@
         <td>{{ user.child_name or "Not added" }}</td>
         <td>{{ user.child_age or "Not added" }}</td>
         <td>{{ user.unlocked_levels }}/{{ user.total_levels or 9 }}</td>
+        <td>
+  <details class="level-time-details">
+    <summary>View time</summary>
+
+    <div class="level-time-list">
+      {% for level in level_times_by_user.get(user.user_id, []) %}
+        <div class="level-time-row">
+          <div>
+            <strong>
+              Level {{ level.activity_order }}:
+              {{ level.activity_name.replace("_", " ").title() }}
+            </strong>
+            <span>
+              {{ level.session_count }} session{{ "" if level.session_count == 1 else "s" }}
+              {% if level.last_played %}
+                · Last played {{ level.last_played }}
+              {% endif %}
+            </span>
+          </div>
+
+          <b>{{ "%.1f"|format(level.display_minutes) }} min</b>
+        </div>
+      {% endfor %}
+    </div>
+  </details>
+</td>
         <td>{{ user.login_count or 0 }}</td>
         <td>
   {% if user.has_seen_tour %}
