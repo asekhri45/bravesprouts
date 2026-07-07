@@ -52,34 +52,38 @@ except Exception as e:
 
 app = Flask(__name__)
 
-
 load_dotenv()
-
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-eleven_client = ElevenLabs(api_key=os.getenv("ELEVENLABS_API_KEY"))
 
 debug_mode = os.environ.get("FLASK_DEBUG") == "1"
 app.config["DEBUG"] = debug_mode
-is_development = os.environ.get("FLASK_ENV") == "development"
 
-#app.secret_key = secrets.token_hex(32)
+is_production = os.environ.get("FLASK_ENV") == "production"
+
+secret_key = os.environ.get("SECRET_KEY")
+
+if is_production and not secret_key:
+    raise RuntimeError("SECRET_KEY must be set in production")
+
+app.config["SECRET_KEY"] = secret_key or "dev-secret-key-change-later"
+
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SECURE=is_production,
+    SESSION_COOKIE_SAMESITE="Lax",
+    PERMANENT_SESSION_LIFETIME=1800,
+    SESSION_TYPE="filesystem",
+    SESSION_PERMANENT=True,
+    WTF_CSRF_SSL_STRICT=is_production
+)
+
+Session(app)
 csrf = CSRFProtect(app)
 
-app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "dev-secret-key-change-later")
-
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+eleven_client = ElevenLabs(api_key=os.getenv("ELEVENLABS_API_KEY"))
 serializer = URLSafeTimedSerializer(app.config["SECRET_KEY"])
 
 # Secure Flask Session Configuration
-app.config.update(
-    SESSION_COOKIE_HTTPONLY=True,
-    SESSION_COOKIE_SECURE=False,
-    SESSION_COOKIE_SAMESITE="Lax",
-    PERMANENT_SESSION_LIFETIME=1800
-)
-
-app.config["SESSION_TYPE"] = "filesystem"
-app.config["SESSION_PERMANENT"] = True
-Session(app)
 
 # HTTP Security Policies
 csp = {
@@ -92,7 +96,7 @@ csp = {
     "frame-src": "'self' https://www.youtube.com https://www.youtube-nocookie.com",
 }
 
-Talisman(app, content_security_policy=csp, force_https=False)
+Talisman(app, content_security_policy=csp, force_https=is_production)
 # Talisman(app, content_security_policy=csp, force_https=os.environ.get("FLASK_ENV") == "production")
 
 # RATE Limiting
@@ -233,6 +237,7 @@ def home():
 
 @app.route("/login", methods=["GET", "POST"])
 @limiter.limit("10 per minute")
+@csrf.exempt
 def login():
     ensure_feedback_tables()
 
@@ -274,7 +279,6 @@ def login():
             return render_template("login.html", error="* Incorrect email or password")
 
     return render_template("login.html")
-
 
 @app.route("/signup", methods=["GET", "POST"])
 @csrf.exempt
@@ -371,8 +375,9 @@ def signup():
         session["profile_icon"] = "profileicon.png"
         session.permanent = True
 
+        print("SIGNED UP USER:", user_id, dict(session))
         return redirect(url_for("dashboard"))
-
+    
     return render_template("signup.html")
 
 def admin_required(f):
