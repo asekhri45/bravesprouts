@@ -99,9 +99,10 @@ csp = {
     "connect-src": (
         "'self' "
         "https://www.google-analytics.com "
-        "https://region1.google-analytics.com "
         "https://analytics.google.com "
-        "https://www.googletagmanager.com"
+        "https://*.google-analytics.com "
+        "https://www.googletagmanager.com "
+        "https://*.googletagmanager.com"
     ),
     "style-src": "'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src": "'self' https://fonts.gstatic.com data:",
@@ -109,7 +110,6 @@ csp = {
     "media-src": "'self' data: blob:",
     "frame-src": "'self' https://www.youtube.com https://www.youtube-nocookie.com",
 }
-
 Talisman(app, content_security_policy=csp, force_https=is_production)
 # Talisman(app, content_security_policy=csp, force_https=os.environ.get("FLASK_ENV") == "production")
 
