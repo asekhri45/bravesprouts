@@ -6936,6 +6936,10 @@ def get_profile_based_mystery_animal_guess(game_state):
 
     return None
 
+@app.route("/our-story")
+def our_story():
+    return render_template("ourstory.html")
+
 def is_mystery_animal_guess_ready(game_state):
     """
     Decide whether Star should make an educated guess now.
@@ -23629,4 +23633,4 @@ def restaurant_game_transcribe():
 
 
 if __name__ == "__main__":
-    app.run(debug=app.config["DEBUG"])
+    app.run(debug=app.config["DEBUG"], port=5002)

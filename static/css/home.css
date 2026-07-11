@@ -962,3 +962,38 @@ body::after {
         border-radius: 16px;
     }
 }
+
+.nav-inner {
+    width: min(1240px, 92%);
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: 28px;
+}
+
+.logo {
+    width: min(280px, 23vw);
+}
+
+.top-tabs {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 26px;
+    min-width: 0;
+}
+
+.top-tab {
+    white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+    .top-tabs {
+        gap: 14px;
+    }
+
+    .top-tab {
+        font-size: 0.77rem;
+    }
+}

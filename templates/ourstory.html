@@ -1,0 +1,338 @@
+{% extends "base.html" %}
+
+{% block title %}Our Story - MyBraveSprout{% endblock %}
+
+{% block head %}
+<link
+  rel="stylesheet"
+  href="{{ url_for('static', filename='css/ourstory.css') }}?v=16"
+>
+{% endblock %}
+
+{% block content %}
+
+<header class="navbar show-buttons">
+  <div class="nav-inner">
+
+    <a href="/" class="nav-logo-link" aria-label="MyBraveSprout Home">
+      <img
+        src="{{ url_for('static', filename='images/logo_v4.png') }}"
+        class="logo"
+        alt="MyBraveSprout"
+      >
+    </a>
+
+    <nav class="top-tabs" aria-label="Main navigation">
+      <a href="/" class="top-tab">Home</a>
+      <a href="/our-story" class="top-tab active" aria-current="page">
+        Our Story
+      </a>
+      <a href="/acknowledgments2" class="top-tab">
+        Acknowledgments
+      </a>
+    </nav>
+
+    <div class="nav-buttons">
+      <a href="/login" class="hero-btn secondary">Login</a>
+      <a href="/signup" class="hero-btn primary">Get Started</a>
+    </div>
+
+  </div>
+</header>
+
+
+<main class="story">
+
+  <!-- Hero -->
+<section class="hero">
+
+  <div class="hero__copy">
+    <p class="eyebrow">Behind MyBraveSprout</p>
+
+    <h1 class="hero__title">Our <em>Story</em></h1>
+
+    <p class="hero__lead">
+      MyBraveSprout grew out of a personal family experience and has continued
+      to grow through conversations with families and specialists.
+    </p>
+
+    <p class="hero__desc">
+      It was created to give children a more comfortable place to practice
+      speaking, with gentle opportunities to build confidence from home.
+    </p>
+  </div>
+
+  <div class="hero__visual">
+    <img
+      src="{{ url_for('static', filename='images/our_story_hero.png') }}"
+      class="hero__image"
+      alt="A child practicing communication with a friendly animated character"
+    >
+  </div>
+
+  <ul class="hero__facts">
+    <li>Free for families</li>
+    <li>Shaped with specialists</li>
+    <li>Practice at home, at your child's pace</li>
+  </ul>
+
+</section>
+
+
+  <!-- Chapters, tied together by the stem -->
+  <div class="chapters">
+    <div class="stem" aria-hidden="true">
+      <span class="stem__fill"></span>
+    </div>
+
+    <!-- Beginning -->
+    <section class="chapter reveal" aria-labelledby="beginning-heading">
+      <div class="chapter__head">
+        <p class="eyebrow">Personal Beginning</p>
+        <h2 id="beginning-heading">Where MyBraveSprout began</h2>
+      </div>
+
+      <div class="chapter__body">
+        <p class="lede">
+          MyBraveSprout grew out of my family’s experience with selective
+          mutism.
+        </p>
+
+        <p>
+          My younger sister was talkative and playful at home, but speaking in
+          many settings outside our home was much harder for her. As my family
+          learned how to support her, I began to understand how anxiety could
+          make speaking feel incredibly difficult, even when a child wanted to
+          communicate.
+        </p>
+
+        <p class="pullquote">
+          Over time, she became more comfortable speaking in situations that
+          had once felt overwhelming. Years later, she was elected president of
+          her school.
+        </p>
+
+        <p>
+          Her progress took time, patience, and many opportunities to practice
+          in settings where she felt comfortable. Watching that process showed
+          me how important it was for support to continue beyond scheduled
+          sessions and become part of everyday life.
+        </p>
+
+        <p>
+          As I became more involved in computer science and software
+          development, I began wondering whether I could build something that
+          made those lower-pressure practice opportunities easier to access at
+          home.
+        </p>
+
+        <p>
+          Seeing the confident and expressive person our family had always
+          known begin to share that part of herself more freely with the people
+          around her became my greatest inspiration for creating MyBraveSprout.
+          I wanted to build something that could help other children and
+          families take similar steps.
+        </p>
+      </div>
+    </section>
+
+
+    <!-- Purpose -->
+    <section class="chapter reveal" aria-labelledby="practice-heading">
+      <div class="chapter__head">
+        <p class="eyebrow">The purpose</p>
+        <h2 id="practice-heading">A comfortable place to practice</h2>
+      </div>
+
+      <div class="chapter__body">
+        <p class="lede">
+          MyBraveSprout is a free, interactive platform designed to give
+          children gentle opportunities to practice speaking from the comfort
+          of home.
+        </p>
+
+        <p>
+          Through game-like activities and friendly animated characters,
+          children can practice answering questions, making choices, asking for
+          help, and participating in simple conversations. The activities begin
+          with smaller, lower-pressure interactions and gradually encourage
+          more independent responses.
+        </p>
+
+        <p>
+          The goal is not to pressure children into speaking. It is to help
+          speaking feel a little safer, more familiar, and more achievable, one
+          step at a time.
+        </p>
+
+        <aside class="note">
+          <strong>An additional resource</strong>
+
+          <p>
+            MyBraveSprout is not intended to replace professional care. It was
+            created as an additional resource that families can use between
+            sessions and alongside the strategies recommended by their child’s
+            specialists.
+          </p>
+        </aside>
+      </div>
+    </section>
+
+
+    <!-- Collaboration -->
+    <section class="chapter reveal" aria-labelledby="community-heading">
+      <div class="chapter__head">
+        <p class="eyebrow">Growing together</p>
+        <h2 id="community-heading">
+          Built with families and specialists
+        </h2>
+      </div>
+
+      <div class="chapter__body">
+        <p class="lede">
+          Although MyBraveSprout began with my family’s story, it cannot be
+          built from our experience alone.
+        </p>
+
+        <p>
+          I have met with selective mutism specialists and families to better
+          understand what children need and how technology may support them
+          responsibly. I hope to continue having these conversations as
+          MyBraveSprout grows.
+        </p>
+
+        <p>
+          Parents and children have also helped shape the platform through
+          their feedback. Their experiences have influenced the activities,
+          characters, pacing, parent resources, and the way the platform
+          responds to each child.
+        </p>
+
+        <p>
+          MyBraveSprout is still growing. Every conversation with a family or
+          specialist teaches me something new, and every piece of feedback
+          helps make the platform more thoughtful, accessible, and useful.
+        </p>
+      </div>
+    </section>
+
+
+    <!-- Creator -->
+    <section class="creator reveal" aria-labelledby="creator-heading">
+      <div class="creator__photo-wrap">
+        <img
+          src="{{ url_for('static', filename='images/aarav_sekhri.png') }}"
+          class="creator__photo"
+          alt="Aarav Sekhri"
+        >
+      </div>
+
+      <div class="creator__copy">
+        <p class="eyebrow">Behind the project</p>
+
+        <h2 id="creator-heading">Aarav Sekhri</h2>
+
+        <p class="creator__role">
+          Founder and Lead Developer, MyBraveSprout
+        </p>
+
+        <p>
+          I am a high school student interested in computer science,
+          competitive programming, artificial intelligence, and building
+          technology that addresses real needs.
+        </p>
+
+        <p>
+          MyBraveSprout brought those interests together with an experience
+          that was deeply personal to my family.
+        </p>
+      </div>
+    </section>
+  </div>
+
+
+  <!-- Closing -->
+  <section class="closing reveal" aria-labelledby="closing-heading">
+    <p class="eyebrow">Looking ahead</p>
+
+    <h2 id="closing-heading">
+      Helping children take meaningful steps forward
+    </h2>
+
+    <p>
+      My hope is that MyBraveSprout can give children another comfortable place
+      to practice, build confidence at their own pace, and take meaningful
+      steps toward sharing their voices more freely.
+    </p>
+
+    <a href="/signup" class="closing__cta">
+      Start with your child
+    </a>
+  </section>
+
+</main>
+
+
+<script src="{{ url_for('static', filename='js/nav-bar.js') }}"></script>
+
+<script>
+  (function () {
+    const reduce = window.matchMedia(
+      "(prefers-reduced-motion: reduce)"
+    ).matches;
+
+    // Scroll-linked stem growth
+    const stem = document.querySelector(".stem");
+    const fill = document.querySelector(".stem__fill");
+    const chapters = document.querySelector(".chapters");
+
+    function growStem() {
+      if (!stem || !fill || !chapters) return;
+
+      const rect = chapters.getBoundingClientRect();
+      const anchor = window.innerHeight * 0.55;
+      const progress = (anchor - rect.top) / rect.height;
+
+      fill.style.height =
+        Math.min(Math.max(progress, 0), 1) * 100 + "%";
+    }
+
+    if (reduce && fill) {
+      fill.style.height = "100%";
+    } else {
+      growStem();
+
+      window.addEventListener("scroll", growStem, {
+        passive: true
+      });
+
+      window.addEventListener("resize", growStem);
+    }
+
+    // Section reveals
+    const items = document.querySelectorAll(".reveal");
+
+    if (reduce || !("IntersectionObserver" in window)) {
+      items.forEach((el) => el.classList.add("is-visible"));
+    } else {
+      const io = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              entry.target.classList.add("is-visible");
+              io.unobserve(entry.target);
+            }
+          });
+        },
+        {
+          threshold: 0.12,
+          rootMargin: "0px 0px -60px 0px"
+        }
+      );
+
+      items.forEach((el) => io.observe(el));
+    }
+  })();
+</script>
+
+{% endblock %}
