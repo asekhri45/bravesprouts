@@ -245,6 +245,7 @@ def initialize_user_progress(cursor, user_id):
 
 # ROUTES
 @app.route("/")
+@app.route("/home")
 def home():
     return render_template("home.html")
 
