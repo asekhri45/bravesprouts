@@ -1,30 +1,40 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+    <title>{% block title %}MyBraveSprout{% endblock %}</title>
+
     {% block head %}{% endblock %}
-    <title>MyBraveSprout</title>
+
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,200..1000;1,200..1000&display=swap" rel="stylesheet">
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,200..1000;1,200..1000&display=swap"
+        rel="stylesheet"
+    >
+
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 
     <!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-E018EPCBS6"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-E018EPCBS6"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
 
-  gtag('config', 'G-E018EPCBS6');
-</script>
+        function gtag() {
+            dataLayer.push(arguments);
+        }
 
+        gtag('js', new Date());
+        gtag('config', 'G-E018EPCBS6');
+    </script>
 </head>
 
 <body class="{% block body_class %}{% endblock %}">
-    {% block content %} {% endblock %}
+    {% block content %}{% endblock %}
 </body>
-
 </html>

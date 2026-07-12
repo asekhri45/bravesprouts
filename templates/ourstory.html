@@ -1,8 +1,13 @@
 {% extends "base.html" %}
 
-{% block title %}Our Story - MyBraveSprout{% endblock %}
+{% block title %}Our Story | MyBraveSprout - Helping Children with Selective Mutism{% endblock %}
 
 {% block head %}
+<meta
+    name="description"
+    content="Learn how MyBraveSprout was inspired by a family's experience with selective mutism and built to help children practice speaking through gentle, game-based conversations."
+>
+
 <link
   rel="stylesheet"
   href="{{ url_for('static', filename='css/ourstory.css') }}?v=16"
@@ -27,6 +32,7 @@
       <a href="/our-story" class="top-tab active" aria-current="page">
         Our Story
       </a>
+      <a href="{{ url_for('parent_academy') }}" class="top-tab"> Parent Resources </a>
       <a href="/acknowledgments2" class="top-tab">
         Acknowledgments
       </a>

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %} MyBraveSprout - Home {% endblock %}
+{% block title %} MyBraveSprout | Free Selective Mutism Games for Kids {% endblock %}
 
 {% block head %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/home.css') }}">
@@ -17,6 +17,7 @@
             <nav class="top-tabs" aria-label="Main navigation">
                 <a href="/" class="top-tab active">Home</a>
                 <a href="{{ url_for('our_story') }}" class="top-tab">Our Story</a>
+                <a href="{{ url_for('parent_academy') }}" class="top-tab"> Parent Resources </a>
                 <a href="/acknowledgments2" class="top-tab">Acknowledgments</a>
             </nav>
 

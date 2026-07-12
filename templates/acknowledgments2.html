@@ -1,8 +1,12 @@
 {% extends "base.html" %}
 
-{% block title %}Acknowledgments - MyBraveSprout{% endblock %}
+{% block title %}Acknowledgments | MyBraveSprout{% endblock %}
 
 {% block head %}
+<meta
+    name="description"
+    content="Meet the specialists, families, and contributors whose feedback and support helped shape MyBraveSprout for children with selective mutism."
+>
 <link rel="stylesheet" href="{{ url_for('static', filename='css/acknowledgments2.css') }}?v=1">
 {% endblock %}
 
@@ -19,7 +23,8 @@
       <a href="{{ url_for('our_story') }}" class="top-tab">
         Our Story
       </a>
-      <a href="/acknowledgments2" class="top-tab active">Acknowledgments</a>
+      <a href="{{ url_for('parent_academy') }}" class="top-tab"> Parent Resources </a>
+      <a href="/acknowledgments2" class="top-tab active" aria-current="page">Acknowledgments</a>
     </nav>
 
     <div class="nav-buttons">

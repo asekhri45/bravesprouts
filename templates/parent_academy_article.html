@@ -1,22 +1,68 @@
-{% extends "dashboard_layout.html" %}
+{% extends "base.html" %}
+
+{% block title %}{{ article.title }} | MyBraveSprout{% endblock %}
 
 {% block head %}
-{{ super() }}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/parent_academy.css') }}?v=18">
+<meta
+  name="description"
+  content="{{ article.summary }}"
+>
+<link
+  rel="stylesheet"
+  href="{{ url_for('static', filename='css/parent_academy.css') }}?v=17"
+>
 {% endblock %}
 
-{% block title %}{{ article.title }}{% endblock %}
+{% block content %}
 
-{% block dashboard_content %}
+<header class="navbar show-buttons">
+  <div class="nav-inner">
 
+    <a href="{{ url_for('home') }}" class="nav-logo-link" aria-label="MyBraveSprout Home">
+      <img
+        src="{{ url_for('static', filename='images/logo_v4.png') }}"
+        class="logo"
+        alt="MyBraveSprout"
+      >
+    </a>
+
+    <nav class="top-tabs" aria-label="Main navigation">
+      <a href="{{ url_for('home') }}" class="top-tab">Home</a>
+
+      <a href="{{ url_for('our_story') }}" class="top-tab">
+        Our Story
+      </a>
+
+      <a
+        href="{{ url_for('parent_academy') }}"
+        class="top-tab active"
+        aria-current="page"
+      >
+        Parent Resources
+      </a>
+
+      <a href="{{ url_for('acknowledgments2') }}" class="top-tab">
+        Acknowledgments
+      </a>
+    </nav>
+
+    <div class="nav-buttons">
+      <a href="{{ url_for('login') }}" class="hero-btn secondary">Login</a>
+      <a href="{{ url_for('signup') }}" class="hero-btn primary">Get Started</a>
+    </div>
+
+  </div>
+</header>
+
+<main class="public-parent-resources">
 <div class="academy-article-shell">
 
   <a href="{{ url_for('parent_academy') }}" class="article-back-btn">
-    ← Back to Parent Academy
+    ← Back to Parent Resources
   </a>
 
   <p class="article-breadcrumb">
-    Parent Academy / {{ article.category }}
+    Parent Resources / {{ article.category }}
   </p>
 
   <section class="article-hero">
@@ -45,5 +91,8 @@
   </section>
 
 </div>
+</main>
+
+<script src="{{ url_for('static', filename='js/nav-bar.js') }}"></script>
 
 {% endblock %}

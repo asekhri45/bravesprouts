@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, session, url_for, abort, flash
+from flask import Flask, render_template, request, redirect, session, url_for, abort, flash, Response
 import sqlite3
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -18715,17 +18715,15 @@ def library_guessing_game_transcribe():
         }), 500
 
 
-@app.route("/parent-academy")
-@login_required
+@app.route("/parent-resources")
 def parent_academy():
     return render_template(
         "parent_academy.html",
-        active_page="parent_academy",
-        parent=session["parent_name"],
-        child=session["child_name"],
-        profile_icon=session.get("profile_icon", "profileicon.png"),
-        has_seen_tour=get_has_seen_tour_for_user(session["user_id"])
     )
+
+@app.route("/parent-academy")
+def old_parent_academy():
+    return redirect(url_for("parent_academy"), code=301)
 
 def generate_gym_teacher_voice_elevenlabs(text):
     voice_id = os.getenv("GYM_TEACHER_VOICE_ID")
@@ -19449,8 +19447,7 @@ PARENT_ACADEMY_CATEGORIES = {
     }
 }
 
-@app.route("/parent-academy/category/<category_slug>")
-@login_required
+@app.route("/parent-resources/category/<category_slug>")
 def parent_academy_category(category_slug):
     category = PARENT_ACADEMY_CATEGORIES.get(category_slug)
 
@@ -19472,16 +19469,21 @@ def parent_academy_category(category_slug):
 
     return render_template(
         "parent_academy_category.html",
-        active_page="parent_academy",
-        parent=session["parent_name"],
-        child=session["child_name"],
-        profile_icon=session.get("profile_icon", "profileicon.png"),
         category=category,
         articles=articles
     )
 
-@app.route("/parent-academy/article/<slug>")
-@login_required
+@app.route("/parent-academy/category/<category_slug>")
+def old_parent_academy_category(category_slug):
+    return redirect(
+        url_for(
+            "parent_academy_category",
+            category_slug=category_slug
+        ),
+        code=301
+    )
+
+@app.route("/parent-resources/article/<slug>")
 def parent_academy_article(slug):
     article = PARENT_ACADEMY_ARTICLES.get(slug)
 
@@ -19490,11 +19492,60 @@ def parent_academy_article(slug):
 
     return render_template(
         "parent_academy_article.html",
-        active_page="parent_academy",
-        parent=session["parent_name"],
-        child=session["child_name"],
-        profile_icon=session.get("profile_icon", "profileicon.png"),
         article=article
+    )
+
+@app.route("/parent-academy/article/<slug>")
+def old_parent_academy_article(slug):
+    return redirect(
+        url_for("parent_academy_article", slug=slug),
+        code=301
+    )
+
+@app.route("/sitemap.xml")
+def sitemap():
+    urls = [
+        url_for("home", _external=True),
+        url_for("our_story", _external=True),
+        url_for("parent_academy", _external=True),
+        url_for("acknowledgments2", _external=True),
+        url_for("terms", _external=True),
+        url_for("privacy", _external=True),
+    ]
+
+    for category_slug in PARENT_ACADEMY_CATEGORIES:
+        urls.append(
+            url_for(
+                "parent_academy_category",
+                category_slug=category_slug,
+                _external=True
+            )
+        )
+
+    for article_slug in PARENT_ACADEMY_ARTICLES:
+        urls.append(
+            url_for(
+                "parent_academy_article",
+                slug=article_slug,
+                _external=True
+            )
+        )
+
+    xml_lines = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+    ]
+
+    for page_url in urls:
+        xml_lines.append(
+            f"  <url><loc>{page_url}</loc></url>"
+        )
+
+    xml_lines.append("</urlset>")
+
+    return Response(
+        "\n".join(xml_lines),
+        mimetype="application/xml"
     )
 
 @app.route("/ask-bravesprouts")

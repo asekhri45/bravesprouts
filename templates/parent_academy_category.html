@@ -1,54 +1,112 @@
-{% extends "dashboard_layout.html" %}
+{% extends "base.html" %}
+
+{% block title %}{{ category.title }} | Selective Mutism Parent Resources{% endblock %}
 
 {% block head %}
-{{ super() }}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/parent_academy.css') }}?v=17">
+<meta
+  name="description"
+  content="{{ category.subtitle }}"
+>
+<link
+  rel="stylesheet"
+  href="{{ url_for('static', filename='css/parent_academy.css') }}?v=17"
+>
 {% endblock %}
 
-{% block title %}{{ category.title }}{% endblock %}
+{% block content %}
 
-{% block dashboard_content %}
+<header class="navbar show-buttons">
+  <div class="nav-inner">
 
-<div class="academy-category-shell">
-
-  <a href="{{ url_for('parent_academy') }}" class="article-back-btn">
-    ← Back to Parent Resources
-  </a>
-
-  <section class="category-hero">
-    <p class="category-kicker">Parent Resource Collection</p>
-    <h1>{{ category.title }}</h1>
-    <p>{{ category.subtitle }}</p>
-  </section>
-
-  <section class="category-grid">
-    {% for article in articles %}
-      <a
-        href="{{ url_for('parent_academy_article', slug=article.slug) }}"
-        class="category-article-card"
+    <a href="{{ url_for('home') }}" class="nav-logo-link" aria-label="MyBraveSprout Home">
+      <img
+        src="{{ url_for('static', filename='images/logo_v4.png') }}"
+        class="logo"
+        alt="MyBraveSprout"
       >
-        <div class="category-card-art {{ article.art }}">
-          <img
-            src="{{ url_for('static', filename='images/' + article.image) }}"
-            alt=""
-            loading="lazy"
-            decoding="async"
-          >
-        </div>
+    </a>
 
-        <div class="category-card-body">
-          <div class="category-card-meta">
-            <span>{{ article.category }}</span>
-            <span>◷ {{ article.read_time }}</span>
+    <nav class="top-tabs" aria-label="Main navigation">
+      <a href="{{ url_for('home') }}" class="top-tab">
+        Home
+      </a>
+
+      <a href="{{ url_for('our_story') }}" class="top-tab">
+        Our Story
+      </a>
+
+      <a
+        href="{{ url_for('parent_academy') }}"
+        class="top-tab active"
+        aria-current="page"
+      >
+        Parent Resources
+      </a>
+
+      <a href="{{ url_for('acknowledgments2') }}" class="top-tab">
+        Acknowledgments
+      </a>
+    </nav>
+
+    <div class="nav-buttons">
+      <a href="{{ url_for('login') }}" class="hero-btn secondary">
+        Login
+      </a>
+
+      <a href="{{ url_for('signup') }}" class="hero-btn primary">
+        Get Started
+      </a>
+    </div>
+
+  </div>
+</header>
+
+<main class="public-parent-resources">
+  <div class="academy-category-shell">
+
+    <a href="{{ url_for('parent_academy') }}" class="article-back-btn">
+      ← Back to Parent Resources
+    </a>
+
+    <section class="category-hero">
+      <p class="category-kicker">Parent Resource Collection</p>
+
+      <h1>{{ category.title }}</h1>
+
+      <p>{{ category.subtitle }}</p>
+    </section>
+
+    <section class="category-grid">
+      {% for article in articles %}
+        <a
+          href="{{ url_for('parent_academy_article', slug=article.slug) }}"
+          class="category-article-card"
+        >
+          <div class="category-card-art {{ article.art }}">
+            <img
+              src="{{ url_for('static', filename='images/' + article.image) }}"
+              alt=""
+              loading="lazy"
+              decoding="async"
+            >
           </div>
 
-          <h3>{{ article.title }}</h3>
-          <p>{{ article.summary }}</p>
-        </div>
-      </a>
-    {% endfor %}
-  </section>
+          <div class="category-card-body">
+            <div class="category-card-meta">
+              <span>{{ article.category }}</span>
+              <span>◷ {{ article.read_time }}</span>
+            </div>
 
-</div>
+            <h3>{{ article.title }}</h3>
+            <p>{{ article.summary }}</p>
+          </div>
+        </a>
+      {% endfor %}
+    </section>
+
+  </div>
+</main>
+
+<script src="{{ url_for('static', filename='js/nav-bar.js') }}"></script>
 
 {% endblock %}

@@ -1,3 +1,173 @@
+:root {
+  --color-blue: #3b82f6;
+  --color-blue-dark: #2563eb;
+  --color-white: #ffffff;
+  --color-border: #e5e7eb;
+  --color-text-dark: #3f3f46;
+  --color-shadow: rgba(0, 0, 0, 0.03);
+
+  --nav-height: 90px;
+  --container-width: min(1240px, 92%);
+  --border-radius-btn: 16px;
+}
+
+html {
+  background: var(--color-white);
+}
+
+body {
+  margin: 0;
+  padding-top: var(--nav-height);
+  background: var(--color-white);
+  position: relative;
+}
+
+/* =========================
+   PUBLIC NAVBAR
+========================= */
+
+.navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  padding: 18px 0;
+  background: var(--color-white);
+  z-index: 1000;
+  transition:
+    border-bottom 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+.navbar.scrolled {
+  border-bottom: 1px solid var(--color-border);
+  box-shadow: 0 4px 10px var(--color-shadow);
+}
+
+.nav-inner {
+  width: var(--container-width);
+  margin: 0 auto;
+
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 28px;
+}
+
+.nav-logo-link {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.logo {
+  width: min(280px, 23vw);
+}
+
+.top-tabs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 26px;
+  min-width: 0;
+}
+
+.top-tab {
+  color: var(--color-text-dark);
+  text-decoration: none;
+  white-space: nowrap;
+
+  font-size: 1rem;
+  font-weight: 600;
+
+  padding: 10px 0 8px;
+  border-bottom: 2px solid transparent;
+
+  transition:
+    color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.top-tab:hover,
+.top-tab.active {
+  color: var(--color-blue);
+}
+
+.top-tab.active {
+  font-weight: 700;
+  border-bottom-color: var(--color-blue);
+}
+
+.nav-buttons {
+  display: flex;
+  gap: 12px;
+
+  opacity: 0;
+  transform: translateY(-6px);
+  pointer-events: none;
+
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s ease;
+}
+
+.navbar.show-buttons .nav-buttons {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.hero-btn {
+  text-decoration: none;
+  text-align: center;
+
+  padding: 16px 24px;
+  border-radius: var(--border-radius-btn);
+
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+
+  transition: 0.2s ease;
+}
+
+.hero-btn.primary {
+  background: var(--color-blue);
+  color: var(--color-white);
+  box-shadow: 0 6px 0 var(--color-blue-dark);
+}
+
+.hero-btn.primary:hover {
+  transform: translateY(1px);
+  box-shadow: 0 5px 0 var(--color-blue-dark);
+}
+
+.hero-btn.secondary {
+  background: var(--color-white);
+  color: var(--color-blue);
+  border: 2px solid var(--color-border);
+  box-shadow: 0 4px 0 var(--color-border);
+}
+
+.hero-btn.secondary:hover {
+  transform: translateY(1px);
+  box-shadow: 0 3px 0 var(--color-border);
+}
+
+.nav-buttons .hero-btn {
+  padding: 12px 18px;
+  font-size: 0.9rem;
+  border-radius: 14px;
+}
+
+.navbar.scrolled .nav-buttons .hero-btn {
+  padding: 11px 14px 6px;
+  font-size: 0.82rem;
+  transform: translateY(-3px);
+  line-height: 1.6;
+}
+
 /* =========================
    PARENT ACADEMY SHARED
 ========================= */
@@ -1785,5 +1955,68 @@
   .research-note-copy p {
     font-size: 13px;
     line-height: 1.5;
+  }
+}
+
+.public-parent-resources {
+  width: var(--container-width);
+  margin: 0 auto;
+  padding: 32px 0 80px;
+}
+
+@media (max-width: 700px) {
+  .public-parent-resources {
+    width: var(--container-width);
+    padding-top: 24px;
+  }
+}
+
+@media (max-width: 950px) {
+  :root {
+    --nav-height: 124px;
+    --container-width: min(92%, 720px);
+  }
+
+  .nav-inner {
+    width: var(--container-width);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .logo {
+    width: min(82vw, 330px);
+  }
+
+  .top-tabs {
+    gap: 20px;
+  }
+
+  .top-tab {
+    font-size: 0.88rem;
+    padding: 6px 0 7px;
+  }
+
+  .nav-buttons {
+    display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  :root {
+    --nav-height: 124px;
+  }
+
+  .navbar {
+    padding: 14px 0 12px;
+  }
+
+  .top-tabs {
+    gap: 14px;
+  }
+
+  .top-tab {
+    font-size: 0.77rem;
   }
 }
