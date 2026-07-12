@@ -117,7 +117,6 @@ Talisman(app, content_security_policy=csp, force_https=is_production)
 limiter = Limiter(
     get_remote_address,
     app=app,
-    default_limits=["200 per day", "50 per hour"]
 )
 
 def get_db_connection():
