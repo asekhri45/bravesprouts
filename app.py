@@ -19505,7 +19505,7 @@ def old_parent_academy_article(slug):
 @app.route("/sitemap.xml")
 def sitemap():
     urls = [
-        url_for("home", _external=True),
+        request.url_root.rstrip("/") + "/",
         url_for("our_story", _external=True),
         url_for("parent_academy", _external=True),
         url_for("acknowledgments2", _external=True),
