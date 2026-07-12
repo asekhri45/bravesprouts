@@ -86,31 +86,67 @@ serializer = URLSafeTimedSerializer(app.config["SECRET_KEY"])
 # Secure Flask Session Configuration
 
 # HTTP Security Policies
+# HTTP Security Policies
 csp = {
     "default-src": "'self'",
+
     "script-src": (
         "'self' "
         "'unsafe-inline' "
         "https://www.googletagmanager.com "
         "https://www.google-analytics.com "
         "https://www.youtube.com "
-        "https://www.youtube-nocookie.com"
+        "https://www.youtube-nocookie.com "
+        "https://www.clarity.ms "
+        "https://*.clarity.ms"
     ),
+
     "connect-src": (
         "'self' "
         "https://www.google-analytics.com "
         "https://analytics.google.com "
         "https://*.google-analytics.com "
         "https://www.googletagmanager.com "
-        "https://*.googletagmanager.com"
+        "https://*.googletagmanager.com "
+        "https://www.clarity.ms "
+        "https://*.clarity.ms "
+        "https://c.bing.com "
+        "https://*.bing.com"
     ),
-    "style-src": "'self' 'unsafe-inline' https://fonts.googleapis.com",
-    "font-src": "'self' https://fonts.gstatic.com data:",
-    "img-src": "'self' data: https:",
+
+    "style-src": (
+        "'self' "
+        "'unsafe-inline' "
+        "https://fonts.googleapis.com"
+    ),
+
+    "font-src": (
+        "'self' "
+        "https://fonts.gstatic.com "
+        "data:"
+    ),
+
+    "img-src": (
+        "'self' "
+        "data: "
+        "blob: "
+        "https:"
+    ),
+
     "media-src": "'self' data: blob:",
-    "frame-src": "'self' https://www.youtube.com https://www.youtube-nocookie.com",
+
+    "frame-src": (
+        "'self' "
+        "https://www.youtube.com "
+        "https://www.youtube-nocookie.com"
+    ),
 }
-Talisman(app, content_security_policy=csp, force_https=is_production)
+
+Talisman(
+    app,
+    content_security_policy=csp,
+    force_https=is_production
+)
 # Talisman(app, content_security_policy=csp, force_https=os.environ.get("FLASK_ENV") == "production")
 
 # RATE Limiting
