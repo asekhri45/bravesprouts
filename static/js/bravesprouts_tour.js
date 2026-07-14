@@ -7,7 +7,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   const urlParams = new URLSearchParams(window.location.search);
   const urlStep = Number(urlParams.get("tour"));
-  const hasUrlStep = Number.isInteger(urlStep) && urlStep >= 1 && urlStep <= 8;
+  const hasUrlStep = Number.isInteger(urlStep) && urlStep >= 1 && urlStep <= 7;
 
   const hasSeenTour = layout.dataset.hasSeenTour === "1";
   if (hasSeenTour && !hasUrlStep) return;
@@ -23,7 +23,7 @@ document.addEventListener("DOMContentLoaded", function () {
       pillLabel: "Start guided tour",
       icon: "👋",
       title: "Welcome to MyBraveSprout!",
-      text: "Let's take a quick 1 minute tour before getting started. It shows the demo videos, activity path, parent resources, questions, profile setup, and permissions.",
+      text: "Let's take a quick 1 minute tour before getting started. It shows the demo videos, activity path, questions, profile setup, and permissions.",
       mobileText: "This quick tour will show you the main features you'll use most.",
       badge: "Required setup • About 1 minute",
       instruction: "Select Next to begin the guided tour.",
@@ -95,27 +95,6 @@ document.addEventListener("DOMContentLoaded", function () {
     },
     {
       step: 5,
-      page: "parent-academy",
-      path: "/parent-academy",
-      target: "parent-academy",
-      mobileScrollSelector: '[data-tour-target="parent-academy"]',
-      highlightSelectors: [
-        ".academy-section .academy-section-header",
-        ".academy-section .academy-resource-row",
-        '.sidebar-nav a[href="/parent-academy"], .sidebar-nav a[href$="/parent-academy"]'
-      ],
-      pillLabel: "Parent Resources",
-      icon: "📚",
-      title: "Parent resources",
-      text: "Browse short articles that explain selective mutism concepts, family situations, and support strategies in parent-friendly language.",
-      mobileText: "Browse helpful articles and practical ideas to support your child.",
-      instruction: "Select Next to continue.",
-      mobileInstruction: "Select Next to continue.",
-      nextText: "Next",
-      sideImage: true
-    },
-    {
-      step: 6,
       page: "ask-bravesprouts",
       path: "/ask-bravesprouts",
       target: "ask-input",
@@ -134,7 +113,7 @@ document.addEventListener("DOMContentLoaded", function () {
       sideImage: true
     },
     {
-      step: 7,
+      step: 6,
       page: "settings",
       path: "/settings",
       target: "settings-child-profile",
@@ -153,7 +132,7 @@ document.addEventListener("DOMContentLoaded", function () {
       sideImage: true
     },
     {
-      step: 8,
+      step: 7,
       page: "settings",
       path: "/settings",
       target: "settings-permissions",
@@ -197,7 +176,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function currentPage() {
     if (path.startsWith("/getting-started")) return "getting-started";
-    if (path.startsWith("/parent-academy")) return "parent-academy";
     if (path.startsWith("/ask-bravesprouts")) return "ask-bravesprouts";
     if (path.startsWith("/settings")) return "settings";
     if (path.startsWith("/dashboard")) return "dashboard";
@@ -329,8 +307,7 @@ document.addEventListener("DOMContentLoaded", function () {
       "bravesprouts-tour-step-4-active",
       "bravesprouts-tour-step-5-active",
       "bravesprouts-tour-step-6-active",
-      "bravesprouts-tour-step-7-active",
-      "bravesprouts-tour-step-8-active"
+      "bravesprouts-tour-step-7-active"
     );
 
     document.documentElement.classList.remove("bravesprouts-tour-no-scroll");
@@ -639,7 +616,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function handleTourFormSubmit(event) {
     const step = getStep(activeStepNumber);
-    if (!step || step.step !== 7 || tourCompleteShowing) return;
+    if (!step || step.step !== 6 || tourCompleteShowing) return;
 
     const form = event.target.closest
       ? event.target.closest('form[data-tour-target="settings-child-profile"]')
@@ -657,7 +634,7 @@ document.addEventListener("DOMContentLoaded", function () {
     saveChildProfileDuringTour(form, event.submitter);
   }
 
-  function addPermissionListenersForStep8() {
+  function addPermissionListenersForStep7() {
     const audioToggle = document.getElementById("audioPermissionToggle");
     const micToggle = document.getElementById("microphonePermissionToggle");
 
@@ -668,7 +645,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
       toggle.addEventListener("click", function () {
         window.setTimeout(() => {
-          if (activeStepNumber === 8 && arePermissionsComplete()) {
+          if (activeStepNumber === 7 && arePermissionsComplete()) {
             clearTourRequirement();
             showTourStatus("Audio and microphone are both on.");
           }
@@ -736,8 +713,7 @@ document.addEventListener("DOMContentLoaded", function () {
       "bravesprouts-tour-step-4-active",
       "bravesprouts-tour-step-5-active",
       "bravesprouts-tour-step-6-active",
-      "bravesprouts-tour-step-7-active",
-      "bravesprouts-tour-step-8-active"
+      "bravesprouts-tour-step-7-active"
     );
 
     if (spotlight) {
@@ -842,7 +818,7 @@ document.addEventListener("DOMContentLoaded", function () {
   function scrollTargetIntoViewForDesktop(step, target) {
     if (!target || step.centerOnly) return;
 
-    if (step.step === 8) {
+    if (step.step === 7) {
       const rect = target.getBoundingClientRect();
       const currentScrollY = window.pageYOffset || document.documentElement.scrollTop || 0;
       const absoluteTop = rect.top + currentScrollY;
@@ -956,7 +932,7 @@ document.addEventListener("DOMContentLoaded", function () {
       left = rect.left;
       top = rect.top - cardHeight - 22;
       arrowClass = "arrow-bottom";
-    } else if (step.step === 8) {
+    } else if (step.step === 7) {
       left = rect.left + rect.width / 2 - cardWidth / 2;
       top = rect.top - cardHeight - 18;
       arrowClass = "arrow-bottom";
@@ -1115,8 +1091,8 @@ document.addEventListener("DOMContentLoaded", function () {
     renderStepPill(step);
     renderCardContent(step);
 
-    if (step.step === 8) {
-      addPermissionListenersForStep8();
+    if (step.step === 7) {
+      addPermissionListenersForStep7();
     }
 
     setActiveTarget(step, target);
