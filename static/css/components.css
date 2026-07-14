@@ -1,0 +1,151 @@
+/*
+  Shared component classes — Phase 2.
+
+  Scope: consumed by the redesigned homepage only (see tokens.css header
+  note). Formalizes patterns that already exist on the site today rather
+  than inventing a new visual language:
+    - Buttons: the existing "hard shadow" 3D-press pattern already used by
+      .hero-btn / .start-activity-btn / .login-btn.
+    - Cards: the existing soft-shadow + hover-lift pattern already used by
+      .journey-card / .academy-resource-card.
+    - Form fields: same visual shell as .input-group elsewhere, but with a
+      real :focus-visible state added -- login.css/signup.css strip the
+      default outline with no replacement anywhere in either file; this is
+      the first place in the codebase that pattern is done correctly, and
+      later phases (signup/login redesign) can adopt it.
+    - Loading spinner: net new -- no shared loading-state component exists
+      anywhere in the codebase today.
+*/
+
+/* ---------- Buttons ---------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  text-decoration: none;
+  text-align: center;
+  padding: 16px 28px;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-primary);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.btn-primary {
+  background: var(--color-blue);
+  color: var(--color-white);
+  box-shadow: 0 6px 0 var(--color-blue-dark);
+}
+
+.btn-primary:hover {
+  transform: translateY(1px);
+  box-shadow: 0 5px 0 var(--color-blue-dark);
+}
+
+.btn-primary:active {
+  transform: translateY(4px);
+  box-shadow: 0 2px 0 var(--color-blue-dark);
+}
+
+.btn-secondary {
+  background: var(--color-white);
+  color: var(--color-blue);
+  border: 2px solid var(--color-border);
+  box-shadow: 0 4px 0 var(--color-border);
+}
+
+.btn-secondary:hover {
+  transform: translateY(1px);
+  box-shadow: 0 3px 0 var(--color-border);
+}
+
+.btn:focus-visible {
+  outline: 3px solid var(--color-blue);
+  outline-offset: 3px;
+}
+
+/* ---------- Cards ---------- */
+
+.card {
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-soft);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-card-hover);
+}
+
+/* ---------- Form fields ---------- */
+/* Not used by the homepage itself (no form on this page), included here so
+   later phases inherit a corrected pattern instead of copying the
+   no-focus-indicator gap forward from login.css/signup.css. */
+
+.field {
+  width: 100%;
+  background: var(--color-white);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 0 var(--space-4);
+  display: flex;
+  align-items: center;
+  box-shadow: 0 2px 8px var(--color-shadow);
+}
+
+.field input {
+  border: none;
+  background: transparent;
+  width: 100%;
+  font-family: var(--font-primary);
+  font-size: 1rem;
+  color: var(--color-text-dark);
+  padding: 16px 0;
+}
+
+.field input:focus-visible {
+  outline: none;
+}
+
+.field:has(input:focus-visible) {
+  outline: 3px solid var(--color-blue);
+  outline-offset: 2px;
+}
+
+/* ---------- Loading spinner ---------- */
+
+.loading-spinner {
+  display: inline-block;
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--color-blue-subtle);
+  border-top-color: var(--color-blue);
+  border-radius: 50%;
+  animation: spin-loading 0.8s linear infinite;
+}
+
+@keyframes spin-loading {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---------- Reduced motion ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .btn,
+  .card,
+  .loading-spinner {
+    transition: none;
+    animation: none;
+  }
+}

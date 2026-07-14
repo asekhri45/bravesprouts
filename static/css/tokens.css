@@ -1,0 +1,79 @@
+/*
+  Shared design tokens — Phase 2.
+
+  Scope: consumed by the redesigned homepage (home.css) only. Every other
+  page's CSS keeps its own existing :root values unchanged in this phase;
+  those pages adopt these tokens when they get their own redesign phase.
+
+  Values below are not invented from scratch — where a value already exists
+  identically on the current homepage (color-blue, color-text-dark, etc.),
+  the same value is reused here so nothing currently rendering shifts.
+  Net-new scales (radius, spacing) are only used by new homepage sections.
+*/
+
+:root {
+  /* Primary brand color — confirmed identical across home.css, signup.css,
+     login.css, parent_academy.css, dashboard_layout.css today. */
+  --color-blue: #3b82f6;
+  --color-blue-dark: #2563eb;
+  --color-blue-subtle: rgba(59, 130, 246, 0.12);
+  --color-blue-light: rgba(96, 165, 250, 0.2);
+
+  /* Secondary accent — reused from dashboard.css's existing purple family
+     for warmth/variety, not a new hue introduced to the brand. */
+  --color-purple: #8b5cf6;
+  --color-purple-dark: #6d28d9;
+  --color-purple-soft: #f1ebff;
+
+  /* Neutrals — reuse home.css's existing values so current homepage text
+     doesn't shift. */
+  --color-white: #ffffff;
+  --color-page-bg: #fbfbfe;
+  --color-border: #e5e7eb;
+  --color-text-dark: #3f3f46;
+  --color-text-muted: #6b7280;
+  --color-shadow: rgba(0, 0, 0, 0.03);
+
+  /* Typography — Nunito already loads sitewide via base.html; this token
+     formalizes what's already in effect rather than changing it. */
+  --font-primary: "Nunito", sans-serif;
+  --font-size-h1: clamp(2.1rem, 4vw, 3.1rem);
+  --font-size-h2: clamp(1.6rem, 2.6vw, 2.2rem);
+  --font-size-h3: 1.25rem;
+  --font-size-body: 1rem;
+  --font-size-small: 0.875rem;
+  --font-weight-heading: 800;
+  --font-weight-body: 500;
+
+  /* Spacing scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  /* Radius scale — net new, used only by new homepage sections. Existing
+     pages keep their own scattered 16/22/24/32px values unchanged. */
+  --radius-sm: 12px;
+  --radius-md: 20px;
+  --radius-lg: 28px;
+  --radius-pill: 999px;
+
+  /* Shadows — "soft" for cards, "press" mirrors the hard-shadow button
+     pattern already used by .hero-btn / .start-activity-btn / .login-btn. */
+  --shadow-soft: 0 14px 34px rgba(56, 91, 155, 0.08);
+  --shadow-card-hover: 0 18px 34px rgba(139, 92, 246, 0.10);
+
+  /* Nav sizing — reused verbatim from home.css so the nav's box model
+     doesn't shift when it starts consuming shared component classes. */
+  --nav-height: 90px;
+  --container-width: min(1100px, 80%);
+
+  /* Motion — matches the existing 0.18s-0.2s ease pattern already used
+     across hero-btn, journey-card, academy-resource-card. */
+  --transition-fast: 0.18s ease;
+  --transition-base: 0.2s ease;
+}

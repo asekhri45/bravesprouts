@@ -3,7 +3,7 @@
 {% block title %} MyBraveSprout | Free Selective Mutism Games for Kids {% endblock %}
 
 {% block head %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/home.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/home.css') }}?v=2">
 {% endblock %}
 
 {% block content %}
@@ -22,233 +22,147 @@
             </nav>
 
             <div class="nav-buttons">
-                <a href="/signup" class="hero-btn primary">Get Started</a>
-                <a href="/login" class="hero-btn secondary">Login</a>
+                <a href="/signup" class="btn btn-primary" data-track-click="cta_click" data-track-label="nav">Get Started Free</a>
+                <a href="/login" class="btn btn-secondary">Login</a>
             </div>
 
         </div>
     </header>
 
-    <main class="hero-section">
+    <main class="hero-section" data-track-section="hero">
         <div class="hero-container">
 
-            <div class="hero-image">
-                <img src="{{ url_for('static', filename='images/heroimage_2.gif') }}" alt="MyBraveSprout hero illustration">
-            </div>
-
             <div class="hero-text">
-                <h1>Help Kids Practice Real Conversations</h1>
+                <h1>Helping Your Child Find Their Voice, One Brave Conversation at a Time</h1>
 
                 <p>
-                    MyBraveSprout is a free web application designed for children ages 8 and under with selective mutism, helping them gradually build confidence speaking through guided AI conversations with evolving, interactive animated characters.
+                    MyBraveSprout is a free, judgment-free way for kids with selective mutism to practice
+                    speaking through warm, guided conversations with friendly animated characters —
+                    at their own pace, with zero pressure.
                 </p>
-                
+
                 <div class="hero-buttons">
-                    <a href="/signup" class="hero-btn primary">Get Started</a>
-                    <a href="/login" class="hero-btn secondary">
-                        <span class="desktop-label">Already Have an Account</span>
+                    <a href="/signup" class="btn btn-primary" data-track-click="cta_click" data-track-label="hero">Get Started Free</a>
+                    <a href="/login" class="btn btn-secondary">
+                        <span class="desktop-label">Already Have an Account?</span>
                         <span class="mobile-label">Log In</span>
                     </a>
+                </div>
+            </div>
+
+            <div class="hero-visual">
+                <div class="hero-visual-frame">
+                    <img
+                        src="{{ url_for('static', filename='images/roombg.png') }}"
+                        alt=""
+                        class="hero-visual-bg"
+                    >
+                    <img
+                        src="{{ url_for('static', filename='images/starpfp.png') }}"
+                        alt="Star, MyBraveSprout's friendly character, waiting to say hello"
+                        class="hero-visual-character"
+                    >
                 </div>
             </div>
 
         </div>
     </main>
 
-    <section class="feature-strip">
-        <div class="feature-strip-track">
-            <div class="group">
-                <div class="feature-item">
-                    <img src="{{ url_for('static', filename='images/26convos.gif') }}" alt="Real-world conversations" class="feature-image">
-                    <div class="feature-text">
-                        <span class="feature-number">26</span>
-                        <p class="feature-label">Real-World<br>Scenarios</p>
-                    </div>
-                </div>
-
-                <div class="feature-divider"></div>
-
-                <div class="feature-item">
-                    <img src="{{ url_for('static', filename='images/4chars.gif') }}" alt="Interactive characters" class="feature-image">
-                    <div class="feature-text">
-                        <span class="feature-number">4</span>
-                        <p class="feature-label">Interactive<br>Characters</p>
-                    </div>
-                </div>
-
-                <div class="feature-divider"></div>
-
-                <div class="feature-item">
-                    <img src="{{ url_for('static', filename='images/3scenes.png') }}" alt="Everyday settings" class="feature-image settings-image">
-                    <div class="feature-text">
-                        <span class="feature-number">3</span>
-                        <p class="feature-label">Everyday<br>Settings</p>
-                    </div>
-                </div>
-
-                <div class="feature-divider"></div>
-
-                <div class="feature-item">
-                    <img src="{{ url_for('static', filename='images/26convos.gif') }}" alt="Real-world conversations" class="feature-image">
-                    <div class="feature-text">
-                        <span class="feature-number">26</span>
-                        <p class="feature-label">Real-World<br>Scenarios</p>
-                    </div>
-                </div>
-
-                <div class="feature-divider"></div>
-
-                <div class="feature-item">
-                    <img src="{{ url_for('static', filename='images/4chars.gif') }}" alt="Interactive characters" class="feature-image">
-                    <div class="feature-text">
-                        <span class="feature-number">4</span>
-                        <p class="feature-label">Interactive<br>Characters</p>
-                    </div>
-                </div>
-
-                <div class="feature-divider"></div>
-
-                <div class="feature-item">
-                    <img src="{{ url_for('static', filename='images/3scenes.png') }}" alt="Everyday settings" class="feature-image settings-image">
-                    <div class="feature-text">
-                        <span class="feature-number">3</span>
-                        <p class="feature-label">Everyday<br>Settings</p>
-                    </div>
-                </div>
-
-                <div class="feature-divider"></div>
+    <section class="trust-strip" data-track-section="trust_strip">
+        <div class="trust-strip-inner">
+            <div class="trust-pill">
+                <span class="trust-pill-icon" aria-hidden="true">🌱</span>
+                Completely free — no credit card, ever
             </div>
 
-            <div aria-hidden class="group">
-                <div class="feature-item">
-                    <img src="{{ url_for('static', filename='images/26convos.gif') }}" alt="Real-world conversations" class="feature-image">
-                    <div class="feature-text">
-                        <span class="feature-number">26</span>
-                        <p class="feature-label">Real-World<br>Scenarios</p>
-                    </div>
-                </div>
-
-                <div class="feature-divider"></div>
-
-                <div class="feature-item">
-                    <img src="{{ url_for('static', filename='images/4chars.gif') }}" alt="Interactive characters" class="feature-image">
-                    <div class="feature-text">
-                        <span class="feature-number">4</span>
-                        <p class="feature-label">Interactive<br>Characters</p>
-                    </div>
-                </div>
-
-                <div class="feature-divider"></div>
-
-                <div class="feature-item">
-                    <img src="{{ url_for('static', filename='images/3scenes.png') }}" alt="Everyday settings" class="feature-image settings-image">
-                    <div class="feature-text">
-                        <span class="feature-number">3</span>
-                        <p class="feature-label">Everyday<br>Settings</p>
-                    </div>
-                </div>
-
-                <div class="feature-divider"></div>
-
-                <div class="feature-item">
-                    <img src="{{ url_for('static', filename='images/26convos.gif') }}" alt="Real-world conversations" class="feature-image">
-                    <div class="feature-text">
-                        <span class="feature-number">26</span>
-                        <p class="feature-label">Real-World<br>Scenarios</p>
-                    </div>
-                </div>
-
-                <div class="feature-divider"></div>
-
-                <div class="feature-item">
-                    <img src="{{ url_for('static', filename='images/4chars.gif') }}" alt="Interactive characters" class="feature-image">
-                    <div class="feature-text">
-                        <span class="feature-number">4</span>
-                        <p class="feature-label">Interactive<br>Characters</p>
-                    </div>
-                </div>
-
-                <div class="feature-divider"></div>
-
-                <div class="feature-item">
-                    <img src="{{ url_for('static', filename='images/3scenes.png') }}" alt="Everyday settings" class="feature-image settings-image">
-                    <div class="feature-text">
-                        <span class="feature-number">3</span>
-                        <p class="feature-label">Everyday<br>Settings</p>
-                    </div>
-                </div>
-
-                <div class="feature-divider"></div>
+            <div class="trust-pill">
+                <span class="trust-pill-icon" aria-hidden="true">💙</span>
+                Gentle by design — no timers, no pressure, no wrong answers
             </div>
+
+            <a href="/privacy-policy" class="trust-pill trust-pill-link">
+                <span class="trust-pill-icon" aria-hidden="true">🔒</span>
+                Privacy-first — we never sell your data
+            </a>
+        </div>
+
+        <p class="trust-strip-subtext">
+            MyBraveSprout is a supportive practice space — it's not a replacement for therapy or professional care.
+        </p>
+    </section>
+
+    <section class="gameplay-preview" data-track-section="gameplay_preview">
+        <div class="gameplay-preview-inner">
+            <span class="section-kicker">See it for yourself</span>
+            <h2>See MyBraveSprout in Action</h2>
+            <p class="section-subtitle">
+                Real characters and real activities from inside MyBraveSprout — no account needed to take a look.
+            </p>
+
+            <div class="preview-grid">
+                <div class="preview-frame">
+                    <div class="preview-media">
+                        <img
+                            src="{{ url_for('static', filename='images/starpfp.png') }}"
+                            alt="Star, the character children meet in Match Cards"
+                            loading="lazy"
+                        >
+                    </div>
+                    <div class="preview-caption">
+                        <h3>Match Cards</h3>
+                        <p>Find matching pairs with Star while building comfort and confidence communicating.</p>
+                    </div>
+                </div>
+
+                <div class="preview-frame">
+                    <div class="preview-media">
+                        <img
+                            src="{{ url_for('static', filename='images/librarianpfp.png') }}"
+                            alt="The Librarian, the character children meet in Drawing Game"
+                            loading="lazy"
+                        >
+                    </div>
+                    <div class="preview-caption">
+                        <h3>Drawing Game</h3>
+                        <p>Draw, describe, and share your ideas with the Librarian in a creative activity.</p>
+                    </div>
+                </div>
+
+                <div class="preview-frame">
+                    <div class="preview-media">
+                        <img
+                            src="{{ url_for('static', filename='images/toy_worker_pfp.png') }}"
+                            alt="The Toy Worker, a character children meet in Toy Sorting Game"
+                            loading="lazy"
+                        >
+                    </div>
+                    <div class="preview-caption">
+                        <h3>Toy Sorting Game</h3>
+                        <p>Sort toys and practice conversation with the Toy Worker, one gentle step at a time.</p>
+                    </div>
+                </div>
+            </div>
+
+            <p class="gameplay-preview-note">
+                🎙️ Every activity listens only when your child chooses to speak — practice always stays on their terms.
+            </p>
         </div>
     </section>
 
-    <section class="home-video-section">
-  <div class="home-video-container reveal">
-    <div class="home-video-heading">
-      <span>Quick parent guides</span>
-      <h2>See how MyBraveSprout works</h2>
-      <p>
-        Watch a short overview of the experience and a quick walkthrough of the dashboard.
-      </p>
-    </div>
-
-    <div class="home-video-grid">
-      <article class="home-video-card">
-        <div class="home-video-copy">
-          <span class="home-video-kicker">Start here</span>
-          <h3>Getting Started with MyBraveSprout</h3>
-          <p>A complete overview of how MyBraveSprout works.</p>
-        </div>
-
-        <div class="home-youtube-embed">
-          <iframe
-            src="https://www.youtube.com/embed/QN3GLChKneI?si=pVeEy9XiwrjerQ1c&rel=0&modestbranding=1"
-            title="Getting Started with BraveSprouts"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            referrerpolicy="strict-origin-when-cross-origin"
-            allowfullscreen>
-          </iframe>
-        </div>
-
-        <span class="home-duration-pill">About 8 minutes</span>
-      </article>
-
-      <article class="home-video-card">
-        <div class="home-video-copy">
-          <span class="home-video-kicker">Quick tour</span>
-          <h3>Dashboard Walkthrough</h3>
-          <p>A quick tour of the key features.</p>
-        </div>
-
-        <div class="home-youtube-embed">
-          <iframe
-            src="https://www.youtube.com/embed/66-fb20aPPE?si=1DChjEDnkvNFXYxE&rel=0&modestbranding=1"
-            title="Dashboard Walkthrough"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            referrerpolicy="strict-origin-when-cross-origin"
-            allowfullscreen>
-          </iframe>
-        </div>
-
-        <span class="home-duration-pill">About 2 minutes</span>
-      </article>
-    </div>
-  </div>
-</section>
-
-    <section class="approach-section">
+    <section class="approach-section" data-track-section="how_it_works">
         <div class="approach-container">
+            <span class="section-kicker">How it works</span>
+            <h2 class="approach-heading">A gentle path, one small step at a time</h2>
 
             <div class="approach-row reveal">
                 <div class="approach-visual">
                     <div class="approach-decor decor-one"></div>
                     <div class="approach-decor decor-two"></div>
-                    <img src="{{ url_for('static', filename='images/star1.png') }}" class="floating-image">
+                    <img src="{{ url_for('static', filename='images/star1.png') }}" class="floating-image" alt="Star, MyBraveSprout's guide character">
                 </div>
 
                 <div class="approach-text">
-                    <h2>start with the star</h2>
+                    <h3>start with the star</h3>
                     <p>
                         With the help of a parent, children first interact with the MyBraveSprout star through
                         simple games and playful activities. This stage focuses on helping the child feel
@@ -261,11 +175,11 @@
                 <div class="approach-visual">
                     <div class="approach-decor decor-one"></div>
                     <div class="approach-decor decor-two"></div>
-                    <img src="{{ url_for('static', filename='images/stage2.gif') }}" class="floating-image">
+                    <img src="{{ url_for('static', filename='images/stage2.gif') }}" class="floating-image" alt="A new character being introduced" loading="lazy">
                 </div>
 
                 <div class="approach-text two">
-                    <h2>meet new friends</h2>
+                    <h3>meet new friends</h3>
                     <p>
                         Once the child feels more at ease, the star introduces additional characters through
                         interactive games and guided activities. Each new character gently expands the child's
@@ -278,11 +192,11 @@
                 <div class="approach-visual">
                     <div class="approach-decor decor-one"></div>
                     <div class="approach-decor decor-two"></div>
-                    <img src="{{ url_for('static', filename='images/teacheranimation.gif') }}" class="floating-image">
+                    <img src="{{ url_for('static', filename='images/teacheranimation.gif') }}" class="floating-image" alt="A guided practice conversation" loading="lazy">
                 </div>
 
                 <div class="approach-text">
-                    <h2>practice conversations</h2>
+                    <h3>practice conversations</h3>
                     <p>
                         After meeting the characters, children begin practicing short guided conversations.
                         These scenarios are supportive and structured, helping kids respond and participate
@@ -295,11 +209,11 @@
                 <div class="approach-visual">
                     <div class="approach-decor decor-one"></div>
                     <div class="approach-decor decor-two"></div>
-                    <img src="{{ url_for('static', filename='images/4th.gif') }}" class="floating-image">
+                    <img src="{{ url_for('static', filename='images/4th.gif') }}" class="floating-image" alt="A child speaking with more confidence" loading="lazy">
                 </div>
 
                 <div class="approach-text two">
-                    <h2>speak with confidence</h2>
+                    <h3>speak with confidence</h3>
                     <p>
                         As confidence grows, conversations become more realistic and dynamic. Characters,
                         voices, and situations gradually resemble real-life interactions, preparing children
@@ -311,23 +225,119 @@
         </div>
     </section>
 
-    <section class="bottom-cta">
+    <section class="stats-section" data-track-section="why_families">
+        <div class="stats-inner">
+            <h2>Why Families Choose MyBraveSprout</h2>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <span class="stat-number">26</span>
+                    <p class="stat-label">Real-World Scenarios</p>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-number">4</span>
+                    <p class="stat-label">Interactive Characters</p>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-number">3</span>
+                    <p class="stat-label">Everyday Settings</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="founder-story" data-track-section="founder_story">
+        <div class="founder-story-inner">
+            <span class="section-kicker">Why we built this</span>
+            <p>
+                MyBraveSprout began with a personal family story: our founder's younger sister was talkative
+                and playful at home, but speaking anywhere else felt impossible. That experience shaped
+                everything we've built here.
+            </p>
+            <a href="{{ url_for('our_story') }}" class="founder-story-link">Read our full story →</a>
+        </div>
+    </section>
+
+    <section class="home-video-section" data-track-section="video_guides">
+        <div class="home-video-container reveal">
+            <div class="home-video-heading">
+                <span>Quick parent guides</span>
+                <h2>See how MyBraveSprout works</h2>
+                <p>
+                    Watch a short overview of the experience and a quick walkthrough of the dashboard.
+                </p>
+            </div>
+
+            <div class="home-video-grid">
+                <article class="home-video-card">
+                    <div class="home-video-copy">
+                        <span class="home-video-kicker">Start here</span>
+                        <h3>Getting Started with MyBraveSprout</h3>
+                        <p>A complete overview of how MyBraveSprout works.</p>
+                    </div>
+
+                    <button
+                        type="button"
+                        class="home-youtube-facade"
+                        data-video-id="QN3GLChKneI"
+                        data-video-title="Getting Started with MyBraveSprout"
+                        data-track-click="video_facade_click"
+                        data-track-label="getting_started"
+                        aria-label="Play: Getting Started with MyBraveSprout"
+                    >
+                        <img
+                            src="https://img.youtube.com/vi/QN3GLChKneI/hqdefault.jpg"
+                            alt=""
+                            loading="lazy"
+                        >
+                        <span class="home-youtube-play" aria-hidden="true">▶</span>
+                    </button>
+
+                    <span class="home-duration-pill">About 8 minutes</span>
+                </article>
+
+                <article class="home-video-card">
+                    <div class="home-video-copy">
+                        <span class="home-video-kicker">Quick tour</span>
+                        <h3>Dashboard Walkthrough</h3>
+                        <p>A quick tour of the key features.</p>
+                    </div>
+
+                    <button
+                        type="button"
+                        class="home-youtube-facade"
+                        data-video-id="66-fb20aPPE"
+                        data-video-title="Dashboard Walkthrough"
+                        data-track-click="video_facade_click"
+                        data-track-label="dashboard_walkthrough"
+                        aria-label="Play: Dashboard Walkthrough"
+                    >
+                        <img
+                            src="https://img.youtube.com/vi/66-fb20aPPE/hqdefault.jpg"
+                            alt=""
+                            loading="lazy"
+                        >
+                        <span class="home-youtube-play" aria-hidden="true">▶</span>
+                    </button>
+
+                    <span class="home-duration-pill">About 2 minutes</span>
+                </article>
+            </div>
+        </div>
+    </section>
+
+    <section class="bottom-cta" data-track-section="bottom_cta">
 
         <div class="bottom-cta-content reveal">
-            <h2>Ready to help your child speak with confidence?</h2>
+            <h2>Your child's next brave conversation starts here.</h2>
 
             <p>
-                Start playful conversations, build comfort step-by-step,
-                and help your child grow toward real-world speaking.
+                Free to join. No pressure. Just a gentle place to grow.
             </p>
 
-            <a href="/signup" class="hero-btn primary bottom-cta-btn">
-                Get Started
+            <a href="/signup" class="btn btn-primary bottom-cta-btn" data-track-click="cta_click" data-track-label="bottom_cta">
+                Get Started Free
             </a>
-        </div>
-
-        <div class="bottom-cta-image">
-            <img src="{{ url_for('static', filename='images/ctabottom.gif') }}" alt="MyBraveSprout illustration">
         </div>
 
     <div class="bottom-cta-ground">
@@ -336,10 +346,11 @@
             <a href="/privacy-policy">Privacy Policy</a>
             <p>© 2026 MyBraveSprout</p>
         </div>
-    </div>  
+    </div>
 
     </section>
 
     <script src="{{ url_for('static', filename='js/nav-bar.js') }}"></script>
     <script src="{{ url_for('static', filename='js/approach-animation.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/home-video-facade.js') }}" defer></script>
 {% endblock %}
