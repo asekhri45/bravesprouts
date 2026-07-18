@@ -5893,6 +5893,17 @@ def save_mystery_animal_round_progress(rounds_completed):
 
 
 def complete_mystery_animal_and_unlock_next_for_user(rounds_completed=None):
+    """
+    Returns {"ok": bool, "next_activity_id": Optional[int]}.
+
+    `next_activity_id` being None does NOT by itself mean failure -- it's
+    also None on genuine success when there's simply no further active
+    activity to unlock. `ok` is the only field that distinguishes "the
+    database write actually committed" from "it didn't"; callers that need
+    to know whether progress/unlock genuinely succeeded (e.g. before
+    deciding whether a downstream TTS failure is safe to treat as
+    non-fatal) must check `ok`, not `next_activity_id`.
+    """
     ensure_mystery_animal_progress_columns()
 
     saved_rounds = max(0, int(rounds_completed or 0))
@@ -5905,7 +5916,7 @@ def complete_mystery_animal_and_unlock_next_for_user(rounds_completed=None):
 
         if not current_activity:
             conn.close()
-            return None
+            return {"ok": False, "next_activity_id": None}
 
         current_activity_id = current_activity["activity_id"]
 
@@ -5987,13 +5998,13 @@ def complete_mystery_animal_and_unlock_next_for_user(rounds_completed=None):
         conn.commit()
         conn.close()
 
-        return next_activity_id
+        return {"ok": True, "next_activity_id": next_activity_id}
 
     except Exception as e:
         conn.rollback()
         conn.close()
         print("Could not complete Mystery Animal and unlock next activity:", repr(e))
-        return None
+        return {"ok": False, "next_activity_id": None}
 
 
 def should_mystery_animal_ask_round_choice(rounds_completed):
@@ -8131,7 +8142,7 @@ def ask_child_to_reveal_mystery_animal(game_state, history, event_type, child_re
 
 def unlock_mystery_animal_next_game_for_user():
     rounds_completed = get_saved_mystery_animal_rounds()
-    return complete_mystery_animal_and_unlock_next_for_user(rounds_completed) is not None
+    return complete_mystery_animal_and_unlock_next_for_user(rounds_completed)["ok"]
 
 
 
@@ -8500,25 +8511,73 @@ def mystery_animal_message():
         next_url = url_for("dashboard")
         rounds_completed = int(game_state.get("rounds_completed", 0))
 
+        # Resolved and checked BEFORE attempting the goodbye TTS below.
+        # If the database write itself didn't commit, that is a genuine
+        # failure -- raise immediately (regardless of whether TTS would
+        # have succeeded) so the caller's existing except-block reports it
+        # as a failure rather than this function ever claiming success on
+        # top of a failed write.
         if unlock_next:
-            complete_mystery_animal_and_unlock_next_for_user(rounds_completed)
+            db_result = complete_mystery_animal_and_unlock_next_for_user(rounds_completed)
+            db_write_succeeded = db_result["ok"]
         else:
-            save_mystery_animal_round_progress(rounds_completed)
+            db_write_succeeded = save_mystery_animal_round_progress(rounds_completed) is not None
 
-        return make_mystery_animal_audio_response(
-            message=message,
-            stage="session_done",
-            response_mode="none",
-            expects_response=False,
-            game_complete=unlock_next,
-            game_state=game_state,
-            history=history,
-            event_type=event_label,
-            child_response=child_response,
-            next_url=next_url,
-            redirect_after_ms=1700,
-            session_done=True
-        )
+        if not db_write_succeeded:
+            raise RuntimeError(
+                f"Mystery Animal completion write failed (event_label={event_label}, unlock_next={unlock_next})"
+            )
+
+        try:
+            return make_mystery_animal_audio_response(
+                message=message,
+                stage="session_done",
+                response_mode="none",
+                expects_response=False,
+                game_complete=unlock_next,
+                game_state=game_state,
+                history=history,
+                event_type=event_label,
+                child_response=child_response,
+                next_url=next_url,
+                redirect_after_ms=1700,
+                session_done=True
+            )
+        except Exception as e:
+            # The database write above already committed (checked before
+            # this point) -- only the goodbye line's audio failed to
+            # generate. The child never hearing that one line does not
+            # undo the completion that already genuinely happened, so
+            # return a recoverable, audio-less completion instead of
+            # leaving the user at a dead end for an unrelated TTS hiccup.
+            app.logger.warning(
+                "Mystery Animal goodbye TTS failed after DB completion committed "
+                "(event_label=%s, unlock_next=%s): %r",
+                event_label, unlock_next, e
+            )
+
+            game_state["stage"] = "session_done"
+            game_state["last_response_mode"] = "none"
+            game_state["game_complete"] = unlock_next
+
+            session["mystery_animal_history"] = history[-20:]
+            session["mystery_animal_state"] = game_state
+            session.modified = True
+
+            return jsonify({
+                "success": True,
+                "stage": "session_done",
+                "expects_response": False,
+                "response_mode": "none",
+                "game_complete": unlock_next,
+                "session_done": True,
+                "game_state": game_state,
+                "audio_parts": [],
+                "audio_available": False,
+                "error_category": "tts_unavailable",
+                "next_url": next_url,
+                "redirect_after_ms": 400
+            })
 
     def finish_mystery_round(base_message, game_state, history, event_label):
         rounds_completed = int(game_state.get("rounds_completed", 0))
