@@ -38,6 +38,7 @@ import base64
 
 from elevenlabs.client import ElevenLabs
 
+import httpx
 import requests
 
 import os
@@ -98,15 +99,39 @@ def handle_csrf_error(e):
     return render_template("csrf_error.html", error=friendly_message), 400
 
 # Reliability audit (2026-07-18): explicit timeouts on external AI/speech
-# calls. Previously unset, so a slow provider response could hang the
-# request indefinitely. These values are generous relative to normal
-# response times observed for short child dialogue lines/recordings, so
-# they should not affect any currently-successful call.
-OPENAI_CALL_TIMEOUT_SECONDS = 15.0
-ELEVENLABS_CALL_TIMEOUT_SECONDS = 12.0
+# calls. Previously unset (OpenAI defaulted to no timeout at all;
+# ElevenLabs defaulted to a flat 240s), so a slow provider response could
+# hang the request for minutes. Split by phase rather than one flat
+# number, because "can't reach the host" and "host is slow to finish a
+# real generation" are different failures that should be told apart:
+#   - connect/write/pool: establishing the connection and sending our
+#     (small) request. 5s is already generous for these -- if this phase
+#     is slow, the network path itself is the problem, not the AI
+#     provider's processing time, so there is no reason to wait longer.
+#   - read: waiting for the provider to finish generating and send the
+#     response body. This is where legitimate variance lives (a longer
+#     LLM answer or a longer TTS line takes longer to generate), so it
+#     gets the most headroom.
+# OpenAI's read budget (20s) is larger than ElevenLabs' (15s) because the
+# same client also serves the one LLM decision call
+# (get_classroom_openai_decision, library_guessing_game) in addition to
+# Whisper transcription, both of which can legitimately run a few seconds
+# longer than a short TTS line.
+OPENAI_TIMEOUT = httpx.Timeout(connect=5.0, read=20.0, write=10.0, pool=5.0)
+ELEVENLABS_TIMEOUT = httpx.Timeout(connect=5.0, read=15.0, write=10.0, pool=5.0)
 
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"), timeout=OPENAI_CALL_TIMEOUT_SECONDS)
-eleven_client = ElevenLabs(api_key=os.getenv("ELEVENLABS_API_KEY"), timeout=ELEVENLABS_CALL_TIMEOUT_SECONDS)
+# Both SDKs still perform their own internal retries on top of this
+# per-attempt timeout: the OpenAI client defaults to max_retries=2 for
+# connection errors and 408/409/429/5xx responses (so a single call can
+# take up to roughly 3x its read timeout before finally raising); the
+# ElevenLabs client defaults to max_retries=0 (no retry unless a call
+# site opts in). Neither retry causes duplicate work on our side -- they
+# only resend the same outbound HTTP request if the provider never
+# returned a response, they do not re-invoke our Flask route or touch the
+# database, and the calling endpoint only proceeds once the SDK call
+# either returns or raises.
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"), timeout=OPENAI_TIMEOUT)
+eleven_client = ElevenLabs(api_key=os.getenv("ELEVENLABS_API_KEY"), timeout=ELEVENLABS_TIMEOUT)
 serializer = URLSafeTimedSerializer(app.config["SECRET_KEY"])
 
 # Reliability audit: per-request ID + timing, so a slow game round can be

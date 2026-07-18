@@ -35,6 +35,14 @@ document.addEventListener("DOMContentLoaded", function () {
   let sessionDone = false;
   let starSpeaking = false;
 
+  // Declared here (ahead of where they're used) because the diagnostics
+  // session below invokes its getState() callback synchronously as part
+  // of construction, to record the very first "game_initialized" event --
+  // if these were declared after that point, that first snapshot would
+  // hit the temporal dead zone and fail.
+  let currentTurnToken = 0;
+  let lastKnownMimeType = null;
+
   // Guards a single response window against being resolved twice --
   // MediaRecorder and SpeechRecognition now run concurrently (see
   // startListeningForChild), so both a recognition result AND the
@@ -67,7 +75,27 @@ document.addEventListener("DOMContentLoaded", function () {
   function dlog(...args) { if (window.APP_DEBUG) console.log(`[mystery_animal:${activityId}]`, ...args); }
 
   const diagnostics = window.GameDiagnostics
-    ? window.GameDiagnostics.createSession({ game: "mystery_animal", activityId: activityId })
+    ? window.GameDiagnostics.createSession({
+        game: "mystery_animal",
+        activityId: activityId,
+        // Attached to every logged event -- a compact snapshot of "what
+        // was going on" at that moment, so a timeline export shows state
+        // alongside events without needing to correlate against console
+        // logs from elsewhere.
+        getState: function () {
+          return {
+            stage: currentStage,
+            responseMode: currentResponseMode,
+            gameActive: gameActive,
+            sessionDone: sessionDone,
+            isListening: isListening,
+            starSpeaking: starSpeaking,
+            waitingForStarResponse: waitingForStarResponse,
+            turnToken: currentTurnToken,
+            recorderMimeType: lastKnownMimeType
+          };
+        }
+      })
     : null;
 
   const audioManager = window.GameAudioManager
@@ -83,10 +111,12 @@ document.addEventListener("DOMContentLoaded", function () {
   // captures the token active when it started and checks it still matches
   // before mutating game state -- a stale continuation from a turn that no
   // longer applies (game was restarted or ended in the meantime) becomes a
-  // no-op instead of corrupting the current turn.
-  let currentTurnToken = 0;
+  // no-op instead of corrupting the current turn. Also doubles as the
+  // diagnostics "turn/round id" -- both concepts are the same counter.
+  // (declared earlier in this file, see comment near starSpeaking)
   function beginNewTurn() {
     currentTurnToken += 1;
+    if (diagnostics) diagnostics.newRound();
     return currentTurnToken;
   }
   function isTurnStale(token) {
@@ -99,7 +129,11 @@ document.addEventListener("DOMContentLoaded", function () {
   // isn't clipped by the transition. This is not used to guess whether
   // playback finished; playAndWait already guarantees that.
   const SETTLE_BUFFER_MS = 300;
-  const TRANSCRIBE_TIMEOUT_MS = 18000;
+  // Set above the backend's own worst-case single-attempt budget for this
+  // call (connect 5s + read 20s = 25s, see OPENAI_TIMEOUT in app.py) so
+  // this client-side abort is a genuine "the whole thing is stuck" signal,
+  // not a race against the server's own legitimate timeout.
+  const TRANSCRIBE_TIMEOUT_MS = 30000;
   let recordingExtension = "webm";
   let promptRetryCount = 0;
   let currentMouthState = "closed";
@@ -1069,6 +1103,7 @@ document.addEventListener("DOMContentLoaded", function () {
       recordStartedAt = Date.now();
       lastSpeechAt = recordStartedAt;
       setListeningUI(true);
+      lastKnownMimeType = mediaRecorder.mimeType || null;
       diagLog("recording_started", { mimeType: mediaRecorder.mimeType });
 
       setupMicSilenceDetection(stream);
