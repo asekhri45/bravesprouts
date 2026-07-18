@@ -16,13 +16,24 @@
     </p>
 
     <form method="POST" class="pin-form">
+        <input
+            type="hidden"
+            name="csrf_token"
+            value="{{ csrf_token() }}"
+        >
+
+        <label for="parentPin" class="sr-only">
+            Four-digit parent PIN
+        </label>
 
         <input
             type="password"
+            id="parentPin"
             name="parent_pin"
             maxlength="4"
             inputmode="numeric"
             pattern="[0-9]{4}"
+            autocomplete="off"
             placeholder="••••"
             required
             autofocus
@@ -30,7 +41,7 @@
         >
 
         {% if error %}
-        <div class="pin-error">
+        <div class="pin-error" role="alert">
             {{ error }}
         </div>
         {% endif %}
@@ -39,6 +50,12 @@
             Continue
         </button>
 
+        <a
+            href="{{ url_for('forgot_parent_pin') }}"
+            class="pin-text-link"
+        >
+            Forgot your PIN?
+        </a>
     </form>
 
 </div>

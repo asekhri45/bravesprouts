@@ -1,15 +1,35 @@
 {% extends "base.html" %}
 
-{% block title %}{{ article.title }} | MyBraveSprout{% endblock %}
+{% block title %}{{ article.title }} | MyBraveSprout Parent Resources{% endblock %}
 
 {% block head %}
 <meta
   name="description"
   content="{{ article.summary }}"
 >
+<link rel="canonical" href="{{ canonical_url }}">
+
+<meta property="og:type" content="article">
+<meta property="og:title" content="{{ article.title }}">
+<meta property="og:description" content="{{ article.summary }}">
+<meta property="og:url" content="{{ canonical_url }}">
+{% if image_url %}
+<meta property="og:image" content="{{ image_url }}">
+{% endif %}
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{ article.title }}">
+<meta name="twitter:description" content="{{ article.summary }}">
+{% if image_url %}
+<meta name="twitter:image" content="{{ image_url }}">
+{% endif %}
+
+<script type="application/ld+json">{{ article_jsonld | tojson }}</script>
+<script type="application/ld+json">{{ breadcrumb_jsonld | tojson }}</script>
+
 <link
   rel="stylesheet"
-  href="{{ url_for('static', filename='css/parent_academy.css') }}?v=17"
+  href="{{ url_for('static', filename='css/parent_academy.css') }}?v=19"
 >
 {% endblock %}
 
@@ -54,43 +74,84 @@
   </div>
 </header>
 
-<main class="public-parent-resources">
-<div class="academy-article-shell">
+<div class="editorial-subnav">
+  <div class="editorial-subnav-inner">
+    <a href="{{ url_for('parent_academy') }}" class="editorial-back-link">
+      <span aria-hidden="true">&larr;</span> Back to Parent Resources
+    </a>
 
-  <a href="{{ url_for('parent_academy') }}" class="article-back-btn">
-    ← Back to Parent Resources
-  </a>
-
-  <p class="article-breadcrumb">
-    Parent Resources / {{ article.category }}
-  </p>
-
-  <section class="article-hero">
-    <h1>{{ article.title }}</h1>
-
-    <div class="article-meta-row">
-      <span>◷ {{ article.read_time }}</span>
-      <span>Evidence: {{ article.evidence }}</span>
-      <span>Sources reviewed: {{ article.sources_reviewed }}</span>
-    </div>
-  </section>
-
-  <section class="article-research-note">
-  <div class="research-note-icon">i</div>
-
-  <div class="research-note-copy">
-    <h2>How this article was created</h2>
-    <p>
-      This article was created with help from ChatGPT using compiled research papers, clinical resources, and selective mutism information. It is for educational purposes only and should not be used as medical advice, a diagnosis, treatment guidance, or a replacement for support from a licensed therapist, clinician, or other qualified specialist.
-    </p>
+    <nav aria-label="Breadcrumb" class="editorial-breadcrumb">
+      <a href="{{ url_for('parent_academy') }}">Parent Resources</a>
+      <span class="editorial-breadcrumb-sep" aria-hidden="true">/</span>
+      {% if article.category_slug %}
+        <a href="{{ url_for('parent_academy_category', category_slug=article.category_slug) }}">{{ article.category }}</a>
+      {% else %}
+        <span>{{ article.category }}</span>
+      {% endif %}
+    </nav>
   </div>
-</section>
-
-  <section class="article-content-card">
-    {% include article.template %}
-  </section>
-
 </div>
+
+<main class="editorial-article-page">
+  <article>
+
+    <header class="editorial-header">
+      {% if article.category %}<p class="editorial-kicker">{{ article.category }}</p>{% endif %}
+      <h1>{{ article.title }}</h1>
+      <p class="editorial-dek">{{ article.summary }}</p>
+
+      <div class="editorial-meta">
+        <span>◷ {{ article.read_time }}</span>
+        <span>Evidence: {{ article.evidence }}</span>
+        <span>Sources reviewed: {{ article.sources_reviewed }}</span>
+      </div>
+    </header>
+
+    {% if hero_photo %}
+    <figure class="editorial-hero-photo">
+      <img
+        src="{{ url_for('static', filename='images/' ~ hero_photo.filename) }}"
+        alt="{{ hero_photo.alt }}"
+        loading="eager"
+        decoding="async"
+      >
+      <figcaption>{{ hero_photo.caption }}</figcaption>
+    </figure>
+    {% endif %}
+
+    <div class="editorial-note">
+      <p>
+        <strong>How this article was created:</strong> This article was created with help from ChatGPT using compiled research papers, clinical resources, and selective mutism information. It is for educational purposes only and should not be used as medical advice, a diagnosis, treatment guidance, or a replacement for support from a licensed therapist, clinician, or other qualified specialist.
+      </p>
+    </div>
+
+    <div class="editorial-body">
+      {% include article.template %}
+    </div>
+
+    <div class="editorial-cta">
+      <h2>Ready to help your child practice?</h2>
+      <p>MyBraveSprout offers free, parent-guided speaking games your child can try at their own pace.</p>
+      <a href="{{ url_for('signup') }}" class="hero-btn primary">Create a Free Parent Account</a>
+    </div>
+
+    {% if related_articles %}
+    <aside class="editorial-related" aria-labelledby="related-heading">
+      <h2 id="related-heading">Related resources</h2>
+      <ul class="editorial-related-list">
+        {% for related in related_articles %}
+        <li>
+          <a href="{{ url_for('parent_academy_article', slug=related.slug) }}">
+            {{ related.title }}
+            <span class="editorial-related-arrow" aria-hidden="true">&rarr;</span>
+          </a>
+        </li>
+        {% endfor %}
+      </ul>
+    </aside>
+    {% endif %}
+
+  </article>
 </main>
 
 <script src="{{ url_for('static', filename='js/nav-bar.js') }}"></script>

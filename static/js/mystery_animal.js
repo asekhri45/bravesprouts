@@ -41,6 +41,14 @@ document.addEventListener("DOMContentLoaded", function () {
   let sessionDone = false;
   let starSpeaking = false;
 
+  // Guards a single response window against being resolved twice --
+  // MediaRecorder and SpeechRecognition now run concurrently (see
+  // startListeningForChild), so both a recognition result AND the
+  // recorder's own stop/transcribe path could otherwise fire for the same
+  // round. Whichever settles first sets this to true; every other
+  // resolution path checks it and becomes a no-op.
+  let roundResolved = false;
+
   let recognition = null;
   let recognitionActive = false;
   let recognitionStartedAt = 0;
@@ -60,6 +68,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
   const SpeechRecognition =
     window.SpeechRecognition || window.webkitSpeechRecognition || null;
+
+  const activityId = document.querySelector("[data-activity-id]")?.dataset.activityId || "unknown";
+  function dlog(...args) { if (window.APP_DEBUG) console.log(`[mystery_animal:${activityId}]`, ...args); }
 
   const LISTEN_AFTER_STAR_AUDIO_MS = 650;
 
@@ -135,8 +146,8 @@ document.addEventListener("DOMContentLoaded", function () {
   function getLiveHardCapDuration() {
     const extraThinkingTime = Math.min(thinkingRestartCount * 2500, 5000);
 
-    if (currentResponseMode === "yes_no") return 9000 + extraThinkingTime;
-    if (currentResponseMode === "guess_confirmation") return 9000 + extraThinkingTime;
+    if (currentResponseMode === "yes_no") return 12000 + extraThinkingTime;
+    if (currentResponseMode === "guess_confirmation") return 12000 + extraThinkingTime;
     if (currentResponseMode === "choice") return 11000 + extraThinkingTime;
     if (currentResponseMode === "one_word") return 13000 + extraThinkingTime;
     if (currentResponseMode === "short_phrase") return 16000 + extraThinkingTime;
@@ -149,8 +160,8 @@ document.addEventListener("DOMContentLoaded", function () {
   function getBackupListeningDuration() {
     const extraThinkingTime = Math.min(thinkingRestartCount * 2500, 5000);
 
-    if (currentResponseMode === "yes_no") return 6500 + extraThinkingTime;
-    if (currentResponseMode === "guess_confirmation") return 7000 + extraThinkingTime;
+    if (currentResponseMode === "yes_no") return 10000 + extraThinkingTime;
+    if (currentResponseMode === "guess_confirmation") return 10000 + extraThinkingTime;
     if (currentResponseMode === "choice") return 8500 + extraThinkingTime;
     if (currentResponseMode === "one_word") return 10000 + extraThinkingTime;
     if (currentResponseMode === "short_phrase") return 12500 + extraThinkingTime;
@@ -163,8 +174,8 @@ document.addEventListener("DOMContentLoaded", function () {
   function getBackupSilenceAfterSpeechDuration() {
     const extraThinkingPause = Math.min(thinkingRestartCount * 800, 1800);
 
-    if (currentResponseMode === "yes_no") return 1500 + extraThinkingPause;
-    if (currentResponseMode === "guess_confirmation") return 1100 + extraThinkingPause;
+    if (currentResponseMode === "yes_no") return 2600 + extraThinkingPause;
+    if (currentResponseMode === "guess_confirmation") return 2600 + extraThinkingPause;
     if (currentResponseMode === "choice") return 2200 + extraThinkingPause;
     if (currentResponseMode === "one_word") return 2400 + extraThinkingPause;
     if (currentResponseMode === "short_phrase") return 3100 + extraThinkingPause;
@@ -188,18 +199,18 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function getLiveSubmitDelay(cleanedTranscript) {
     if (currentResponseMode === "yes_no") {
-      if (isYesOrNoLike(cleanedTranscript)) return 350;
-      return 900;
+      if (isYesOrNoLike(cleanedTranscript)) return 1100;
+      return 1500;
     }
 
     if (currentResponseMode === "guess_confirmation") {
-      if (isYesOrNoLike(cleanedTranscript)) return 350;
-      return 900;
+      if (isYesOrNoLike(cleanedTranscript)) return 1100;
+      return 1500;
     }
 
-    if (currentResponseMode === "choice") return 900;
-    if (currentResponseMode === "one_word") return 950;
-    if (currentResponseMode === "short_phrase") return 1250;
+    if (currentResponseMode === "choice") return 1500;
+    if (currentResponseMode === "one_word") return 1500;
+    if (currentResponseMode === "short_phrase") return 1900;
     if (currentResponseMode === "open_hint") return 1500;
     if (currentResponseMode === "round_choice") return 1200;
 
@@ -645,15 +656,26 @@ document.addEventListener("DOMContentLoaded", function () {
   async function startListeningForChild() {
     if (isListening || waitingForStarResponse || starSpeaking || sessionDone || !gameActive) return;
 
+    roundResolved = false;
+
     hideResponseButtons();
     setListeningUI(true);
 
+    // MediaRecorder always captures the full response window from this
+    // point forward, regardless of whether SpeechRecognition is available
+    // or how it ends up erroring out. This mirrors Match Cards: browser
+    // recognition is purely a fast-path optimization layered on top, never
+    // a precondition for audio being captured. If SpeechRecognition never
+    // fires a usable result, the recorder (already running since t=0) still
+    // has the child's full response and gets sent to the server -- no
+    // audio spoken before a recognition error/timeout is lost.
+    await startAudioRecorderFallback();
+
+    if (roundResolved || sessionDone || !gameActive) return;
+
     if (SpeechRecognition) {
       startLiveSpeechRecognition();
-      return;
     }
-
-    startAudioRecorderFallback();
   }
 
   function startLiveSpeechRecognition() {
@@ -677,8 +699,11 @@ document.addEventListener("DOMContentLoaded", function () {
     recognition.onresult = function (event) {
       let transcript = "";
 
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        transcript += event.results[i][0].transcript || "";
+      // Rebuild the whole recognition transcript each time. Starting at
+      // event.resultIndex can drop an earlier softly-spoken word when the
+      // browser emits the answer in multiple result chunks.
+      for (let i = 0; i < event.results.length; i++) {
+        transcript += `${event.results[i][0].transcript || ""} `;
       }
 
       transcript = transcript.trim();
@@ -709,15 +734,17 @@ document.addEventListener("DOMContentLoaded", function () {
 
     recognition.onerror = function (event) {
       console.warn("Speech recognition error:", event.error);
+      dlog("recognition error", event.error);
 
-      if (
-        event.error === "not-allowed" ||
-        event.error === "service-not-allowed" ||
-        event.error === "audio-capture"
-      ) {
-        stopLiveSpeechRecognition(true);
-        startAudioRecorderFallback();
-      }
+      if (recognitionStoppedByUs || roundResolved) return;
+
+      // MediaRecorder has been capturing this entire response window
+      // concurrently since startListeningForChild(), so a recognition error
+      // -- "no-speech", "network", or otherwise -- never loses any audio.
+      // Just stop the (now useless) recognizer; the recorder's own
+      // silence-detector/timeout remains the authoritative decision-maker
+      // for this round, exactly like Match Cards.
+      stopLiveSpeechRecognition(true);
     };
 
     recognition.onend = function () {
@@ -749,7 +776,7 @@ document.addEventListener("DOMContentLoaded", function () {
     };
 
     recognitionHardCapTimer = setTimeout(function () {
-      if (!isListening || waitingForStarResponse || sessionDone || !gameActive) return;
+      if (!recognitionActive || roundResolved || waitingForStarResponse || sessionDone || !gameActive) return;
 
       const cleanedTranscript = cleanTranscriptForMeaning(lastLiveTranscript);
 
@@ -758,17 +785,24 @@ document.addEventListener("DOMContentLoaded", function () {
         return;
       }
 
+      // No usable live transcript within the recognition-specific time
+      // budget -- just stop trying to recognize. Do NOT decide the round
+      // here: the MediaRecorder started concurrently in
+      // startListeningForChild is still running and remains the
+      // authoritative source for this response window.
+      dlog("recognition hard cap reached with no usable live transcript, deferring to recorder");
       stopLiveSpeechRecognition(true);
-      resetThinkingState();
-      requestStarMessage("no_response", "");
     }, getLiveHardCapDuration());
 
     try {
       recognition.start();
     } catch (error) {
-      console.warn("Speech recognition could not start, using backup recorder:", error);
+      // The concurrently-running recorder (started in startListeningForChild
+      // before this function was called) is unaffected -- no need to start
+      // it again here.
+      console.warn("Speech recognition could not start:", error);
+      dlog("recognition failed to start", error.name || error);
       stopLiveSpeechRecognition(true);
-      startAudioRecorderFallback();
     }
   }
 
@@ -788,16 +822,41 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function submitLiveTranscript(cleanedTranscript) {
-    if (waitingForStarResponse || sessionDone || !gameActive) return;
+    if (waitingForStarResponse || sessionDone || !gameActive || roundResolved) return;
+    roundResolved = true;
 
     console.log("Sending live transcript:", cleanedTranscript);
+    dlog("live recognition won the race", { transcript: cleanedTranscript });
 
     resetThinkingState();
     stopLiveSpeechRecognition(true);
+
+    // A live transcript already won the race -- cancel the concurrently
+    // running recorder without letting its own "stop" handler send a
+    // second (redundant) transcription request or a duplicate round
+    // advancement for the same response window.
+    cancelConcurrentRecorder();
+
     setListeningUI(false);
     hideResponseButtons();
 
     requestStarMessage("child_answer", cleanedTranscript);
+  }
+
+  function cancelConcurrentRecorder() {
+    clearMaxRecordTimer();
+    cleanupMicAnalysis();
+
+    if (mediaRecorder && mediaRecorder.state !== "inactive") {
+      ignoreNextRecording = true;
+      try {
+        mediaRecorder.stop();
+      } catch (error) {
+        console.error("Could not cancel concurrent recorder:", error);
+      }
+    } else {
+      stopActiveStream();
+    }
   }
 
   function stopLiveSpeechRecognition(markStoppedByUs) {
@@ -884,14 +943,21 @@ document.addEventListener("DOMContentLoaded", function () {
         cleanupMicAnalysis();
         stopActiveStream();
 
-        if (shouldIgnore) {
+        if (shouldIgnore || roundResolved) {
           ignoreNextRecording = false;
           return;
         }
 
+        // The recorder is the authoritative end of the response window now
+        // -- stop recognition (if it's still running) so a late
+        // onresult/onerror can't also try to resolve this same round.
+        roundResolved = true;
+        if (recognitionActive || recognition) stopLiveSpeechRecognition(true);
+
         const audioBlob = new Blob(audioChunks, {
           type: "audio/webm"
         });
+        dlog("recording stopped", { size: audioBlob.size, type: audioBlob.type, speechDetected });
 
         if (!audioBlob.size || !speechDetected) {
           console.warn("No clear speech captured.");
@@ -919,15 +985,19 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function stopListeningForChild() {
+    // Recognition and the recorder run concurrently now, so both need to be
+    // stopped here -- previously this returned early after stopping
+    // recognition alone, which (in the old mutually-exclusive model) was
+    // correct because the recorder was never running at the same time.
     if (recognitionActive) {
       stopLiveSpeechRecognition(true);
+    }
+
+    if (!mediaRecorder || mediaRecorder.state === "inactive") {
       setListeningUI(false);
       hideResponseButtons();
       return;
     }
-
-    if (!mediaRecorder) return;
-    if (mediaRecorder.state === "inactive") return;
 
     try {
       mediaRecorder.stop();
@@ -937,6 +1007,7 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function cancelListening() {
+    roundResolved = true;
     clearRecognitionSubmitTimer();
 
     if (recognitionActive || recognition) {
@@ -1008,7 +1079,7 @@ document.addEventListener("DOMContentLoaded", function () {
         const rms = Math.sqrt(sum / dataArray.length);
         const now = Date.now();
 
-        const speechThreshold = 0.022;
+        const speechThreshold = 0.012;
 
         if (rms > speechThreshold) {
           if (!speechDetected) {
@@ -1026,14 +1097,14 @@ document.addEventListener("DOMContentLoaded", function () {
 
         const speechWasVeryBrief =
           speechDetected &&
-          speechDuration < 850 &&
+          speechDuration < 1200 &&
           elapsedSinceStart < getBackupListeningDuration() - 1200;
 
         if (speechWasVeryBrief) {
           if (currentResponseMode === "yes_no" || currentResponseMode === "guess_confirmation") {
-            silenceNeeded += 1200;
+            silenceNeeded += 2200;
           } else {
-            silenceNeeded += 3200;
+            silenceNeeded += 4200;
           }
         }
 
@@ -1227,11 +1298,7 @@ document.addEventListener("DOMContentLoaded", function () {
     if (!audioSrc) {
       starSpeaking = false;
       stopMouthAnimation();
-
-      if (onEnded) {
-        onEnded();
-      }
-
+      if (onEnded) onEnded();
       return;
     }
 
@@ -1244,68 +1311,90 @@ document.addEventListener("DOMContentLoaded", function () {
 
     if (starAudio) {
       starAudio.pause();
-      starAudio.currentTime = 0;
+      starAudio.removeAttribute("src");
+      starAudio.load();
     }
 
     stopMouthAnimation();
     hideResponseButtons();
     setStatus("", false);
 
-    starAudio = new Audio(audioSrc);
-    starAudio.volume = 1.0;
+    const audio = new Audio();
+    starAudio = audio;
+    audio.preload = "auto";
+    audio.volume = 1.0;
+    // Keep normal speed. Altered playback speed can cause clipped endings on
+    // some mobile browsers and Bluetooth/audio-output combinations.
+    audio.playbackRate = 0.95;
 
-    starAudio.playbackRate = 0.94;
-    starAudio.preservesPitch = false;
-    starAudio.mozPreservesPitch = false;
-    starAudio.webkitPreservesPitch = false;
+    let finished = false;
+    let retryCount = 0;
+    let stallTimer = null;
 
-    starAudio.addEventListener("play", function () {
-      startMouthAnimation();
-    });
-
-    starAudio.addEventListener("ended", function () {
+    function finishPlayback() {
+      if (finished || starAudio !== audio) return;
+      finished = true;
+      if (stallTimer) clearTimeout(stallTimer);
       starSpeaking = false;
       stopMouthAnimation();
 
-      if (onEnded) {
-        onEnded();
+      // Give the device's audio output a tiny buffer before opening the mic.
+      // This prevents the final phoneme from being clipped by the transition.
+      setTimeout(function () {
+        if (onEnded) {
+          onEnded();
+        } else if (expectsResponse && gameActive && !sessionDone) {
+          startListeningAfterStarFinishes();
+        }
+      }, 300);
+    }
+
+    function attemptPlay() {
+      if (finished || starAudio !== audio) return;
+      audio.play().catch(function (error) {
+        if (retryCount < 2) {
+          retryCount += 1;
+          setTimeout(attemptPlay, 350 * retryCount);
+          return;
+        }
+        console.error("Audio playback error:", error);
+        finishPlayback();
+      });
+    }
+
+    audio.addEventListener("play", startMouthAnimation);
+    audio.addEventListener("ended", finishPlayback, { once: true });
+    audio.addEventListener("error", function () {
+      if (retryCount < 2) {
+        retryCount += 1;
+        const resumeAt = Number.isFinite(audio.currentTime) ? audio.currentTime : 0;
+        audio.load();
+        audio.addEventListener("canplay", function () {
+          try { audio.currentTime = resumeAt; } catch (e) {}
+          attemptPlay();
+        }, { once: true });
         return;
       }
-
-      if (expectsResponse && gameActive && !sessionDone) {
-        startListeningAfterStarFinishes();
-      }
-    });
-
-    starAudio.addEventListener("error", function () {
-      starSpeaking = false;
       console.error("Star audio error");
-      stopMouthAnimation();
-
-      if (onEnded) {
-        onEnded();
-        return;
-      }
-
-      if (expectsResponse && gameActive && !sessionDone) {
-        startListeningAfterStarFinishes();
-      }
+      finishPlayback();
     });
 
-    starAudio.play().catch(function (error) {
-      starSpeaking = false;
-      console.error("Audio playback error:", error);
-      stopMouthAnimation();
-
-      if (onEnded) {
-        onEnded();
-        return;
-      }
-
-      if (expectsResponse && gameActive && !sessionDone) {
-        startListeningAfterStarFinishes();
-      }
+    audio.addEventListener("stalled", function () {
+      if (finished || audio.paused) return;
+      if (stallTimer) clearTimeout(stallTimer);
+      stallTimer = setTimeout(function () {
+        if (!finished && !audio.ended && audio.paused) attemptPlay();
+      }, 800);
     });
+
+    audio.src = audioSrc;
+    audio.load();
+    audio.addEventListener("canplay", attemptPlay, { once: true });
+
+    // canplay is occasionally skipped for cached audio in Safari.
+    setTimeout(function () {
+      if (!finished && audio.paused) attemptPlay();
+    }, 500);
   }
 
   function startMouthAnimation() {
@@ -1516,3 +1605,4 @@ document.addEventListener("DOMContentLoaded", function () {
 
   window.restartMysteryAnimal = restartGame;
 });
+// Mystery Animal decision-tree backend integration version: 2026-07-17

@@ -4,139 +4,253 @@
 
 {% block dashboard_content %}
 <div class="admin-overview-page">
+
   <div class="admin-stats-grid">
-  <div class="admin-stat-card">
-    <span>Total Users</span>
-    <strong>{{ admin_stats.total_users }}</strong>
-  </div>
-
-  <div class="admin-stat-card">
-    <span>Created Today</span>
-    <strong>{{ admin_stats.users_created_today }}</strong>
-  </div>
-
-  <div class="admin-stat-card">
-    <span>Interacted Today</span>
-    <strong>{{ admin_stats.users_interacted_today }}</strong>
-  </div>
-
-  <div class="admin-stat-card">
-    <span>Created This Week</span>
-    <strong>{{ admin_stats.users_created_this_week }}</strong>
-  </div>
-
-  <div class="admin-stat-card">
-    <span>Interacted This Week</span>
-    <strong>{{ admin_stats.users_interacted_this_week }}</strong>
-  </div>
-
-  <div class="admin-stat-card">
-    <span>Created This Month</span>
-    <strong>{{ admin_stats.users_created_this_month }}</strong>
-  </div>
-
-  <div class="admin-stat-card">
-    <span>Interacted This Month</span>
-    <strong>{{ admin_stats.users_interacted_this_month }}</strong>
-  </div>
-</div>
-
-<div class="admin-table-scroll">
-  <table class="admin-user-table">
-    <thead>
-      <tr>
-        <th>Parent Name</th>
-        <th>Parent Email</th>
-        <th>Child Name</th>
-        <th>Child Age</th>
-        <th>Unlocked Levels</th>
-        <th>Level Time</th>
-        <th>Logins</th>
-        <th>Tour</th>
-        <th>Feedback</th>
-        <th>Last Active</th>
-      </tr>
-    </thead>
-
-    <tbody>
-      {% for user in users %}
-      <tr>
-        <td>{{ user.parent_name }}</td>
-        <td>{{ user.email }}</td>
-        <td>{{ user.child_name or "Not added" }}</td>
-        <td>{{ user.child_age or "Not added" }}</td>
-        <td>{{ user.unlocked_levels }}/{{ user.total_levels or 9 }}</td>
-        <td>
-  <details class="level-time-details">
-    <summary>View time</summary>
-
-    <div class="level-time-list">
-      {% for level in level_times_by_user.get(user.user_id, []) %}
-        <div class="level-time-row">
-          <div>
-            <strong>
-              Level {{ level.activity_order }}:
-              {{ level.activity_name.replace("_", " ").title() }}
-            </strong>
-            <span>
-              {{ level.session_count }} session{{ "" if level.session_count == 1 else "s" }}
-              {% if level.last_played %}
-                · Last played {{ level.last_played }}
-              {% endif %}
-            </span>
-          </div>
-
-          <b>{{ "%.1f"|format(level.display_minutes) }} min</b>
-        </div>
-      {% endfor %}
+    <div class="admin-stat-card">
+      <span>Total Users</span>
+      <strong>{{ admin_stats.total_users }}</strong>
     </div>
-  </details>
-</td>
-        <td>{{ user.login_count or 0 }}</td>
-        <td>
-  {% if user.has_seen_tour %}
-    <span class="tour-status-pill completed">Completed</span>
-  {% else %}
-    <span class="tour-status-pill incomplete">Not yet</span>
-  {% endif %}
-</td>
-        <td>
-          {% if user.has_submitted_feedback %}
-            <span class="feedback-status-pill submitted">Submitted</span>
-          {% else %}
-            <span class="feedback-status-pill missing">Not yet</span>
-          {% endif %}
-        </td>
-        <td>{{ user.last_active or "No sessions yet" }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+
+    <div class="admin-stat-card">
+      <span>Created Today</span>
+      <strong>{{ admin_stats.users_created_today }}</strong>
+    </div>
+
+    <div class="admin-stat-card">
+      <span>Interacted Today</span>
+      <strong>{{ admin_stats.users_interacted_today }}</strong>
+    </div>
+
+    <div class="admin-stat-card">
+      <span>Created This Week</span>
+      <strong>{{ admin_stats.users_created_this_week }}</strong>
+    </div>
+
+    <div class="admin-stat-card">
+      <span>Interacted This Week</span>
+      <strong>{{ admin_stats.users_interacted_this_week }}</strong>
+    </div>
+
+    <div class="admin-stat-card">
+      <span>Created This Month</span>
+      <strong>{{ admin_stats.users_created_this_month }}</strong>
+    </div>
+
+    <div class="admin-stat-card">
+      <span>Interacted This Month</span>
+      <strong>{{ admin_stats.users_interacted_this_month }}</strong>
+    </div>
+  </div>
+
+  <div class="admin-table-scroll">
+    <table class="admin-user-table">
+      <thead>
+        <tr>
+          <th>Parent Name</th>
+          <th>Parent Email</th>
+          <th>Child Name</th>
+          <th>Child Age</th>
+          <th>Unlocked Levels</th>
+          <th>Level Progress</th>
+          <th>Logins</th>
+          <th>Tour</th>
+          <th>Feedback</th>
+          <th>Last Active</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for user in users %}
+        <tr>
+          <td>
+            <strong class="admin-user-name">
+              {{ user.parent_name }}
+            </strong>
+          </td>
+
+          <td>
+            <a
+              class="admin-email-link"
+              href="mailto:{{ user.email }}"
+            >
+              {{ user.email }}
+            </a>
+          </td>
+
+          <td>
+            {{ user.child_name or "Not added" }}
+          </td>
+
+          <td>
+            {{ user.child_age or "Not added" }}
+          </td>
+
+          <td>
+            <span class="unlocked-level-count">
+              {{ user.unlocked_levels }}/{{ user.total_levels or 0 }}
+            </span>
+          </td>
+
+          <td>
+            <details class="level-progress-details">
+              <summary>
+                <span>View progress</span>
+
+                <svg
+                  class="level-progress-chevron"
+                  viewBox="0 0 20 20"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M5.5 7.5L10 12l4.5-4.5"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </summary>
+
+              <div class="level-progress-panel">
+                <div class="level-progress-panel-header">
+                  <div>
+                    <strong>
+                      {{ user.child_name or user.parent_name }}
+                    </strong>
+
+                    <span>
+                      Activity progress
+                    </span>
+                  </div>
+
+                  <span class="level-progress-total">
+                    {{ user.unlocked_levels }}
+                    unlocked
+                  </span>
+                </div>
+
+                <div class="level-progress-list">
+                  {% for level in level_progress_by_user.get(user.user_id, []) %}
+                  <div
+                    class="
+                      level-progress-row
+                      {% if not level.is_unlocked %}
+                        is-locked
+                      {% elif level.is_completed %}
+                        is-completed
+                      {% elif level.status_type == 'active' %}
+                        is-active
+                      {% endif %}
+                    "
+                  >
+                    <div class="level-progress-number">
+                      {{ level.activity_order }}
+                    </div>
+
+                    <div class="level-progress-main">
+                      <div class="level-progress-title-row">
+                        <strong class="level-progress-title">
+                          {{ level.activity_name.replace("_", " ").title() }}
+                        </strong>
+
+                        <span
+                          class="
+                            level-status-pill
+                            {{ level.status_type }}
+                          "
+                        >
+                          {{ level.status_label }}
+                        </span>
+                      </div>
+
+                      <span class="level-progress-description">
+                        {{ level.status_description }}
+                      </span>
+
+                      {% if
+                        level.is_unlocked
+                        and level.has_round_tracking
+                        and level.total_rounds
+                      %}
+                      <div
+                        class="level-progress-bar"
+                        role="progressbar"
+                        aria-label="{{ level.activity_name.replace('_', ' ').title() }} progress"
+                        aria-valuemin="0"
+                        aria-valuemax="{{ level.total_rounds }}"
+                        aria-valuenow="{{ level.rounds_completed }}"
+                      >
+                        <div
+                          class="level-progress-bar-fill"
+                          style="
+                            width:
+                            {{
+                              (
+                                level.rounds_completed
+                                / level.total_rounds
+                                * 100
+                              )|round
+                            }}%;
+                          "
+                        ></div>
+                      </div>
+                      {% endif %}
+                    </div>
+                  </div>
+                  {% else %}
+                  <div class="level-progress-empty">
+                    No active levels were found.
+                  </div>
+                  {% endfor %}
+                </div>
+              </div>
+            </details>
+          </td>
+
+          <td>
+            {{ user.login_count or 0 }}
+          </td>
+
+          <td>
+            {% if user.has_seen_tour %}
+              <span class="tour-status-pill completed">
+                Completed
+              </span>
+            {% else %}
+              <span class="tour-status-pill incomplete">
+                Not yet
+              </span>
+            {% endif %}
+          </td>
+
+          <td>
+            {% if user.has_submitted_feedback %}
+              <span class="feedback-status-pill submitted">
+                Submitted
+              </span>
+            {% else %}
+              <span class="feedback-status-pill missing">
+                Not yet
+              </span>
+            {% endif %}
+          </td>
+
+          <td>
+            {{ user.last_active or "No sessions yet" }}
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="10" class="admin-empty-table">
+            No users were found.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
 </div>
-
-<style>
-  .feedback-status-pill {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 6px 10px;
-    border-radius: 999px;
-    font-size: 12px;
-    font-weight: 800;
-    white-space: nowrap;
-  }
-
-  .feedback-status-pill.submitted {
-    background: #ecfdf5;
-    color: #047857;
-  }
-
-  .feedback-status-pill.missing {
-    background: #f6f2ff;
-    color: #6d28d9;
-  }
-</style>
 
 <style>
   .admin-overview-page {
@@ -149,19 +263,328 @@
     max-width: 100%;
     overflow-x: auto;
     overflow-y: visible;
+    padding-bottom: 24px;
     -webkit-overflow-scrolling: touch;
-    padding-bottom: 12px;
   }
 
   .admin-user-table {
-    min-width: 1250px;
     width: 100%;
+    min-width: 1320px;
     border-collapse: collapse;
   }
 
   .admin-user-table th,
   .admin-user-table td {
     white-space: nowrap;
+  }
+
+  .admin-user-name {
+    color: #272033;
+    font-weight: 800;
+  }
+
+  .admin-email-link {
+    color: #6d28d9;
+    text-decoration: none;
+  }
+
+  .admin-email-link:hover {
+    text-decoration: underline;
+  }
+
+  .unlocked-level-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 52px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: #f6f2ff;
+    color: #6d28d9;
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  /* -------------------------------------------------------
+     PROGRESS DROPDOWN
+  ------------------------------------------------------- */
+
+  .level-progress-details {
+    position: relative;
+  }
+
+  .level-progress-details > summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: #6d28d9;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 800;
+    list-style: none;
+    user-select: none;
+  }
+
+  .level-progress-details > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .level-progress-details > summary::marker {
+    display: none;
+    content: "";
+  }
+
+  .level-progress-details > summary:hover {
+    color: #5520ad;
+  }
+
+  .level-progress-chevron {
+    width: 16px;
+    height: 16px;
+    transition: transform 180ms ease;
+  }
+
+  .level-progress-details[open] .level-progress-chevron {
+    transform: rotate(180deg);
+  }
+
+  .level-progress-panel {
+    width: 430px;
+    max-height: 520px;
+    margin-top: 12px;
+    overflow-y: auto;
+    border: 1px solid #e9e3f5;
+    border-radius: 16px;
+    background: #ffffff;
+    box-shadow:
+      0 18px 45px rgba(39, 32, 51, 0.14),
+      0 4px 12px rgba(39, 32, 51, 0.07);
+  }
+
+  .level-progress-panel-header {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 16px;
+    border-bottom: 1px solid #eee9f5;
+    background: #ffffff;
+  }
+
+  .level-progress-panel-header > div {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .level-progress-panel-header strong {
+    color: #272033;
+    font-size: 14px;
+    font-weight: 900;
+  }
+
+  .level-progress-panel-header span {
+    color: #81798b;
+    font-size: 11px;
+  }
+
+  .level-progress-total {
+    padding: 5px 9px;
+    border-radius: 999px;
+    background: #f6f2ff;
+    color: #6d28d9 !important;
+    font-weight: 800;
+  }
+
+  .level-progress-list {
+    padding: 6px 10px 10px;
+  }
+
+  .level-progress-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 11px;
+    padding: 12px 6px;
+    border-bottom: 1px solid #f0edf5;
+  }
+
+  .level-progress-row:last-child {
+    border-bottom: none;
+  }
+
+  .level-progress-row.is-locked {
+    opacity: 0.62;
+  }
+
+  .level-progress-number {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    margin-top: 1px;
+    border-radius: 9px;
+    background: #f6f2ff;
+    color: #6d28d9;
+    font-size: 12px;
+    font-weight: 900;
+  }
+
+  .level-progress-row.is-locked .level-progress-number {
+    background: #f1f1f4;
+    color: #777782;
+  }
+
+  .level-progress-row.is-completed .level-progress-number {
+    background: #ecfdf5;
+    color: #047857;
+  }
+
+  .level-progress-row.is-active .level-progress-number {
+    background: #fff7df;
+    color: #9a5b00;
+  }
+
+  .level-progress-main {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .level-progress-title-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .level-progress-title {
+    min-width: 0;
+    overflow: hidden;
+    color: #272033;
+    font-size: 13px;
+    font-weight: 850;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .level-progress-description {
+    display: block;
+    margin-top: 3px;
+    color: #777080;
+    font-size: 11px;
+    line-height: 1.4;
+    white-space: normal;
+  }
+
+  .level-status-pill {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    min-width: 72px;
+    padding: 5px 8px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 850;
+    white-space: nowrap;
+  }
+
+  .level-status-pill.locked {
+    background: #f1f1f4;
+    color: #777782;
+  }
+
+  .level-status-pill.not-started {
+    background: #f6f2ff;
+    color: #6d28d9;
+  }
+
+  .level-status-pill.active {
+    background: #fff7df;
+    color: #985900;
+  }
+
+  .level-status-pill.completed {
+    background: #ecfdf5;
+    color: #047857;
+  }
+
+  .level-status-pill.unlocked {
+    background: #eef6ff;
+    color: #2563a8;
+  }
+
+  .level-progress-bar {
+    width: 100%;
+    height: 6px;
+    margin-top: 8px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: #eeeaf3;
+  }
+
+  .level-progress-bar-fill {
+    height: 100%;
+    min-width: 0;
+    border-radius: inherit;
+    background: #7c3aed;
+    transition: width 200ms ease;
+  }
+
+  .level-progress-row.is-completed
+  .level-progress-bar-fill {
+    background: #10b981;
+  }
+
+  .level-progress-empty {
+    padding: 20px 12px;
+    color: #777080;
+    font-size: 12px;
+    text-align: center;
+  }
+
+  /* -------------------------------------------------------
+     EXISTING STATUS PILLS
+  ------------------------------------------------------- */
+
+  .feedback-status-pill,
+  .tour-status-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 800;
+    white-space: nowrap;
+  }
+
+  .feedback-status-pill.submitted,
+  .tour-status-pill.completed {
+    background: #ecfdf5;
+    color: #047857;
+  }
+
+  .feedback-status-pill.missing,
+  .tour-status-pill.incomplete {
+    background: #f6f2ff;
+    color: #6d28d9;
+  }
+
+  .admin-empty-table {
+    padding: 30px !important;
+    color: #777080;
+    text-align: center;
+  }
+
+  @media (max-width: 700px) {
+    .level-progress-panel {
+      width: 360px;
+    }
   }
 </style>
 {% endblock %}

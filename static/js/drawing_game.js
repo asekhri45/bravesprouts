@@ -3,6 +3,8 @@ document.addEventListener("DOMContentLoaded", function () {
   const activityId = Number(page?.dataset.activityId || 7);
   const childName = (page?.dataset.childName || "there").trim() || "there";
 
+  function dlog(...args) { if (window.APP_DEBUG) console.log(`[drawing_game:${activityId}]`, ...args); }
+
   const incomingCallScreen = document.getElementById("incomingCallScreen");
   const acceptCall = document.getElementById("acceptCall");
   const declineCall = document.getElementById("declineCall");
@@ -1604,6 +1606,7 @@ document.addEventListener("DOMContentLoaded", function () {
       });
 
       recordingChunks = [];
+      dlog("transcribe request start", { size: blob.size, type: blob.type });
 
       const formData = new FormData();
       formData.append("audio", blob, "drawing-response.webm");

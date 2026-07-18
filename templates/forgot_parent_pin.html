@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block title %}Forgot Parent PIN{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/parent_pin.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="pin-page">
+
+    <div class="pin-card">
+        <h1 class="pin-title">Forgot your PIN?</h1>
+
+        <p class="pin-subtitle">
+            Enter your account password to create a new parent PIN.
+        </p>
+
+        <form method="POST" class="pin-form">
+            <input
+                type="hidden"
+                name="csrf_token"
+                value="{{ csrf_token() }}"
+            >
+
+            <label for="password" class="sr-only">
+                Account password
+            </label>
+
+            <div class="pin-password-wrap">
+                <input
+                    type="password"
+                    id="password"
+                    name="password"
+                    placeholder="Enter your password"
+                    autocomplete="current-password"
+                    required
+                    autofocus
+                    class="pin-password-input"
+                >
+
+                <button
+                    type="button"
+                    class="pin-password-toggle"
+                    id="togglePinPassword"
+                    aria-label="Show password"
+                >
+                    Show
+                </button>
+            </div>
+
+            {% if error %}
+            <div class="pin-error" role="alert">
+                {{ error }}
+            </div>
+            {% endif %}
+
+            <button type="submit" class="pin-button">
+                Continue
+            </button>
+
+            <div class="pin-link-group">
+                <a
+                    href="{{ url_for('forgot_password') }}"
+                    class="pin-text-link"
+                >
+                    Forgot password?
+                </a>
+
+                <a
+                    href="{{ url_for('parent_pin_gate') }}"
+                    class="pin-text-link"
+                >
+                    I remember my PIN
+                </a>
+            </div>
+        </form>
+    </div>
+
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const passwordInput = document.getElementById("password");
+    const toggleButton = document.getElementById("togglePinPassword");
+
+    if (!passwordInput || !toggleButton) {
+        return;
+    }
+
+    toggleButton.addEventListener("click", function () {
+        const isHidden = passwordInput.type === "password";
+
+        passwordInput.type = isHidden ? "text" : "password";
+        toggleButton.textContent = isHidden ? "Hide" : "Show";
+        toggleButton.setAttribute(
+            "aria-label",
+            isHidden ? "Hide password" : "Show password"
+        );
+    });
+});
+</script>
+{% endblock %}

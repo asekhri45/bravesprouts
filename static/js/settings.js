@@ -125,87 +125,143 @@ function setupPermissionToggles() {
   const micToggle = document.getElementById("microphonePermissionToggle");
   const message = document.getElementById("permissionMessage");
 
-  if (!audioToggle || !micToggle) return;
+  if (
+    !audioToggle ||
+    !micToggle ||
+    !window.BraveSproutPermissions
+  ) {
+    return;
+  }
+
+  const permissions = window.BraveSproutPermissions;
 
   const isTourPermissionStep =
     new URLSearchParams(window.location.search).get("tour") === "7";
 
-  if (isTourPermissionStep) {
-    localStorage.setItem("bravesprouts_audio_enabled", "false");
-    localStorage.setItem("bravesprouts_microphone_enabled", "false");
+  async function refreshStates() {
+    if (isTourPermissionStep) {
+      permissions.setAudioPreference(false);
+      permissions.setMicrophonePreference(false);
 
-    setToggleState(audioToggle, false);
-    setToggleState(micToggle, false);
-  } else {
-    const audioEnabled = localStorage.getItem("bravesprouts_audio_enabled") === "true";
-    const micEnabled = localStorage.getItem("bravesprouts_microphone_enabled") === "true";
+      setToggleState(audioToggle, false);
+      setToggleState(micToggle, false);
+      return;
+    }
+
+    const audioEnabled = permissions.getAudioPreference();
+    const microphoneState =
+      await permissions.getMicrophoneReadiness();
 
     setToggleState(audioToggle, audioEnabled);
-    setToggleState(micToggle, micEnabled);
+
+    setToggleState(
+      micToggle,
+      microphoneState.ready,
+      microphoneState.state === "denied"
+    );
   }
 
   audioToggle.addEventListener("click", async () => {
-    const currentlyOn = audioToggle.classList.contains("is-on");
+    const currentlyOn =
+      audioToggle.classList.contains("is-on");
 
     if (currentlyOn) {
-      localStorage.setItem("bravesprouts_audio_enabled", "false");
+      permissions.setAudioPreference(false);
       setToggleState(audioToggle, false);
-      setPermissionMessage(message, "Audio is turned off for this browser.", "neutral");
-      return;
-    }
 
-    try {
-      await unlockAudioPlayback();
-
-      localStorage.setItem("bravesprouts_audio_enabled", "true");
-      setToggleState(audioToggle, true);
-      setPermissionMessage(message, "Audio is enabled for this browser.", "success");
-    } catch (error) {
-      localStorage.setItem("bravesprouts_audio_enabled", "false");
-      setToggleState(audioToggle, false, true);
-      setPermissionMessage(message, "Audio could not be enabled. Try again after clicking the page.", "error");
-    }
-  });
-
-  micToggle.addEventListener("click", async () => {
-    const currentlyOn = micToggle.classList.contains("is-on");
-
-    if (currentlyOn) {
-      localStorage.setItem("bravesprouts_microphone_enabled", "false");
-      setToggleState(micToggle, false);
       setPermissionMessage(
         message,
-        "Microphone is turned off inside BraveSprouts. Browser permission may still remain allowed.",
+        "Audio is turned off for this browser.",
         "neutral"
       );
-      return;
-    }
 
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      localStorage.setItem("bravesprouts_microphone_enabled", "false");
-      setToggleState(micToggle, false, true);
-      setPermissionMessage(message, "This browser does not support microphone access here.", "error");
       return;
     }
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      await permissions.unlockAudio();
+      setToggleState(audioToggle, true);
 
-      stream.getTracks().forEach((track) => track.stop());
-
-      localStorage.setItem("bravesprouts_microphone_enabled", "true");
-      setToggleState(micToggle, true);
-      setPermissionMessage(message, "Microphone access is enabled for this browser.", "success");
-    } catch (error) {
-      localStorage.setItem("bravesprouts_microphone_enabled", "false");
-      setToggleState(micToggle, false, true);
       setPermissionMessage(
         message,
-        "Microphone permission was blocked. Open your browser’s site settings to allow it.",
+        "Audio is enabled for this browser.",
+        "success"
+      );
+    } catch (error) {
+      permissions.setAudioPreference(false);
+      setToggleState(audioToggle, false, true);
+
+      setPermissionMessage(
+        message,
+        "Audio could not be enabled. Click the page and try again.",
         "error"
       );
     }
   });
+
+  micToggle.addEventListener("click", async () => {
+    const currentlyOn =
+      micToggle.classList.contains("is-on");
+
+    if (currentlyOn) {
+      permissions.setMicrophonePreference(false);
+      setToggleState(micToggle, false);
+
+      setPermissionMessage(
+        message,
+        "Microphone is turned off inside MyBraveSprout. Browser permission may still remain allowed.",
+        "neutral"
+      );
+
+      return;
+    }
+
+    const result = await permissions.requestMicrophone();
+
+    if (result.enabled) {
+      permissions.stopStream(result.stream);
+      setToggleState(micToggle, true);
+
+      setPermissionMessage(
+        message,
+        "Microphone access is enabled for this browser.",
+        "success"
+      );
+
+      return;
+    }
+
+    setToggleState(
+      micToggle,
+      false,
+      result.state === "denied"
+    );
+
+    let errorMessage =
+      "Microphone access could not be enabled.";
+
+    if (result.state === "denied") {
+      errorMessage =
+        "Microphone permission was blocked. Open your browser’s site settings to allow it.";
+    } else if (result.state === "no-device") {
+      errorMessage =
+        "No microphone was found on this device.";
+    } else if (result.state === "unavailable") {
+      errorMessage =
+        "The microphone is currently unavailable or is being used by another app.";
+    } else if (result.state === "unsupported") {
+      errorMessage =
+        "This browser does not support microphone access here.";
+    }
+
+    setPermissionMessage(
+      message,
+      errorMessage,
+      "error"
+    );
+  });
+
+  refreshStates();
 }
 
 async function unlockAudioPlayback() {

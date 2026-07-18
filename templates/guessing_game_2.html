@@ -10,7 +10,7 @@
 
 {% block content %}
 
-<div class="toy-page">
+<div class="toy-page" data-activity-id="{{ activity.activity_id if activity else 14 }}">
 
   <div class="incoming-call-screen" id="incomingCallScreen">
     <div class="incoming-bg"></div>

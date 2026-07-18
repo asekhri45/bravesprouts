@@ -7,9 +7,22 @@
   name="description"
   content="{{ category.subtitle }}"
 >
+<link rel="canonical" href="{{ canonical_url }}">
+
+<meta property="og:type" content="website">
+<meta property="og:title" content="{{ category.title }} | Selective Mutism Parent Resources">
+<meta property="og:description" content="{{ category.subtitle }}">
+<meta property="og:url" content="{{ canonical_url }}">
+
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="{{ category.title }} | Selective Mutism Parent Resources">
+<meta name="twitter:description" content="{{ category.subtitle }}">
+
+<script type="application/ld+json">{{ breadcrumb_jsonld | tojson }}</script>
+
 <link
   rel="stylesheet"
-  href="{{ url_for('static', filename='css/parent_academy.css') }}?v=17"
+  href="{{ url_for('static', filename='css/parent_academy.css') }}?v=18"
 >
 {% endblock %}
 
@@ -85,7 +98,7 @@
           <div class="category-card-art {{ article.art }}">
             <img
               src="{{ url_for('static', filename='images/' + article.image) }}"
-              alt=""
+              alt="Illustration for the article: {{ article.title }}"
               loading="lazy"
               decoding="async"
             >
@@ -99,6 +112,7 @@
 
             <h3>{{ article.title }}</h3>
             <p>{{ article.summary }}</p>
+            <span class="category-card-link">Read article →</span>
           </div>
         </a>
       {% endfor %}

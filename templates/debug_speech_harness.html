@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Speech State Machine Harness (Debug){% endblock %}
+
+{% block content %}
+<main style="max-width: 820px; margin: 40px auto; padding: 0 20px; font-family: monospace;">
+  <h1 style="font-family: sans-serif;">Speech state-machine harness</h1>
+  <p style="font-family: sans-serif; color: #555;">
+    Debug-only diagnostic. Tests the shared MediaRecorder + SpeechRecognition
+    concurrent-capture coordination pattern (the "roundResolved" guard) used by
+    guessing_game.js, guessing_game_2.js, mystery_animal.js, book_guessing_game.js,
+    library_guessing_game.js, mystery_food_item.js, and toy_trivia_game.js, using
+    mocked events. Does not exercise real audio hardware, a real browser
+    recognizer, or the actual game files -- see the comment at the top of
+    <code>speech-state-machine-debug.js</code> for what this does and does not prove.
+  </p>
+  <div id="harness-results" style="white-space: pre-wrap; background: #111; color: #ddd; padding: 16px; border-radius: 8px;">Running...</div>
+</main>
+
+<script src="{{ url_for('static', filename='js/speech-state-machine-debug.js') }}"></script>
+<script>
+  (function () {
+    const el = document.getElementById("harness-results");
+    const results = runSpeechHarnessTests();
+    let out = "";
+    let allPass = true;
+
+    results.forEach(function (r) {
+      out += (r.pass ? "PASS" : "FAIL") + " - " + r.name + "\n";
+      if (!r.pass) {
+        allPass = false;
+        if (r.threw) out += "    threw: " + r.threw + "\n";
+        r.results.forEach(function (detail) {
+          if (!detail.pass) out += "    FAILED: " + detail.message + "\n";
+        });
+      }
+    });
+
+    out += "\n" + (allPass ? "ALL SCENARIOS PASSED" : "SOME SCENARIOS FAILED");
+    el.textContent = out;
+    el.style.color = allPass ? "#7CFC7C" : "#FF7C7C";
+  })();
+</script>
+{% endblock %}

@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}Finish Setting Up Your Account | MyBraveSprout{% endblock %}
+
+{% block head %}
+<link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/signup.css') }}?v=3">
+{% endblock %}
+
+{% block content %}
+<div class="page" data-analytics-event="parent_setup_started">
+  <header class="topbar">
+    <a href="/" class="logo-link" aria-label="MyBraveSprout home">
+      <img src="{{ url_for('static', filename='images/logo_v4.png') }}" class="logo" alt="MyBraveSprout">
+    </a>
+    <span class="step-indicator">Step 2 of 2</span>
+  </header>
+
+  <main class="login-layout login-layout-single">
+    <section class="login-card">
+      <h1>Finish setting up</h1>
+      <p class="subtitle">Just two quick details and you're ready to go.</p>
+
+      <form class="login-form" method="POST" id="parentSetupForm" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        {% if error %}
+          <div class="error-message" role="alert" id="formError" tabindex="-1">{{ error }}</div>
+        {% endif %}
+
+        <label class="field-label" for="parent_name">Your name</label>
+        <div class="input-group">
+          <img src="{{ url_for('static', filename='images/profile.svg') }}" class="input-icon" alt="">
+          <input
+            type="text"
+            name="parent_name"
+            id="parent_name"
+            maxlength="50"
+            autocomplete="name"
+            required
+            autofocus
+          >
+        </div>
+        <p class="field-error" id="nameError" aria-live="polite"></p>
+
+        <label class="field-label" for="parent_pin">Create a 4-digit parent PIN</label>
+        <div class="input-group">
+          <img src="{{ url_for('static', filename='images/lockiconblue.svg') }}" class="input-icon" alt="">
+          <input
+            type="password"
+            name="parent_pin"
+            id="parent_pin"
+            maxlength="4"
+            inputmode="numeric"
+            pattern="[0-9]{4}"
+            autocomplete="off"
+            required
+          >
+        </div>
+        <p class="field-error" id="pinError" aria-live="polite"></p>
+        <p class="pin-note">
+            This PIN protects parent-only areas, like settings, from your child. You'll enter it any time you leave an activity and come back to the dashboard.
+        </p>
+
+        <div class="login-buttons">
+          <button type="submit" class="login-btn" id="submitBtn">
+            <span class="btn-label">Finish Setup</span>
+          </button>
+        </div>
+      </form>
+    </section>
+  </main>
+</div>
+
+<script src="{{ url_for('static', filename='js/analytics.js') }}"></script>
+<script src="{{ url_for('static', filename='js/parent-setup.js') }}"></script>
+{% endblock %}

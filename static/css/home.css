@@ -12,8 +12,24 @@
     --color-shadow: rgba(0, 0, 0, 0.03);
 
     --nav-height: 90px;
+    --announcement-height: 34px;
     --container-width: min(1100px, 80%);
     --border-radius-btn: 16px;
+
+    /* Restrained, MyBraveSprout-compatible section backgrounds -- a single
+       barely-there cool off-white (never warm/beige/orange-tinted) used to
+       vary section backgrounds instead of a rigid blue/white alternation. */
+    --bg-cool-off-white: #f8fafc;
+    --bg-sky-blue: #eef6fc;
+
+    /* Standardized section/content spacing -- use these instead of
+       one-off padding values so related sections sit closer together and
+       only major conceptual transitions get the larger gap. */
+    --space-lg: 96px;
+    --space-md: 64px;
+    --space-sm: 40px;
+    --content-gap: 24px;
+    --card-gap: 20px;
 }
 
 html {
@@ -22,27 +38,16 @@ html {
 
 body {
     margin: 0;
-    padding-top: var(--nav-height);
+    padding-top: calc(var(--announcement-height) + var(--nav-height));
     background: var(--color-white);
     position: relative;
-}
-
-body::after {
-    content: "";
-    position: fixed;
-    left: 0;
-    bottom: 0;
-    width: 100%;
-    height: 300px;
-    background: var(--color-blue-brand);
-    z-index: -1;
 }
 
 /* ── Navbar ── */
 
 .navbar {
     position: fixed;
-    top: 0;
+    top: var(--announcement-height);
     left: 0;
     width: 100%;
     padding: 18px 0;
@@ -133,13 +138,25 @@ body::after {
     line-height: 1.6;
 }
 
+/* ── Landing composition: header (fixed, above) + hero (flexible middle) +
+   feature strip (pinned to bottom). min-height, not height, so the section
+   grows and scrolls naturally on unusually short screens instead of
+   clipping or letting the strip overlap the hero. ── */
+
+.landing-section {
+    display: flex;
+    flex-direction: column;
+    min-height: calc(100vh - var(--nav-height) - var(--announcement-height));
+}
+
 /* ── Hero ── */
 
 .hero-section {
-    min-height: calc(73.5vh - var(--nav-height));
+    flex: 1 1 auto;
+    min-height: 0;
     display: flex;
     align-items: center;
-    margin-bottom: 10vh;
+    padding: 40px 0;
 }
 
 .hero-container {
@@ -154,8 +171,17 @@ body::after {
 .hero-image {
     flex: 0.8;
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
+}
+
+.hero-image-caption {
+    margin: 6px 0 0;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    text-align: center;
 }
 
 .hero-image img {
@@ -231,6 +257,7 @@ body::after {
 /* ── Feature Strip ── */
 
 .feature-strip {
+    flex-shrink: 0;
     border-top: 1px solid var(--color-border);
     border-bottom: 1px solid var(--color-border);
     background: var(--color-white);
@@ -309,138 +336,169 @@ body::after {
 /* ── Approach Section ── */
 
 .approach-section {
-    padding: 120px 0;
+    padding: var(--space-lg) 0;
     overflow: hidden;
+    background: var(--color-white);
 }
 
 .approach-container {
-    width: min(1200px, 82%);
+    width: min(1100px, 86%);
     margin: 0 auto;
+}
+
+.approach-intro {
+    max-width: 640px;
+    margin: 0 auto var(--space-sm);
+    text-align: center;
+}
+
+.approach-section-heading {
+    margin: 0 0 12px;
+    font-size: clamp(1.8rem, 3vw, 2.4rem);
+    font-weight: 800;
+    color: var(--color-text-dark);
+}
+
+.approach-section-subtitle {
+    margin: 0;
+    font-size: 1.05rem;
+    line-height: 1.6;
+    color: var(--color-text-muted);
+}
+
+.approach-steps-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 28px;
+    align-items: stretch;
+}
+
+.approach-step {
     display: flex;
     flex-direction: column;
-    gap: 120px;
-}
-
-.approach-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
     align-items: center;
-    gap: 40px;
+    text-align: center;
+    height: 100%;
+    padding: 24px 18px 22px;
+    background: var(--bg-cool-off-white);
+    border: 1px solid var(--color-border);
+    border-radius: 20px;
 }
 
-.approach-row:hover {
-    transform: translateY(-4px);
-}
-
-.approach-row.reverse .approach-visual { order: 2; }
-.approach-row.reverse .approach-text   { order: 1; }
-
-.approach-visual {
+/* Imagery is the focal point of each card -- a tall, generous visual area
+   with the text kept compact and secondary underneath it. */
+.approach-step-visual {
     position: relative;
     display: flex;
     justify-content: center;
     align-items: center;
-    min-height: 320px;
+    min-height: 168px;
+    margin-bottom: 14px;
 }
 
-.approach-visual img {
-    width: 115%;
-    max-width: 650px;
+.approach-step-visual img {
+    width: 100%;
+    max-width: 150px;
     height: auto;
     display: block;
     position: relative;
     z-index: 2;
 }
 
+.approach-step-number {
+    position: absolute;
+    top: -6px;
+    left: calc(50% + 62px);
+    z-index: 3;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--color-blue);
+    color: var(--color-white);
+    font-size: 0.85rem;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+
 .floating-image {
     animation: floatY 4.5s ease-in-out infinite;
 }
 
-.approach-decor {
-    position: absolute;
-    border-radius: 999px;
-    z-index: 1;
-    pointer-events: none;
-}
-
-.decor-one {
-    width: 90px;
-    height: 90px;
-    background: var(--color-blue-brand-subtle);
-    top: 20px;
-    left: 30px;
-    animation: drift 6s ease-in-out infinite;
-}
-
-.decor-two {
-    width: 34px;
-    height: 34px;
-    background: var(--color-blue-light);
-    bottom: 35px;
-    right: 50px;
-    animation: drift 5s ease-in-out infinite reverse;
-}
-
-.approach-text {
-    max-width: 440px;
-}
-
-.approach-text.two {
-    margin-left: 100px;
-}
-
-.approach-text h2 {
-    margin: 0 0 18px;
-    font-size: clamp(2.1rem, 4vw, 3.4rem);
-    line-height: 1;
+.approach-step h3 {
+    margin: 0 0 6px;
+    font-size: 1.02rem;
+    line-height: 1.25;
     font-weight: 800;
-    letter-spacing: -0.03em;
+    letter-spacing: -0.01em;
     color: var(--color-blue);
-    white-space: nowrap;
 }
 
-.approach-text p {
+.approach-step p {
     margin: 0;
-    font-size: 1.08rem;
-    line-height: 1.8;
+    max-width: 210px;
+    font-size: 0.82rem;
+    line-height: 1.5;
     color: var(--color-text-muted);
-    max-width: 520px;
 }
 
-/* ── Reveal Animation ── */
+/* ── Reveal Animation ──
+   Visible by default. JavaScript (approach-animation.js) opts elements
+   INTO the hidden pre-animation state via .js-armed, only once it has
+   confirmed IntersectionObserver support and that prefers-reduced-motion
+   is off. If that script fails to load, throws, or is blocked, elements
+   simply never get .js-armed and stay in this default visible state --
+   content is never lost to a JavaScript failure. */
 
 .reveal {
-    opacity: 0;
-    transform: translateY(50px);
+    opacity: 1;
+    transform: none;
     transition: opacity 0.8s ease, transform 0.8s ease;
 }
 
-.reveal.active {
+.reveal.js-armed {
+    opacity: 0;
+    transform: translateY(50px);
+}
+
+.reveal.js-armed.active {
     opacity: 1;
     transform: translateY(0);
 }
 
-.reveal .approach-text h2,
-.reveal .approach-text p,
-.reveal .approach-visual img {
+@media (prefers-reduced-motion: reduce) {
+    .reveal,
+    .reveal.js-armed,
+    .reveal.js-armed.active {
+        transition: none !important;
+        opacity: 1 !important;
+        transform: none !important;
+    }
+}
+
+.reveal .approach-step h3,
+.reveal .approach-step p,
+.reveal .approach-step-visual img {
     opacity: 0;
     transform: translateY(24px);
     transition: opacity 0.7s ease, transform 0.7s ease;
 }
 
-.reveal.active .approach-visual img {
+.reveal.active .approach-step-visual img {
     opacity: 1;
     transform: translateY(0);
     transition-delay: 0.1s;
 }
 
-.reveal.active .approach-text h2 {
+.reveal.active .approach-step h3 {
     opacity: 1;
     transform: translateY(0);
     transition-delay: 0.2s;
 }
 
-.reveal.active .approach-text p {
+.reveal.active .approach-step p {
     opacity: 1;
     transform: translateY(0);
     transition-delay: 0.35s;
@@ -457,27 +515,22 @@ body::after {
 }
 
 @media (max-width: 950px) {
-    .approach-container { gap: 80px; }
-    .approach-section { padding: 80px 0; }
+    .approach-section { padding: var(--space-sm) 0; }
 
-    .approach-row,
-    .approach-row.reverse {
+    .approach-steps-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+    }
+}
+
+@media (max-width: 600px) {
+    .approach-steps-grid {
         grid-template-columns: 1fr;
-        gap: 30px;
     }
 
-    .approach-row.reverse .approach-visual,
-    .approach-row.reverse .approach-text { order: unset; }
-
-    .approach-text {
-        max-width: 100%;
-        text-align: center;
-        margin: 0 auto;
+    .approach-step {
+        padding: 24px 20px;
     }
-
-    .approach-text h2 { white-space: normal; }
-    .approach-text p { max-width: 100%; }
-    .approach-visual { min-height: unset; }
 }
 
 /* ── Bottom CTA ── */
@@ -486,7 +539,7 @@ body::after {
     position: relative;
     width: 100%;
     text-align: center;
-    padding-top: 120px;
+    padding-top: var(--space-lg);
     overflow: hidden;
 }
 
@@ -611,47 +664,62 @@ body::after {
 
 @media (max-width: 768px) {
     :root {
-        --nav-height: 122px;
+        /* Simplified mobile header: logo + one CTA, no stacked nav-tab row,
+           so this is meaningfully shorter than the desktop nav height. */
+        --nav-height: 68px;
         --container-width: min(92%, 430px);
     }
 
     body {
-        padding-top: var(--nav-height);
+        padding-top: calc(var(--announcement-height) + var(--nav-height));
         overflow-x: hidden;
     }
 
     .navbar {
-        padding: 14px 0 10px;
+        padding: 0;
     }
 
     .nav-inner {
         display: flex;
-        flex-direction: column;
+        flex-direction: row;
         align-items: center;
-        justify-content: center;
+        justify-content: space-between;
         gap: 10px;
+        height: var(--nav-height);
     }
 
     .logo {
-        width: min(78vw, 300px);
+        width: min(46vw, 190px);
+        height: auto;
+        max-height: 40px;
     }
 
+    /* Secondary nav links move out of the header on mobile to keep the
+       header compact and focused on the one CTA -- still reachable via
+       the footer and other pages. */
     .top-tabs {
-        gap: 22px;
-    }
-
-    .top-tab {
-        font-size: 0.88rem;
-        padding: 5px 0 7px;
+        display: none;
     }
 
     .nav-buttons {
+        display: flex;
+        opacity: 1;
+        transform: none;
+        pointer-events: auto;
+    }
+
+    .nav-cta-secondary {
         display: none;
+    }
+
+    .nav-cta-primary {
+        padding: 10px 14px;
+        font-size: 0.78rem;
+        white-space: nowrap;
     }
 
     .hero-section {
         min-height: auto;
-        margin-bottom: 56px;
         padding: 22px 0 0;
     }
 
@@ -694,6 +762,14 @@ body::after {
     .hero-buttons {
         justify-content: center;
         gap: 12px;
+    }
+
+    .hero-login-prompt {
+        text-align: center;
+    }
+
+    .hero-reassurance {
+        justify-content: center;
     }
 
     .hero-btn {
@@ -792,11 +868,15 @@ body::after {
 
 .home-video-section {
     position: relative;
-    padding: 70px 0 110px;
+    padding: var(--space-md) 0;
     background:
-        radial-gradient(circle at 12% 12%, rgba(96, 165, 250, 0.16), transparent 30%),
-        radial-gradient(circle at 88% 8%, rgba(59, 130, 246, 0.10), transparent 26%),
-        linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+        radial-gradient(circle at 12% 12%, rgba(96, 165, 250, 0.08), transparent 30%),
+        radial-gradient(circle at 88% 8%, rgba(59, 130, 246, 0.06), transparent 26%),
+        linear-gradient(180deg,
+            var(--color-white) 0%,
+            var(--bg-sky-blue) 22%,
+            var(--bg-sky-blue) 78%,
+            var(--color-white) 100%);
     overflow: hidden;
 }
 
@@ -847,9 +927,9 @@ body::after {
 .home-video-card {
     background: rgba(255, 255, 255, 0.96);
     border: 1px solid rgba(219, 234, 254, 0.95);
-    border-radius: 30px;
+    border-radius: 24px;
     padding: 28px;
-    box-shadow: 0 22px 50px rgba(37, 99, 235, 0.075);
+    box-shadow: 0 10px 24px rgba(37, 99, 235, 0.06);
 }
 
 .home-video-copy {
@@ -1055,7 +1135,7 @@ body::after {
   }
 
   body {
-    padding-top: var(--nav-height);
+    padding-top: calc(var(--announcement-height) + var(--nav-height));
   }
 
   .navbar .nav-inner {
@@ -1103,4 +1183,647 @@ body::after {
   .navbar .top-tab {
     font-size: 0.77rem;
   }
+}
+
+/* ── Mobile nav CTA: final, authoritative override ──
+   This file has several earlier, higher-specificity duplicate media-query
+   blocks (".navbar .nav-buttons { display: none }" at up to 950px) left
+   over from prior patches, which would otherwise silently re-hide the
+   primary CTA this redesign requires on mobile. Rather than untangle every
+   duplicate block (out of scope for this change), this final block wins
+   the cascade deliberately: it is last in source order and uses
+   !important on the properties those earlier rules fight over, so mobile
+   visitors always have a reachable primary CTA regardless of viewport
+   width down to phone sizes. */
+@media (max-width: 950px) {
+    .top-tabs,
+    .navbar .top-tabs {
+        display: none !important;
+    }
+
+    .nav-buttons,
+    .navbar .nav-buttons {
+        display: flex !important;
+        opacity: 1 !important;
+        transform: none !important;
+        pointer-events: auto !important;
+    }
+
+    .nav-cta-secondary {
+        display: none !important;
+    }
+
+    .nav-cta-primary {
+        padding: 10px 14px;
+        font-size: 0.78rem;
+        white-space: nowrap;
+    }
+
+    /* Full CTA label is too wide for the compact mobile header and was
+       overflowing past the viewport edge -- swap to a short label instead
+       of shrinking font size further (keeps text legible/tappable). */
+    .nav-cta-text-full {
+        display: none;
+    }
+
+    .nav-cta-text-short {
+        display: inline;
+    }
+}
+
+@media (min-width: 951px) {
+    .nav-cta-text-short {
+        display: none;
+    }
+}
+
+@media (max-width: 768px) {
+    :root {
+        --nav-height: 68px !important;
+        --container-width: min(92%, 430px);
+    }
+
+    .navbar {
+        padding: 0 !important;
+    }
+
+    .nav-inner,
+    .navbar .nav-inner {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        height: var(--nav-height);
+    }
+
+    .logo,
+    .navbar .logo {
+        width: min(46vw, 190px) !important;
+        max-width: none !important;
+        height: auto;
+        max-height: 40px;
+    }
+}
+/* ══════════════════════════════════════════════════════════════
+   Phase 2 redesign additions: hero extras, activities carousel,
+   trust, privacy, and FAQ sections.
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── Hero extras ── */
+
+/* ── Hero login prompt: muted question, clearly interactive link ── */
+
+.hero-login-prompt {
+    margin: 20px 0 0;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: var(--color-text-muted);
+}
+
+.hero-login-link {
+    display: inline-block;
+    margin-left: 4px;
+    padding: 2px 3px;
+    border-radius: 4px;
+    color: var(--color-blue);
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-color: var(--color-blue-light);
+    transition: color 0.15s ease, text-decoration-color 0.15s ease;
+}
+
+.hero-login-link:hover {
+    color: var(--color-blue-dark);
+    text-decoration-color: currentColor;
+}
+
+.hero-login-link:focus-visible {
+    outline: 2px solid var(--color-blue);
+    outline-offset: 3px;
+    border-radius: 4px;
+}
+
+/* ── Reassurance row: secondary hierarchy, checkmarks instead of asterisks ── */
+
+.hero-reassurance {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 6px 18px;
+    margin: 16px 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.hero-reassurance li {
+    position: relative;
+    padding-left: 20px;
+    font-size: 0.86rem;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    white-space: nowrap;
+}
+
+.hero-reassurance li::before {
+    content: "\2713";
+    position: absolute;
+    left: 0;
+    top: 0;
+    color: var(--color-blue);
+    font-weight: 700;
+}
+
+/* ── Activities carousel ── */
+
+.activities-section {
+    padding: var(--space-md) 0;
+    background: var(--color-white);
+}
+
+.activities-container {
+    width: var(--container-width);
+    margin: 0 auto;
+}
+
+.activities-container h2 {
+    margin: 0 0 8px;
+    font-size: clamp(1.8rem, 3vw, 2.4rem);
+    font-weight: 800;
+    color: var(--color-text-dark);
+    text-align: center;
+}
+
+.activities-subtitle {
+    margin: 0 0 40px;
+    text-align: center;
+    color: var(--color-text-muted);
+    font-size: 1.05rem;
+}
+
+.activities-carousel {
+    position: relative;
+}
+
+.activities-carousel:focus-visible {
+    outline: 3px solid var(--color-blue);
+    outline-offset: 4px;
+    border-radius: 20px;
+}
+
+.activities-track {
+    display: flex;
+    gap: 24px;
+    overflow-x: auto;
+
+    /*
+     * Continuous auto-scrolling and mandatory snapping conflict. Snapping is
+     * restored temporarily during manual dragging through the rules below.
+     */
+    scroll-snap-type: none;
+
+    padding: 6px 6px 18px;
+    scrollbar-width: none;
+    overscroll-behavior-x: contain;
+    cursor: grab;
+}
+
+.activities-track::-webkit-scrollbar {
+    display: none;
+}
+
+.activities-track.is-dragging {
+    cursor: grabbing;
+    scroll-snap-type: none;
+    user-select: none;
+}
+
+.activity-card {
+    scroll-snap-stop: normal;
+}
+
+.activity-card {
+    flex: 0 0 calc(33.333% - 16px);
+    scroll-snap-align: start;
+    background: var(--color-white);
+    border: 1px solid var(--color-border);
+    border-radius: 24px;
+    overflow: hidden;
+    box-shadow: 0 6px 18px var(--color-shadow);
+    display: flex;
+    flex-direction: column;
+}
+
+.activity-card-image {
+    background: var(--color-blue-brand-subtle);
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+}
+
+.activity-card-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    display: block;
+}
+
+/* The star1.png fallback is a small centered icon, not a landscape
+   screenshot -- switch back to a contained, padded treatment only when
+   the onerror handler swaps it in. */
+.activity-card-image img.activity-image-fallback {
+    object-fit: contain;
+    padding: 28px;
+    background: var(--color-blue-brand-subtle);
+}
+
+.activity-card-body {
+    padding: 18px 20px 22px;
+}
+
+.activity-card-skill {
+    display: inline-block;
+    margin-bottom: 8px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: var(--color-blue-light);
+    color: var(--color-blue-dark);
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.activity-card-body h3 {
+    margin: 0 0 8px;
+    font-size: 1.15rem;
+    color: var(--color-text-dark);
+}
+
+.activity-card-body p {
+    margin: 0 0 8px;
+    font-size: 0.92rem;
+    line-height: 1.55;
+    color: var(--color-text-muted);
+}
+
+.activity-card-character {
+    font-size: 0.82rem;
+    color: var(--color-text-muted);
+    font-weight: 600;
+}
+
+.activities-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    margin-top: 8px;
+}
+
+.activities-arrow {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 1px solid var(--color-border);
+    background: var(--color-white);
+    color: var(--color-blue);
+    font-size: 1.3rem;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.activities-arrow:disabled {
+    opacity: 0.35;
+    cursor: default;
+}
+
+.activities-progress-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    max-width: 320px;
+}
+
+.activities-progress-track {
+    position: relative;
+    flex: 1 1 auto;
+    height: 4px;
+    border-radius: 999px;
+    background: var(--color-border);
+    overflow: hidden;
+}
+
+.activities-progress-fill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 0%;
+    border-radius: 999px;
+    background: var(--color-blue);
+    /* Scroll/drag updates set width directly every frame for immediate
+       feedback; this transition only smooths arrow-click jumps, and is
+       short enough to never visibly lag behind a fast drag. */
+    transition: width 0.12s linear;
+}
+
+.activities-progress-counter {
+    flex: 0 0 auto;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--color-text-muted);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .activities-progress-fill {
+        transition: none;
+    }
+}
+
+/* ── Trust section ── */
+
+.trust-section {
+    padding: var(--space-md) 0;
+    background: var(--bg-cool-off-white);
+}
+
+.trust-container {
+    width: var(--container-width);
+    margin: 0 auto;
+    text-align: center;
+}
+
+.trust-container h2 {
+    margin: 0 0 40px;
+    font-size: clamp(1.8rem, 3vw, 2.4rem);
+    font-weight: 800;
+    color: var(--color-text-dark);
+}
+
+.trust-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    text-align: left;
+    margin-bottom: 32px;
+}
+
+.trust-card {
+    /* Open layout, not a floating card box -- a left accent border is
+       enough to group the heading/paragraph without another rounded
+       shadowed rectangle on the page. */
+    padding: 4px 0 4px 18px;
+    border-left: 3px solid var(--color-blue-light);
+}
+
+.trust-card h3 {
+    margin: 0 0 10px;
+    font-size: 1.08rem;
+    color: var(--color-text-dark);
+}
+
+.trust-card p {
+    margin: 0;
+    font-size: 0.92rem;
+    line-height: 1.6;
+    color: var(--color-text-muted);
+}
+
+.trust-link {
+    display: inline-block;
+    color: var(--color-blue);
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.trust-link:hover {
+    text-decoration: underline;
+}
+
+/* ── Privacy / AI section ── */
+
+.privacy-section {
+    padding: var(--space-md) 0;
+    background: var(--color-white);
+}
+
+.privacy-container {
+    width: min(760px, 88%);
+    margin: 0 auto;
+}
+
+.privacy-container h2 {
+    margin: 0 0 28px;
+    font-size: clamp(1.8rem, 3vw, 2.4rem);
+    font-weight: 800;
+    color: var(--color-text-dark);
+    text-align: center;
+}
+
+.privacy-list {
+    list-style: none;
+    margin: 0 0 20px;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.privacy-list li {
+    /* Open layout to match the trust section, rather than another set of
+       boxed cards -- a left accent border groups each point instead. */
+    padding: 2px 0 2px 18px;
+    border-left: 3px solid var(--color-blue-light);
+    font-size: 0.95rem;
+    line-height: 1.65;
+    color: var(--color-text-muted);
+}
+
+.privacy-list strong {
+    color: var(--color-text-dark);
+}
+
+.privacy-footnote {
+    text-align: center;
+    font-size: 0.9rem;
+    color: var(--color-text-muted);
+}
+
+.privacy-footnote a {
+    color: var(--color-blue);
+    font-weight: 600;
+}
+
+/* ── FAQ section ── */
+
+.faq-section {
+    padding: var(--space-md) 0 var(--space-lg);
+    background: var(--bg-cool-off-white);
+}
+
+.faq-container {
+    width: min(760px, 88%);
+    margin: 0 auto;
+}
+
+.faq-container h2 {
+    margin: 0 0 28px;
+    font-size: clamp(1.8rem, 3vw, 2.4rem);
+    font-weight: 800;
+    color: var(--color-text-dark);
+    text-align: center;
+}
+
+.faq-item {
+    background: var(--color-white);
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    padding: 18px 22px;
+    margin-bottom: 12px;
+}
+
+.faq-item summary {
+    cursor: pointer;
+    font-weight: 700;
+    color: var(--color-text-dark);
+    font-size: 1rem;
+    list-style: none;
+}
+
+.faq-item summary::-webkit-details-marker {
+    display: none;
+}
+
+.faq-item summary::after {
+    content: "+";
+    float: right;
+    font-weight: 400;
+    color: var(--color-blue);
+}
+
+.faq-item[open] summary::after {
+    content: "\2212";
+}
+
+.faq-item p {
+    margin: 12px 0 0;
+    color: var(--color-text-muted);
+    font-size: 0.92rem;
+    line-height: 1.6;
+}
+
+/* ── Responsive: new sections ── */
+
+@media (max-width: 900px) {
+    .trust-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .activity-card {
+        flex: 0 0 calc(50% - 12px);
+    }
+}
+
+@media (max-width: 600px) {
+    .activities-section,
+    .trust-section,
+    .privacy-section,
+    .faq-section {
+        padding: 56px 0;
+    }
+
+    /* One main card + a peek of the next, to signal swiping. */
+    .activity-card {
+        flex: 0 0 82%;
+    }
+
+    .activities-track {
+        gap: 16px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .activities-track {
+        scroll-behavior: auto;
+    }
+}
+
+/* ── Early-access announcement bar ──
+   Sits above the fixed navbar (which is offset down by --announcement-height).
+   Uses the same duplicated-content marquee technique as .feature-strip-track
+   for a seamless, GPU-cheap loop. Reduced-motion shows only the first
+   message, statically, with no animation. */
+
+.announcement-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: var(--announcement-height);
+    background: linear-gradient(90deg, var(--color-blue-dark), var(--color-blue-brand));
+    color: var(--color-white);
+    overflow: hidden;
+    z-index: 1001;
+    display: flex;
+    align-items: center;
+}
+
+.announcement-track {
+    display: flex;
+    width: max-content;
+    animation: announcement-scroll 28s linear infinite;
+}
+
+.announcement-group {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.announcement-message {
+    padding: 0 36px;
+    font-size: 12.5px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+}
+
+@keyframes announcement-scroll {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .announcement-track {
+        animation: none;
+    }
+    .announcement-bar {
+        justify-content: center;
+    }
+    .announcement-group[aria-hidden="true"] {
+        display: none;
+    }
+    .announcement-group:not([aria-hidden="true"]) .announcement-message:not(:first-child) {
+        display: none;
+    }
+}
+
+@media (max-width: 600px) {
+    .announcement-message {
+        padding: 0 20px;
+        font-size: 11.5px;
+    }
+}
+
+.faq-section {
+    background: white;
 }

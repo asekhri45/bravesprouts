@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block title %}Create New Parent PIN{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/parent_pin.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="pin-page">
+
+    <div class="pin-card">
+        <h1 class="pin-title">Create a new PIN</h1>
+
+        <p class="pin-subtitle">
+            Choose a four-digit PIN that your child will not easily guess.
+        </p>
+
+        <form method="POST" class="pin-form">
+            <input
+                type="hidden"
+                name="csrf_token"
+                value="{{ csrf_token() }}"
+            >
+
+            <label for="newPin" class="sr-only">
+                New four-digit parent PIN
+            </label>
+
+            <input
+                type="password"
+                id="newPin"
+                name="new_pin"
+                maxlength="4"
+                inputmode="numeric"
+                pattern="[0-9]{4}"
+                autocomplete="off"
+                placeholder="New PIN"
+                required
+                autofocus
+                class="pin-input pin-input-with-placeholder"
+            >
+
+            <label for="confirmPin" class="sr-only">
+                Confirm new parent PIN
+            </label>
+
+            <input
+                type="password"
+                id="confirmPin"
+                name="confirm_pin"
+                maxlength="4"
+                inputmode="numeric"
+                pattern="[0-9]{4}"
+                autocomplete="off"
+                placeholder="Confirm PIN"
+                required
+                class="pin-input pin-input-with-placeholder pin-second-input"
+            >
+
+            {% if error %}
+            <div class="pin-error" role="alert">
+                {{ error }}
+            </div>
+            {% endif %}
+
+            <button type="submit" class="pin-button">
+                Save New PIN
+            </button>
+
+            <a
+                href="{{ url_for('parent_pin_gate') }}"
+                class="pin-text-link"
+            >
+                I remember my PIN
+            </a>
+        </form>
+    </div>
+
+</div>
+{% endblock %}

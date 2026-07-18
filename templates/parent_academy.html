@@ -7,49 +7,59 @@
   name="description"
   content="Free selective mutism resources for parents, including evidence-based articles about anxiety, communication, school support, and low-pressure speaking strategies."
 >
-<link rel="stylesheet" href="{{ url_for('static', filename='css/parent_academy.css') }}?v=17">
+<link rel="canonical" href="{{ url_for('parent_academy', _external=True) }}">
+
+<meta property="og:type" content="website">
+<meta property="og:title" content="Selective Mutism Parent Resources | MyBraveSprout">
+<meta property="og:description" content="Free selective mutism resources for parents, including evidence-based articles about anxiety, communication, school support, and low-pressure speaking strategies.">
+<meta property="og:url" content="{{ url_for('parent_academy', _external=True) }}">
+
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Selective Mutism Parent Resources | MyBraveSprout">
+<meta name="twitter:description" content="Free selective mutism resources for parents, including evidence-based articles about anxiety, communication, school support, and low-pressure speaking strategies.">
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/parent_academy.css') }}?v=18">
 {% endblock %}
 
 {% block content %}
 
-<header class="navbar show-buttons">
-  <div class="nav-inner">
+<div
+    class="announcement-bar"
+    role="note"
+    aria-label="Early access announcement"
+>
+    <div class="announcement-track">
+        <div class="announcement-group">
+            <span class="announcement-message">
+                LIMITED EARLY ACCESS &middot; Welcoming our first 100 parent accounts
+            </span>
 
-    <a href="{{ url_for('home') }}" class="nav-logo-link" aria-label="MyBraveSprout Home">
-      <img
-        src="{{ url_for('static', filename='images/logo_v4.png') }}"
-        class="logo"
-        alt="MyBraveSprout"
-      >
-    </a>
+            <span class="announcement-message">
+                Growing carefully so every activity can keep improving
+            </span>
 
-    <nav class="top-tabs" aria-label="Main navigation">
-      <a href="{{ url_for('home') }}" class="top-tab">Home</a>
+            <span class="announcement-message">
+                Free &middot; Parent-guided &middot; No credit card
+            </span>
+        </div>
 
-      <a href="{{ url_for('our_story') }}" class="top-tab">
-        Our Story
-      </a>
+        <div class="announcement-group" aria-hidden="true">
+            <span class="announcement-message">
+                LIMITED EARLY ACCESS &middot; Welcoming our first 100 parent accounts
+            </span>
 
-      <a
-        href="{{ url_for('parent_academy') }}"
-        class="top-tab active"
-        aria-current="page"
-      >
-        Parent Resources
-      </a>
+            <span class="announcement-message">
+                Growing carefully so every activity can keep improving
+            </span>
 
-      <a href="{{ url_for('acknowledgments2') }}" class="top-tab">
-        Acknowledgments
-      </a>
-    </nav>
-
-    <div class="nav-buttons">
-      <a href="{{ url_for('login') }}" class="hero-btn secondary">Login</a>
-      <a href="{{ url_for('signup') }}" class="hero-btn primary">Get Started</a>
+            <span class="announcement-message">
+                Free &middot; Parent-guided &middot; No credit card
+            </span>
+        </div>
     </div>
+</div>
 
-  </div>
-</header>
+{% include "partials/nav.html" %}
 
 <main class="public-parent-resources">
 <section class="academy-header-bar">
@@ -102,67 +112,73 @@
 
     <a href="{{ url_for('parent_academy_article', slug='what-is-selective-mutism') }}" class="academy-resource-card academy-searchable" data-title="What is Selective Mutism?" data-category="Understanding Selective Mutism" data-summary="Definition diagnostic criteria anxiety disorder child talks at home but not school symptoms common signs">
       <div class="academy-card-art art-pink">
-        <img src="{{ url_for('static', filename='images/sm_brain_question.png') }}" alt="">
+        <img src="{{ url_for('static', filename='images/sm_brain_question.png') }}" alt="Illustration for the article: What is Selective Mutism?">
       </div>
       <div class="academy-card-body">
         <h3>What is Selective Mutism?</h3>
         <p>Definition, diagnostic criteria, and how common it is.</p>
         <span>◷ 5 min read</span>
+        <span class="category-card-link">Read article →</span>
       </div>
     </a>
 
     <a href="{{ url_for('parent_academy_article', slug='is-selective-mutism-just-shyness') }}" class="academy-resource-card academy-searchable" data-title="Is Selective Mutism Just Shyness?" data-category="Understanding Selective Mutism" data-summary="shyness difference temperament anxiety disorder not just shy diagnosis">
       <div class="academy-card-art art-green">
-        <img src="{{ url_for('static', filename='images/sm_shyness.png') }}" alt="">
+        <img src="{{ url_for('static', filename='images/sm_shyness.png') }}" alt="Illustration for the article: Is Selective Mutism Just Shyness?">
       </div>
       <div class="academy-card-body">
         <h3>Is Selective Mutism Just Shyness?</h3>
         <p>Key differences and what research tells us.</p>
         <span>◷ 4 min read</span>
+        <span class="category-card-link">Read article →</span>
       </div>
     </a>
 
     <a href="{{ url_for('parent_academy_article', slug='what-causes-selective-mutism') }}" class="academy-resource-card academy-searchable" data-title="What Causes Selective Mutism?" data-category="Understanding Selective Mutism" data-summary="causes risk factors genetics temperament behavioral inhibition environment anxiety avoidance">
       <div class="academy-card-art art-peach">
-        <img src="{{ url_for('static', filename='images/sm_causes.png') }}" alt="">
+        <img src="{{ url_for('static', filename='images/sm_causes.png') }}" alt="Illustration for the article: What Causes Selective Mutism?">
       </div>
       <div class="academy-card-body">
         <h3>What Causes Selective Mutism?</h3>
         <p>What researchers know about possible causes and risk factors.</p>
         <span>◷ 6 min read</span>
+        <span class="category-card-link">Read article →</span>
       </div>
     </a>
 
     <a href="{{ url_for('parent_academy_article', slug='the-science-of-anxiety') }}" class="academy-resource-card academy-searchable" data-title="The Science of Anxiety" data-category="Understanding Selective Mutism" data-summary="brain body nervous system fight flight freeze anxiety speech hard threat response">
       <div class="academy-card-art art-blue">
-        <img src="{{ url_for('static', filename='images/sm_anxiety.png') }}" alt="">
+        <img src="{{ url_for('static', filename='images/sm_anxiety.png') }}" alt="Illustration for the article: The Science of Anxiety">
       </div>
       <div class="academy-card-body">
         <h3>The Science of Anxiety</h3>
         <p>How the brain and body respond when speech feels difficult.</p>
         <span>◷ 6 min read</span>
+        <span class="category-card-link">Read article →</span>
       </div>
     </a>
 
     <a href="{{ url_for('parent_academy_article', slug='why-home-but-not-school') }}" class="academy-resource-card academy-searchable" data-title="Why Home but Not School?" data-category="Understanding Selective Mutism" data-summary="talks at home not school different settings classroom teacher anxiety context specific">
       <div class="academy-card-art art-rose">
-        <img src="{{ url_for('static', filename='images/sm_home_school.png') }}" alt="">
+        <img src="{{ url_for('static', filename='images/sm_home_school.png') }}" alt="Illustration for the article: Why Home but Not School?">
       </div>
       <div class="academy-card-body">
         <h3>Why Home but Not School?</h3>
         <p>Why different settings can trigger different levels of anxiety.</p>
         <span>◷ 6 min read</span>
+        <span class="category-card-link">Read article →</span>
       </div>
     </a>
 
     <a href="{{ url_for('parent_academy_article', slug='why-does-my-child-freeze') }}" class="academy-resource-card academy-searchable" data-title="Why Does My Child Freeze?" data-category="Understanding Selective Mutism" data-summary="freeze response cognitive overload stuck cannot answer nervous system shutdown">
       <div class="academy-card-art art-yellow">
-        <img src="{{ url_for('static', filename='images/sm_freeze.png') }}" alt="">
+        <img src="{{ url_for('static', filename='images/sm_freeze.png') }}" alt="Illustration for the article: Why Does My Child Freeze?">
       </div>
       <div class="academy-card-body">
         <h3>Why Does My Child Freeze?</h3>
         <p>Understanding the freeze response and cognitive overload.</p>
         <span>◷ 5 min read</span>
+        <span class="category-card-link">Read article →</span>
       </div>
     </a>
 
@@ -181,133 +197,145 @@
 
     <a href="{{ url_for('parent_academy_article', slug='why-does-my-child-whisper') }}" class="academy-resource-card academy-searchable" data-title="Why Does My Child Whisper?" data-category="Understanding Your Child" data-summary="whispering quiet voice bridge between silence and speech good sign low pressure">
       <div class="academy-card-art art-lavender">
-        <img src="{{ url_for('static', filename='images/sm_whisper.png') }}" alt="" loading="lazy">
+        <img src="{{ url_for('static', filename='images/sm_whisper.png') }}" alt="Illustration for the article: Why Does My Child Whisper?" loading="lazy">
       </div>
       <div class="academy-card-body">
         <h3>Why Does My Child Whisper?</h3>
         <p>Why whispering happens and whether it can be a step forward.</p>
         <span>◷ 4 min read</span>
+        <span class="category-card-link">Read article →</span>
       </div>
     </a>
 
     <a href="{{ url_for('parent_academy_article', slug='why-only-certain-people') }}" class="academy-resource-card academy-searchable" data-title="Why Only Certain People?" data-category="Understanding Your Child" data-summary="certain people relatives grandparents safety familiarity comfort speech islands">
       <div class="academy-card-art art-mint">
-        <img src="{{ url_for('static', filename='images/sm_certain_people.png') }}" alt="" loading="lazy">
+        <img src="{{ url_for('static', filename='images/sm_certain_people.png') }}" alt="Illustration for the article: Why Only Certain People?" loading="lazy">
       </div>
       <div class="academy-card-body">
         <h3>Why Only Certain People?</h3>
         <p>How comfort, safety, and familiarity affect who your child can talk to.</p>
         <span>◷ 5 min read</span>
+        <span class="category-card-link">Read article →</span>
       </div>
     </a>
 
     <a href="{{ url_for('parent_academy_article', slug='why-one-teacher-but-not-another') }}" class="academy-resource-card academy-searchable" data-title="Why One Teacher But Not Another?" data-category="Understanding Your Child" data-summary="teacher classroom one teacher not another predictability pressure relationship safety school">
       <div class="academy-card-art art-warm">
-        <img src="{{ url_for('static', filename='images/sm_one_teacher.png') }}" alt="" loading="lazy">
+        <img src="{{ url_for('static', filename='images/sm_one_teacher.png') }}" alt="Illustration for the article: Why One Teacher But Not Another?" loading="lazy">
       </div>
       <div class="academy-card-body">
         <h3>Why One Teacher But Not Another?</h3>
         <p>The role of connection, predictability, and social pressure.</p>
         <span>◷ 5 min read</span>
+        <span class="category-card-link">Read article →</span>
       </div>
     </a>
 
     <a href="{{ url_for('parent_academy_article', slug='why-is-it-harder-around-other-children') }}" class="academy-resource-card academy-searchable" data-title="Why Is It Harder Around Other Children?" data-category="Understanding Your Child" data-summary="peers children classmates social pressure attention judgment friendships group speaking">
       <div class="academy-card-art art-soft-blue">
-        <img src="{{ url_for('static', filename='images/sm_other_children.png') }}" alt="" loading="lazy">
+        <img src="{{ url_for('static', filename='images/sm_other_children.png') }}" alt="Illustration for the article: Why Is It Harder Around Other Children?" loading="lazy">
       </div>
       <div class="academy-card-body">
         <h3>Why Is It Harder Around Other Children?</h3>
         <p>Understanding peer attention, social pressure, and anxiety.</p>
         <span>◷ 4 min read</span>
+        <span class="category-card-link">Read article →</span>
       </div>
     </a>
 
     <a href="{{ url_for('parent_academy_article', slug='why-avoid-eye-contact') }}" class="academy-resource-card academy-searchable" data-title="Why Avoid Eye Contact?" data-category="Understanding Your Child" data-summary="eye contact looking away social intensity pressure listening anxiety attention">
       <div class="academy-card-art art-soft-purple">
-        <img src="{{ url_for('static', filename='images/sm_eye_contact.png') }}" alt="" loading="lazy">
+        <img src="{{ url_for('static', filename='images/sm_eye_contact.png') }}" alt="Illustration for the article: Why Avoid Eye Contact?" loading="lazy">
       </div>
       <div class="academy-card-body">
         <h3>Why Avoid Eye Contact?</h3>
         <p>What avoidance can mean and how parents can respond gently.</p>
         <span>◷ 4 min read</span>
+        <span class="category-card-link">Read article →</span>
       </div>
     </a>
 
     <a href="{{ url_for('parent_academy_article', slug='why-do-they-seem-comfortable-but-not-speak') }}" class="academy-resource-card academy-searchable" data-title="Why Do They Seem Comfortable But Not Speak?" data-category="Understanding Your Child" data-summary="seems comfortable calm outside internal anxiety hidden anxiety silent but happy">
       <div class="academy-card-art art-pink">
-        <img src="{{ url_for('static', filename='images/sm_seems_comfortable.png') }}" alt="" loading="lazy">
+        <img src="{{ url_for('static', filename='images/sm_seems_comfortable.png') }}" alt="Illustration for the article: Why Do They Seem Comfortable But Not Speak?" loading="lazy">
       </div>
       <div class="academy-card-body">
         <h3>Why Do They Seem Comfortable But Not Speak?</h3>
         <p>Why calm behavior on the outside can still hide internal anxiety.</p>
         <span>◷ 5 min read</span>
+        <span class="category-card-link">Read article →</span>
       </div>
     </a>
 
     <a href="{{ url_for('parent_academy_article', slug='why-did-my-child-stop-speaking-again') }}" class="academy-resource-card academy-searchable" data-title="Why Did My Child Stop Speaking Again?" data-category="Understanding Your Child" data-summary="regression setbacks stopped speaking again progress slowed transition illness vacation">
       <div class="academy-card-art art-yellow">
-        <img src="{{ url_for('static', filename='images/sm_regression.png') }}" alt="" loading="lazy">
+        <img src="{{ url_for('static', filename='images/sm_regression.png') }}" alt="Illustration for the article: Why Did My Child Stop Speaking Again?" loading="lazy">
       </div>
       <div class="academy-card-body">
         <h3>Why Did My Child Stop Speaking Again?</h3>
         <p>Understanding setbacks, regressions, and what they may mean.</p>
         <span>◷ 5 min read</span>
+        <span class="category-card-link">Read article →</span>
       </div>
     </a>
 
     <a href="{{ url_for('parent_academy_article', slug='why-speak-less-in-new-places') }}" class="academy-resource-card academy-searchable" data-title="Why Speak Less In New Places?" data-category="Understanding Your Child" data-summary="new places unfamiliar environments restaurants stores doctor office transitions less speech">
       <div class="academy-card-art art-green">
-        <img src="{{ url_for('static', filename='images/sm_new_places.png') }}" alt="" loading="lazy">
+        <img src="{{ url_for('static', filename='images/sm_new_places.png') }}" alt="Illustration for the article: Why Speak Less In New Places?" loading="lazy">
       </div>
       <div class="academy-card-body">
         <h3>Why Speak Less In New Places?</h3>
         <p>Why unfamiliar environments can make communication harder.</p>
         <span>◷ 4 min read</span>
+        <span class="category-card-link">Read article →</span>
       </div>
     </a>
 
     <a href="{{ url_for('parent_academy_article', slug='why-use-gestures-instead-of-words') }}" class="academy-resource-card academy-searchable" data-title="Why Use Gestures Instead of Words?" data-category="Understanding Your Child" data-summary="gestures pointing nodding nonverbal communication instead of words bridge to speech">
       <div class="academy-card-art art-blue">
-        <img src="{{ url_for('static', filename='images/sm_gestures.png') }}" alt="" loading="lazy">
+        <img src="{{ url_for('static', filename='images/sm_gestures.png') }}" alt="Illustration for the article: Why Use Gestures Instead of Words?" loading="lazy">
       </div>
       <div class="academy-card-body">
         <h3>Why Use Gestures Instead of Words?</h3>
         <p>How gestures can function as communication when speech feels hard.</p>
         <span>◷ 4 min read</span>
+        <span class="category-card-link">Read article →</span>
       </div>
     </a>
 
     <a href="{{ url_for('parent_academy_article', slug='why-do-they-speak-through-me') }}" class="academy-resource-card academy-searchable" data-title="Why Do They Speak Through Me?" data-category="Understanding Your Child" data-summary="speaks through parent answering for child parent bridge whisper parent public situations">
       <div class="academy-card-art art-peach">
-        <img src="{{ url_for('static', filename='images/sm_speaks_through_parent.png') }}" alt="" loading="lazy">
+        <img src="{{ url_for('static', filename='images/sm_speaks_through_parent.png') }}" alt="Illustration for the article: Why Do They Speak Through Me?" loading="lazy">
       </div>
       <div class="academy-card-body">
         <h3>Why Do They Speak Through Me?</h3>
         <p>Why some children rely on parents as a bridge in social situations.</p>
         <span>◷ 5 min read</span>
+        <span class="category-card-link">Read article →</span>
       </div>
     </a>
 
     <a href="{{ url_for('parent_academy_article', slug='why-do-they-shut-down-or-get-upset') }}" class="academy-resource-card academy-searchable" data-title="Why Do They Shut Down or Get Upset?" data-category="Understanding Your Child" data-summary="shutdown upset anger crying refusal overwhelm frustration avoidance meltdown">
       <div class="academy-card-art art-warm">
-        <img src="{{ url_for('static', filename='images/sm_anger_shutdown.png') }}" alt="" loading="lazy">
+        <img src="{{ url_for('static', filename='images/sm_anger_shutdown.png') }}" alt="Illustration for the article: Why Do They Shut Down or Get Upset?" loading="lazy">
       </div>
       <div class="academy-card-body">
         <h3>Why Do They Shut Down or Get Upset?</h3>
         <p>How overwhelm can show up as silence, frustration, or avoidance.</p>
         <span>◷ 5 min read</span>
+        <span class="category-card-link">Read article →</span>
       </div>
     </a>
 
     <a href="{{ url_for('parent_academy_article', slug='why-are-mornings-before-school-so-hard') }}" class="academy-resource-card academy-searchable" data-title="Why Are Mornings Before School So Hard?" data-category="Understanding Your Child" data-summary="morning school hard anticipatory anxiety before school refusal stomachache transition">
       <div class="academy-card-art art-soft-blue">
-        <img src="{{ url_for('static', filename='images/sm_morning_school.png') }}" alt="" loading="lazy">
+        <img src="{{ url_for('static', filename='images/sm_morning_school.png') }}" alt="Illustration for the article: Why Are Mornings Before School So Hard?" loading="lazy">
       </div>
       <div class="academy-card-body">
         <h3>Why Are Mornings Before School So Hard?</h3>
         <p>How anticipatory anxiety can build before the school day starts.</p>
         <span>◷ 4 min read</span>
+        <span class="category-card-link">Read article →</span>
       </div>
     </a>
 
@@ -391,67 +419,73 @@
 
     <a href="{{ url_for('parent_academy_article', slug='how-to-reduce-speaking-pressure') }}" class="academy-resource-card academy-searchable" data-title="How to Reduce Speaking Pressure" data-category="Parent Strategies" data-summary="reduce speaking pressure low pressure communication direct questions greetings staring">
       <div class="academy-card-art art-green">
-        <img src="{{ url_for('static', filename='images/sm_reduce_pressure.png') }}" alt="" loading="lazy">
+        <img src="{{ url_for('static', filename='images/sm_reduce_pressure.png') }}" alt="Illustration for the article: How to Reduce Speaking Pressure" loading="lazy">
       </div>
       <div class="academy-card-body">
         <h3>How to Reduce Speaking Pressure</h3>
         <p>Simple ways to make communication feel safer and less forced.</p>
         <span>◷ 5 min read</span>
+        <span class="category-card-link">Read article →</span>
       </div>
     </a>
 
     <a href="{{ url_for('parent_academy_article', slug='what-parents-should-avoid') }}" class="academy-resource-card academy-searchable" data-title="What Parents Should Avoid" data-category="Parent Strategies" data-summary="parents avoid force speech repeated prompting over rescuing public praise pressure">
       <div class="academy-card-art art-blue">
-        <img src="{{ url_for('static', filename='images/sm_parent_avoid.png') }}" alt="" loading="lazy">
+        <img src="{{ url_for('static', filename='images/sm_parent_avoid.png') }}" alt="Illustration for the article: What Parents Should Avoid" loading="lazy">
       </div>
       <div class="academy-card-body">
         <h3>What Parents Should Avoid</h3>
         <p>Common habits that can accidentally increase anxiety.</p>
         <span>◷ 6 min read</span>
+        <span class="category-card-link">Read article →</span>
       </div>
     </a>
 
     <a href="{{ url_for('parent_academy_article', slug='praise-vs-pressure') }}" class="academy-resource-card academy-searchable" data-title="Praise vs Pressure" data-category="Parent Strategies" data-summary="praise pressure over praise reinforce effort public attention speech performance">
       <div class="academy-card-art art-yellow">
-        <img src="{{ url_for('static', filename='images/sm_praise.png') }}" alt="" loading="lazy">
+        <img src="{{ url_for('static', filename='images/sm_praise.png') }}" alt="Illustration for the article: Praise vs Pressure" loading="lazy">
       </div>
       <div class="academy-card-body">
         <h3>Praise vs Pressure</h3>
         <p>How to encourage effort without making speaking feel like a performance.</p>
         <span>◷ 5 min read</span>
+        <span class="category-card-link">Read article →</span>
       </div>
     </a>
 
     <a href="{{ url_for('parent_academy_article', slug='should-i-answer-for-my-child') }}" class="academy-resource-card academy-searchable" data-title="Should I Answer For My Child?" data-category="Parent Strategies" data-summary="answer for child parent bridge accommodation speaking through parent support without taking over">
       <div class="academy-card-art art-peach">
-        <img src="{{ url_for('static', filename='images/sm_answering_for_child.png') }}" alt="" loading="lazy">
+        <img src="{{ url_for('static', filename='images/sm_answering_for_child.png') }}" alt="Illustration for the article: Should I Answer For My Child?" loading="lazy">
       </div>
       <div class="academy-card-body">
         <h3>Should I Answer For My Child?</h3>
         <p>When helping protects your child and when it can maintain avoidance.</p>
         <span>◷ 5 min read</span>
+        <span class="category-card-link">Read article →</span>
       </div>
     </a>
 
     <a href="{{ url_for('parent_academy_article', slug='creating-speaking-opportunities') }}" class="academy-resource-card academy-searchable" data-title="Creating Speaking Opportunities" data-category="Parent Strategies" data-summary="speaking opportunities routines games daily moments practice communication ladder choices">
       <div class="academy-card-art art-lavender">
-        <img src="{{ url_for('static', filename='images/sm_speaking_opportunities.png') }}" alt="" loading="lazy">
+        <img src="{{ url_for('static', filename='images/sm_speaking_opportunities.png') }}" alt="Illustration for the article: Creating Speaking Opportunities" loading="lazy">
       </div>
       <div class="academy-card-body">
         <h3>Creating Speaking Opportunities</h3>
         <p>Low-pressure routines, games, and daily moments that support practice.</p>
         <span>◷ 6 min read</span>
+        <span class="category-card-link">Read article →</span>
       </div>
     </a>
 
     <a href="{{ url_for('parent_academy_article', slug='handling-setbacks') }}" class="academy-resource-card academy-searchable" data-title="Handling Setbacks" data-category="Parent Strategies" data-summary="setbacks regression progress slows stops reverses transition recovery communication ladder">
       <div class="academy-card-art art-mint">
-        <img src="{{ url_for('static', filename='images/sm_setbacks.png') }}" alt="" loading="lazy">
+        <img src="{{ url_for('static', filename='images/sm_setbacks.png') }}" alt="Illustration for the article: Handling Setbacks" loading="lazy">
       </div>
       <div class="academy-card-body">
         <h3>Handling Setbacks</h3>
         <p>How to respond when progress slows, stops, or temporarily reverses.</p>
         <span>◷ 5 min read</span>
+        <span class="category-card-link">Read article →</span>
       </div>
     </a>
 

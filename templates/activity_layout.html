@@ -1,43 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
+
   <title>{% block title %}{% endblock %}</title>
 
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
 
-  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
+  <link
+    rel="icon"
+    type="image/x-icon"
+    href="{{ url_for('static', filename='images/favicon.ico') }}"
+  >
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    rel="preconnect"
+    href="https://fonts.gstatic.com"
+    crossorigin
+  >
 
-  <link href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,200..1000;1,200..1000&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,200..1000;1,200..1000&display=swap"
+    rel="stylesheet"
+  >
 
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/activity_base.css') }}">
+  <link
+    rel="stylesheet"
+    href="{{ url_for('static', filename='css/activity_base.css') }}"
+  >
 
+  <!-- Google Analytics -->
+  <script
+    async
+    src="https://www.googletagmanager.com/gtag/js?id=G-E018EPCBS6"
+  ></script>
 
-  <!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-E018EPCBS6"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
+  <script>
+    window.dataLayer = window.dataLayer || [];
 
-  gtag('config', 'G-E018EPCBS6');
-</script>
+    function gtag() {
+      dataLayer.push(arguments);
+    }
 
-<script type="text/javascript">
-    (function(c,l,a,r,i,t,y){
-        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
-        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
-        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+    gtag('js', new Date());
+    gtag('config', 'G-E018EPCBS6');
+
+    {% if is_first_activity %}
+      gtag('event', 'first_activity_started');
+    {% endif %}
+  </script>
+
+  <script>
+    window.APP_DEBUG = {{ debug_mode | default(false) | tojson }};
+  </script>
+
+  <script
+    defer
+    src="{{ url_for('static', filename='js/browser_permissions.js') }}?v=1"
+  ></script>
+
+  <!-- Microsoft Clarity -->
+  <script>
+    (function(c, l, a, r, i, t, y) {
+      c[a] = c[a] || function() {
+        (c[a].q = c[a].q || []).push(arguments);
+      };
+
+      t = l.createElement(r);
+      t.async = 1;
+      t.src = "https://www.clarity.ms/tag/" + i;
+
+      y = l.getElementsByTagName(r)[0];
+      y.parentNode.insertBefore(t, y);
     })(window, document, "clarity", "script", "xlb7s498s3");
-</script>
+  </script>
 
   {% block head %}{% endblock %}
 </head>
 
 <body class="activity-body">
-
   {% block content %}{% endblock %}
-
 </body>
 </html>

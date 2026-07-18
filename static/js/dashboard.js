@@ -1,20 +1,109 @@
 document.addEventListener("DOMContentLoaded", function () {
 
-  // ---------------------
-  // CHILD NAME REQUIRED BEFORE ACTIVITY
+  function trackEvent(eventName, parameters = {}) {
+    if (typeof window.gtag !== "function") {
+      return;
+    }
+
+    window.gtag("event", eventName, parameters);
+  }
+
+function getActivityIdFromHref(activityHref) {
+  try {
+    const url = new URL(activityHref, window.location.origin);
+    const match = url.pathname.match(/\/activity\/(\d+)/);
+
+    return match ? match[1] : "unknown";
+  } catch {
+    return "unknown";
+  }
+}
+
+function getMicrophoneErrorType(error) {
+  switch (error?.name) {
+    case "NotAllowedError":
+    case "PermissionDeniedError":
+      return "permission_denied";
+
+    case "NotFoundError":
+    case "DevicesNotFoundError":
+      return "no_microphone";
+
+    case "NotReadableError":
+    case "TrackStartError":
+      return "microphone_unavailable";
+
+    case "SecurityError":
+      return "security_error";
+
+    case "AbortError":
+      return "request_aborted";
+
+    default:
+      return "unknown";
+  }
+}
+
+    // ---------------------
+  // ACTIVITY SETUP GATE
   // ---------------------
   const startActivityBtn = document.getElementById("startActivityBtn");
+  const activityLaunchLinks =
+    document.querySelectorAll(".js-activity-launch");
 
-  const childNameGateModal = document.getElementById("childNameGateModal");
-  const childNameGateInput = document.getElementById("childNameGateInput");
-  const childNameGateStatus = document.getElementById("childNameGateStatus");
-  const childNameGateSubtitle = document.getElementById("childNameGateSubtitle");
+  const activitySetupModal = document.getElementById("activitySetupModal");
+  const activitySetupData = document.getElementById("activitySetupData");
 
-  const closeChildNameGateBtn = document.getElementById("closeChildNameGateBtn");
-  const cancelChildNameGateBtn = document.getElementById("cancelChildNameGateBtn");
-  const saveChildNameAndStartBtn = document.getElementById("saveChildNameAndStartBtn");
+  const childNameSetupItem = document.getElementById("childNameSetupItem");
+  const parentPinSetupItem = document.getElementById("parentPinSetupItem");
+  const audioSetupItem = document.getElementById("audioSetupItem");
+  const microphoneSetupItem = document.getElementById("microphoneSetupItem");
+
+  const activitySetupChildName =
+    document.getElementById("activitySetupChildName");
+
+  const activitySetupParentPin =
+    document.getElementById("activitySetupParentPin");
+
+  const activitySetupParentPinConfirm =
+    document.getElementById("activitySetupParentPinConfirm");
+
+  const enableSetupAudioBtn =
+    document.getElementById("enableSetupAudioBtn");
+
+  const enableSetupMicrophoneBtn =
+    document.getElementById("enableSetupMicrophoneBtn");
+
+  const saveSetupAndStartBtn =
+    document.getElementById("saveSetupAndStartBtn");
+
+  const closeActivitySetupBtn =
+    document.getElementById("closeActivitySetupBtn");
+
+  const cancelActivitySetupBtn =
+    document.getElementById("cancelActivitySetupBtn");
+
+  const activitySetupMessage =
+    document.getElementById("activitySetupMessage");
+
+  const activitySetupSubtitle =
+    document.getElementById("activitySetupSubtitle");
+
+  const microphoneSetupError =
+    document.getElementById("microphoneSetupError");
 
   let pendingActivityHref = null;
+
+  let setupState = {
+    hasChildName:
+      activitySetupData?.dataset.hasChildName === "true",
+
+    hasParentPin:
+      activitySetupData?.dataset.hasParentPin === "true",
+
+    audioReady: false,
+    microphoneReady: false
+  };
 
   function hasRealChildName(value) {
     const cleaned = String(value || "").trim().toLowerCase();
@@ -27,166 +116,726 @@ document.addEventListener("DOMContentLoaded", function () {
     );
   }
 
-  function openChildNameGate(activityHref, activityName) {
-    if (!childNameGateModal || !childNameGateInput) return;
-
-    pendingActivityHref = activityHref;
-
-    if (childNameGateSubtitle) {
-      childNameGateSubtitle.textContent =
-        `Before starting ${activityName || "this activity"}, add your child's name so Star can address them personally.`;
-    }
-
-    if (childNameGateStatus) {
-      childNameGateStatus.textContent = "";
-    }
-
-    childNameGateInput.value = "";
-    childNameGateModal.classList.add("active");
-    document.body.classList.add("child-name-gate-open");
-
-    setTimeout(() => {
-      childNameGateInput.focus();
-    }, 80);
+  function isValidPin(value) {
+    return /^\d{4}$/.test(String(value || ""));
   }
 
-  function closeChildNameGate() {
-    if (childNameGateModal) {
-      childNameGateModal.classList.remove("active");
-    }
+  function setSetupMessage(message, type = "") {
+    if (!activitySetupMessage) return;
 
-    document.body.classList.remove("child-name-gate-open");
-    pendingActivityHref = null;
+    activitySetupMessage.textContent = message || "";
+    activitySetupMessage.dataset.type = type;
   }
 
-  if (startActivityBtn) {
-    startActivityBtn.addEventListener("click", function (event) {
-      const childName = this.dataset.childName || "";
+  function setMicrophoneError(message = "") {
+    if (!microphoneSetupError) return;
 
-      if (hasRealChildName(childName)) {
-        return;
-      }
+    microphoneSetupError.textContent = message;
+    microphoneSetupError.hidden = !message;
+  }
 
-      event.preventDefault();
+  function showSetupItem(element, shouldShow) {
+    if (!element) return;
+    element.hidden = !shouldShow;
+  }
 
-      openChildNameGate(
-        this.href,
-        this.dataset.activityName || "this activity"
+  function setSetupPermissionToggle(
+    button,
+    { enabled = false, busy = false, denied = false } = {}
+  ) {
+    if (!button) return;
+
+    const label = button.querySelector(".activity-setup-toggle-label");
+
+    button.disabled = busy;
+    button.classList.toggle("is-on", enabled);
+    button.classList.toggle("is-denied", denied);
+    button.classList.toggle("is-busy", busy);
+    button.setAttribute("aria-pressed", enabled ? "true" : "false");
+
+    if (label) {
+      label.textContent = busy
+        ? "Working…"
+        : denied
+          ? "Blocked"
+          : enabled
+            ? "On"
+            : "Off";
+    }
+  }
+
+  function getPermissionsHelper() {
+    const permissions = window.BraveSproutPermissions;
+
+    if (!permissions) {
+      console.error(
+        "browser_permissions.js must load before dashboard.js."
       );
-    });
-  }
-
-  async function saveChildNameAndStart() {
-    if (!childNameGateInput || !saveChildNameAndStartBtn) return;
-
-    const childName = childNameGateInput.value.trim();
-
-    if (!hasRealChildName(childName)) {
-      if (childNameGateStatus) {
-        childNameGateStatus.textContent = "Please enter your child's name before starting.";
-      }
-
-      childNameGateInput.focus();
-      return;
     }
 
-    const originalText = saveChildNameAndStartBtn.textContent;
+    return permissions || null;
+  }
 
-    saveChildNameAndStartBtn.disabled = true;
-    saveChildNameAndStartBtn.textContent = "Saving...";
+  async function checkAudioReadiness() {
+    const permissions = getPermissionsHelper();
 
-    if (childNameGateStatus) {
-      childNameGateStatus.textContent = "";
+    if (!permissions) {
+      setupState.audioReady = false;
+      return false;
+    }
+
+    /*
+      Audio cannot always be proven ready before a user gesture.
+      If your shared helper has isAudioUnlocked(), use it.
+      Otherwise, treat the saved app preference as the initial state.
+    */
+    if (typeof permissions.isAudioUnlocked === "function") {
+      setupState.audioReady =
+        Boolean(await permissions.isAudioUnlocked());
+    } else {
+      setupState.audioReady =
+        localStorage.getItem("bravesprouts_audio_enabled") === "true";
+    }
+
+    return setupState.audioReady;
+  }
+
+  async function checkMicrophoneReadiness() {
+    const permissions = getPermissionsHelper();
+
+    if (
+      !permissions ||
+      typeof permissions.getMicrophoneReadiness !== "function"
+    ) {
+      setupState.microphoneReady = false;
+      return false;
     }
 
     try {
-      const response = await fetch("/save-child-name-before-activity", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        credentials: "same-origin",
-        body: JSON.stringify({
-          child_name: childName
-        })
-      });
+      const result =
+        await permissions.getMicrophoneReadiness();
 
-      const data = await response.json();
+      /*
+        Supports either:
+        { ready: true }
+        or a direct true/false result.
+      */
+      setupState.microphoneReady =
+        typeof result === "boolean"
+          ? result
+          : Boolean(result?.ready);
 
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || "Could not save child name.");
-      }
-
-      if (startActivityBtn) {
-        startActivityBtn.dataset.childName = data.child_name || childName;
-      }
-
-      window.location.href = pendingActivityHref || (startActivityBtn ? startActivityBtn.href : "/dashboard");
+      return setupState.microphoneReady;
     } catch (error) {
-      console.error("Child name save error:", error);
+      console.error(
+        "Could not check microphone readiness:",
+        error
+      );
 
-      if (childNameGateStatus) {
-        childNameGateStatus.textContent = error.message || "Something went wrong. Please try again.";
-      }
-
-      saveChildNameAndStartBtn.disabled = false;
-      saveChildNameAndStartBtn.textContent = originalText;
+      setupState.microphoneReady = false;
+      return false;
     }
   }
 
-  if (saveChildNameAndStartBtn) {
-    saveChildNameAndStartBtn.addEventListener("click", saveChildNameAndStart);
-  }
+  function refreshVisibleRequirements() {
+    showSetupItem(
+      childNameSetupItem,
+      !setupState.hasChildName
+    );
 
-  if (childNameGateInput) {
-    childNameGateInput.addEventListener("keydown", function (event) {
-      if (event.key === "Enter") {
-        event.preventDefault();
-        saveChildNameAndStart();
-      }
+    showSetupItem(
+      parentPinSetupItem,
+      !setupState.hasParentPin
+    );
+
+    showSetupItem(
+      audioSetupItem,
+      !setupState.audioReady
+    );
+
+    showSetupItem(
+      microphoneSetupItem,
+      !setupState.microphoneReady
+    );
+
+    setSetupPermissionToggle(enableSetupAudioBtn, {
+      enabled: setupState.audioReady
     });
-  }
 
-  if (closeChildNameGateBtn) {
-    closeChildNameGateBtn.addEventListener("click", closeChildNameGate);
-  }
-
-  if (cancelChildNameGateBtn) {
-    cancelChildNameGateBtn.addEventListener("click", closeChildNameGate);
-  }
-
-  if (childNameGateModal) {
-    childNameGateModal.addEventListener("click", function (event) {
-      if (event.target === childNameGateModal) {
-        closeChildNameGate();
-      }
+    setSetupPermissionToggle(enableSetupMicrophoneBtn, {
+      enabled: setupState.microphoneReady
     });
+
+    updateStartButtonState();
   }
 
-  const childNameRequiredParams = new URLSearchParams(window.location.search);
+  function validateVisibleFields({ showErrors = false } = {}) {
+    if (!setupState.hasChildName) {
+      const childName =
+        activitySetupChildName?.value.trim() || "";
 
-  if (
-    childNameRequiredParams.get("child_name_required") === "1" &&
-    startActivityBtn &&
-    !hasRealChildName(startActivityBtn.dataset.childName)
-  ) {
-    const forcedActivityId = childNameRequiredParams.get("activity_id");
-    const safeForcedHref =
-      forcedActivityId && /^\d+$/.test(forcedActivityId)
-        ? `/activity/${forcedActivityId}`
-        : startActivityBtn.href;
+      if (!hasRealChildName(childName)) {
+        if (showErrors) {
+          setSetupMessage(
+            "Please enter your child’s name.",
+            "error"
+          );
 
-    setTimeout(() => {
-      openChildNameGate(
-        safeForcedHref,
-        startActivityBtn.dataset.activityName || "this activity"
+          activitySetupChildName?.focus();
+        }
+
+        return false;
+      }
+    }
+
+    if (!setupState.hasParentPin) {
+      const pin =
+        activitySetupParentPin?.value || "";
+
+      const confirmation =
+        activitySetupParentPinConfirm?.value || "";
+
+      if (!isValidPin(pin)) {
+        if (showErrors) {
+          setSetupMessage(
+            "Please create a four-digit parent PIN.",
+            "error"
+          );
+
+          activitySetupParentPin?.focus();
+        }
+
+        return false;
+      }
+
+      if (pin !== confirmation) {
+        if (showErrors) {
+          setSetupMessage(
+            "The two parent PIN entries do not match.",
+            "error"
+          );
+
+          activitySetupParentPinConfirm?.focus();
+        }
+
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  function updateStartButtonState() {
+    if (!saveSetupAndStartBtn) return;
+
+    const fieldsReady =
+      validateVisibleFields({ showErrors: false });
+
+    saveSetupAndStartBtn.disabled = !(
+      fieldsReady &&
+      setupState.audioReady &&
+      setupState.microphoneReady
+    );
+  }
+
+  function allSetupReady() {
+    return (
+      setupState.hasChildName &&
+      setupState.hasParentPin &&
+      setupState.audioReady &&
+      setupState.microphoneReady
+    );
+  }
+
+  async function refreshSetupState() {
+    const readinessCheck = Promise.allSettled([
+      checkAudioReadiness(),
+      checkMicrophoneReadiness()
+    ]);
+
+    /*
+      Browser permission APIs can occasionally remain pending. Do not let a
+      pending permission check make the activity button appear unresponsive.
+    */
+    await Promise.race([
+      readinessCheck,
+      new Promise((resolve) => setTimeout(resolve, 1200))
+    ]);
+
+    refreshVisibleRequirements();
+  }
+
+  function openActivitySetup(activityHref, activityName) {
+    if (!activitySetupModal) {
+      console.error(
+        "Activity Setup modal is missing from dashboard.html."
       );
-    }, 350);
+      return;
+    }
 
-    window.history.replaceState({}, document.title, window.location.pathname);
+  pendingActivityHref = activityHref;
+
+  trackEvent("activity_setup_opened", {
+    activity_id: getActivityIdFromHref(activityHref),
+    activity_name: activityName || "unknown",
+    missing_child_name: !setupState.hasChildName,
+    missing_parent_pin: !setupState.hasParentPin,
+    missing_audio: !setupState.audioReady,
+    missing_microphone: !setupState.microphoneReady
+  });
+
+  if (activitySetupSubtitle) {
+    activitySetupSubtitle.textContent =
+      `Complete the steps below before starting ${
+        activityName || "this activity"
+      }.`;
   }
 
-  // ---------------------
+    setSetupMessage("");
+    setMicrophoneError("");
+
+    activitySetupModal.classList.add("active");
+    activitySetupModal.setAttribute("aria-hidden", "false");
+
+    /*
+      Fail-safe visibility. This keeps the gate usable even if the new modal
+      CSS has not yet been deployed or an older stylesheet is cached.
+    */
+    activitySetupModal.hidden = false;
+    activitySetupModal.style.display = "flex";
+    activitySetupModal.style.visibility = "visible";
+    activitySetupModal.style.opacity = "1";
+    activitySetupModal.style.pointerEvents = "auto";
+
+    document.body.classList.add("activity-setup-open");
+
+    const firstVisibleInput =
+      !childNameSetupItem?.hidden
+        ? activitySetupChildName
+        : !parentPinSetupItem?.hidden
+          ? activitySetupParentPin
+          : null;
+
+    if (firstVisibleInput) {
+      setTimeout(() => firstVisibleInput.focus(), 80);
+    }
+  }
+
+  function closeActivitySetup() {
+    if (!activitySetupModal) return;
+
+    activitySetupModal.classList.remove("active");
+    activitySetupModal.setAttribute("aria-hidden", "true");
+    activitySetupModal.style.display = "";
+    activitySetupModal.style.visibility = "";
+    activitySetupModal.style.opacity = "";
+    activitySetupModal.style.pointerEvents = "";
+    document.body.classList.remove("activity-setup-open");
+
+    pendingActivityHref = null;
+    setSetupMessage("");
+    setMicrophoneError("");
+  }
+
+  async function handleActivityLaunch(
+    activityHref,
+    activityName
+  ) {
+    pendingActivityHref = activityHref;
+    setSetupMessage("");
+
+    /*
+      Open immediately when account information is missing. This guarantees a
+      visible response to the click without waiting on browser permission APIs.
+    */
+    if (!setupState.hasChildName || !setupState.hasParentPin) {
+      refreshVisibleRequirements();
+      openActivitySetup(activityHref, activityName);
+      await refreshSetupState();
+      return;
+    }
+
+    try {
+      await refreshSetupState();
+
+      if (allSetupReady()) {
+        trackEvent("activity_launch_started", {
+          activity_id: getActivityIdFromHref(activityHref),
+          activity_name: activityName || "unknown",
+          setup_required: false
+        });
+
+        window.location.assign(activityHref);
+        return;
+      }
+
+      openActivitySetup(activityHref, activityName);
+    } catch (error) {
+      console.error("Activity launch setup check failed:", error);
+
+      /*
+        A readiness-check failure should show the setup gate, never leave the
+        user with a button that appears to do nothing.
+      */
+      openActivitySetup(activityHref, activityName);
+      setSetupMessage(
+        "Please finish the setup steps below before starting.",
+        "error"
+      );
+    }
+  }
+
+  activityLaunchLinks.forEach((link) => {
+    link.addEventListener("click", async function (event) {
+      event.preventDefault();
+
+      const activityHref = this.href;
+
+      if (!activityHref) {
+        console.error("Activity launch link is missing its href.");
+        return;
+      }
+
+      await handleActivityLaunch(
+        activityHref,
+        this.dataset.activityName || "this activity"
+      );
+    });
+  });
+
+  if (enableSetupAudioBtn) {
+    enableSetupAudioBtn.addEventListener("click", async function () {
+      const permissions = getPermissionsHelper();
+
+      if (!permissions?.unlockAudio) {
+        setSetupMessage(
+          "Audio setup is unavailable. Refresh the page and try again.",
+          "error"
+        );
+        return;
+      }
+
+      setSetupPermissionToggle(enableSetupAudioBtn, { busy: true });
+      setSetupMessage("");
+
+      try {
+        const result = await permissions.unlockAudio();
+
+        if (!result?.success || !result?.ready) {
+          throw new Error(
+            result?.message || "Your browser could not enable audio."
+          );
+        }
+
+        setupState.audioReady = true;
+        setSetupPermissionToggle(enableSetupAudioBtn, { enabled: true });
+        updateStartButtonState();
+
+        /* Let the user see the On state, then remove the completed row. */
+        window.setTimeout(refreshVisibleRequirements, 350);
+      } catch (error) {
+        console.error("Audio setup error:", error);
+        setupState.audioReady = false;
+        setSetupPermissionToggle(enableSetupAudioBtn, { denied: true });
+        setSetupMessage(
+          error.message || "Audio could not be enabled. Please try again.",
+          "error"
+        );
+        updateStartButtonState();
+      }
+    });
+  }
+
+  if (enableSetupMicrophoneBtn) {
+    enableSetupMicrophoneBtn.addEventListener("click", async function () {
+      const permissions = getPermissionsHelper();
+
+      if (!permissions?.requestMicrophone) {
+        setMicrophoneError(
+          "Microphone setup is unavailable. Refresh the page and try again."
+        );
+        return;
+      }
+
+      setSetupPermissionToggle(enableSetupMicrophoneBtn, { busy: true });
+      setMicrophoneError("");
+      setSetupMessage("");
+
+      try {
+        const result = await permissions.requestMicrophone();
+
+        if (!result?.success || !result?.ready) {
+          const permissionError = new Error(
+            result?.message || "Microphone permission was not granted."
+          );
+          permissionError.name = result?.errorName || permissionError.name;
+          throw permissionError;
+        }
+
+        setupState.microphoneReady = true;
+        setSetupPermissionToggle(enableSetupMicrophoneBtn, { enabled: true });
+        updateStartButtonState();
+
+        /* Let the user see the On state, then remove the completed row. */
+        window.setTimeout(refreshVisibleRequirements, 350);
+      } catch (error) {
+        console.error("Microphone setup error:", error);
+
+        trackEvent("activity_setup_microphone_failed", {
+          activity_id: getActivityIdFromHref(
+            pendingActivityHref || startActivityBtn?.href || ""
+          ),
+          error_type: getMicrophoneErrorType(error)
+        });
+
+        setupState.microphoneReady = false;
+        setSetupPermissionToggle(enableSetupMicrophoneBtn, { denied: true });
+        setMicrophoneError(
+          error.message ||
+          "Please allow microphone access in your browser and try again."
+        );
+        updateStartButtonState();
+      }
+    });
+  }
+
+  async function saveAccountSetup() {
+    const needsChildName =
+      !setupState.hasChildName;
+
+    const needsParentPin =
+      !setupState.hasParentPin;
+
+    if (!needsChildName && !needsParentPin) {
+      return true;
+    }
+
+    if (!validateVisibleFields({ showErrors: true })) {
+      return false;
+    }
+
+    const saveUrl =
+      activitySetupData?.dataset.saveUrl ||
+      "/save-activity-setup";
+
+    const payload = {};
+
+    if (needsChildName) {
+      payload.child_name =
+        activitySetupChildName.value.trim();
+    }
+
+    if (needsParentPin) {
+      payload.parent_pin =
+        activitySetupParentPin.value;
+
+      payload.parent_pin_confirm =
+        activitySetupParentPinConfirm.value;
+    }
+
+    const response = await fetch(saveUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      credentials: "same-origin",
+      body: JSON.stringify(payload)
+    });
+
+    let data = {};
+
+    try {
+      data = await response.json();
+    } catch {
+      throw new Error(
+        "The server returned an invalid response."
+      );
+    }
+
+    if (!response.ok || !data.success) {
+      throw new Error(
+        data.error ||
+        "Your activity setup could not be saved."
+      );
+    }
+
+    if (needsChildName) {
+      setupState.hasChildName = true;
+
+      if (startActivityBtn) {
+        startActivityBtn.dataset.childName =
+          data.child_name ||
+          payload.child_name;
+      }
+    }
+
+    if (needsParentPin) {
+      setupState.hasParentPin = true;
+    }
+
+    return true;
+  }
+
+  async function completeActivitySetup() {
+    if (!saveSetupAndStartBtn) return;
+
+    const setupCompletedDetails = {
+      childNameAdded: !setupState.hasChildName,
+      parentPinAdded: !setupState.hasParentPin
+    };
+
+    if (!validateVisibleFields({ showErrors: true })) {
+      return;
+    }
+
+    if (!setupState.audioReady) {
+      setSetupMessage(
+        "Please enable audio before starting.",
+        "error"
+      );
+      return;
+    }
+
+    if (!setupState.microphoneReady) {
+      setSetupMessage(
+        "Please enable microphone access before starting.",
+        "error"
+      );
+      return;
+    }
+
+    const originalText =
+      saveSetupAndStartBtn.textContent;
+
+    saveSetupAndStartBtn.disabled = true;
+    saveSetupAndStartBtn.textContent = "Saving...";
+
+    setSetupMessage("");
+
+    try {
+      const saved = await saveAccountSetup();
+
+      if (!saved) {
+        saveSetupAndStartBtn.disabled = false;
+        saveSetupAndStartBtn.textContent = originalText;
+        return;
+      }
+
+      const destination =
+        pendingActivityHref ||
+        startActivityBtn?.href ||
+        "/dashboard";
+
+      trackEvent("activity_setup_completed", {
+        activity_id: getActivityIdFromHref(destination),
+        child_name_added:
+          setupCompletedDetails.childNameAdded,
+        parent_pin_added:
+          setupCompletedDetails.parentPinAdded,
+        audio_ready: setupState.audioReady,
+        microphone_ready: setupState.microphoneReady
+      });
+
+      trackEvent("activity_launch_started", {
+        activity_id: getActivityIdFromHref(destination),
+        setup_required: true
+      });
+
+      window.location.href = destination;
+    } catch (error) {
+      console.error(
+        "Activity setup save error:",
+        error
+      );
+
+      setSetupMessage(
+        error.message ||
+        "Something went wrong. Please try again.",
+        "error"
+      );
+
+      saveSetupAndStartBtn.disabled = false;
+      saveSetupAndStartBtn.textContent = originalText;
+    }
+  }
+
+  if (saveSetupAndStartBtn) {
+    saveSetupAndStartBtn.addEventListener(
+      "click",
+      completeActivitySetup
+    );
+  }
+
+  [
+    activitySetupChildName,
+    activitySetupParentPin,
+    activitySetupParentPinConfirm
+  ].forEach((input) => {
+    if (!input) return;
+
+    input.addEventListener("input", function () {
+      setSetupMessage("");
+      updateStartButtonState();
+    });
+
+    input.addEventListener("keydown", function (event) {
+      if (
+        event.key === "Enter" &&
+        !saveSetupAndStartBtn?.disabled
+      ) {
+        event.preventDefault();
+        completeActivitySetup();
+      }
+    });
+  });
+
+  [
+    activitySetupParentPin,
+    activitySetupParentPinConfirm
+  ].forEach((input) => {
+    if (!input) return;
+
+    input.addEventListener("input", function () {
+      this.value =
+        this.value.replace(/\D/g, "").slice(0, 4);
+    });
+  });
+
+  if (closeActivitySetupBtn) {
+    closeActivitySetupBtn.addEventListener(
+      "click",
+      closeActivitySetup
+    );
+  }
+
+  if (cancelActivitySetupBtn) {
+    cancelActivitySetupBtn.addEventListener(
+      "click",
+      closeActivitySetup
+    );
+  }
+
+  if (activitySetupModal) {
+    activitySetupModal.addEventListener(
+      "click",
+      function (event) {
+        if (event.target === activitySetupModal) {
+          closeActivitySetup();
+        }
+      }
+    );
+  }
+
+  document.addEventListener("keydown", function (event) {
+    if (
+      event.key === "Escape" &&
+      activitySetupModal?.classList.contains("active")
+    ) {
+      closeActivitySetup();
+    }
+  });
+
+// ---------------------
 // PROFILE DROPDOWN
 // ---------------------
 const profileDropdown = document.querySelector(".profile-dropdown");
@@ -365,7 +1014,38 @@ if (profileDropdown && profileTrigger && dropdownMenu) {
 
   if (!confirmRestart) return;
 
-  await sendActivityAction("/restart-activity", activityId, this);
+  const activityUrl = this.dataset.activityUrl;
+
+  try {
+    this.disabled = true;
+
+    const response = await fetch("/restart-activity", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      credentials: "same-origin",
+      body: JSON.stringify({
+        activity_id: activityId
+      })
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      window.location.href = activityUrl;
+      return;
+    }
+
+    console.error(data.error || "Failed to restart activity");
+    alert(data.error || "Something went wrong.");
+    this.disabled = false;
+  } catch (error) {
+    console.error("Error restarting activity:", error);
+    alert("Something went wrong. Check the console.");
+    this.disabled = false;
+  }
+
   return;
 }
 
@@ -1677,262 +2357,432 @@ document.addEventListener("keydown", function (event) {
 
   drawJourneyConnector();
   window.addEventListener("resize", drawJourneyConnector);
-      // ---------------------
-  // FEEDBACK SURVEY
-  // ---------------------
-  const feedbackSystem = document.getElementById("feedbackSystem");
+// ---------------------
+// FEEDBACK SURVEY
+// ---------------------
+const feedbackSystem = document.getElementById("feedbackSystem");
 
-  if (feedbackSystem) {
-    const shouldShowFeedback = feedbackSystem.dataset.showFeedback === "1";
+if (feedbackSystem) {
+  const shouldShowFeedback =
+    feedbackSystem.dataset.showFeedback === "1";
 
-    const feedbackOverlay = document.getElementById("feedbackOverlay");
-    const feedbackIntroPanel = document.getElementById("feedbackIntroPanel");
-    const feedbackFormPanel = document.getElementById("feedbackFormPanel");
+  const feedbackOverlay =
+    document.getElementById("feedbackOverlay");
+  const feedbackIntroPanel =
+    document.getElementById("feedbackIntroPanel");
+  const feedbackFormPanel =
+    document.getElementById("feedbackFormPanel");
 
-    const closeFeedbackBtn = document.getElementById("closeFeedbackBtn");
-    const closeFeedbackFormBtn = document.getElementById("closeFeedbackFormBtn");
+  const closeFeedbackBtn =
+    document.getElementById("closeFeedbackBtn");
+  const closeFeedbackFormBtn =
+    document.getElementById("closeFeedbackFormBtn");
 
-    const feedbackYesBtn = document.getElementById("feedbackYesBtn");
-    const feedbackLaterBtn = document.getElementById("feedbackLaterBtn");
-    const feedbackFormLaterBtn = document.getElementById("feedbackFormLaterBtn");
-    const feedbackBackBtn = document.getElementById("feedbackBackBtn");
+  const feedbackYesBtn =
+    document.getElementById("feedbackYesBtn");
+  const feedbackLaterBtn =
+    document.getElementById("feedbackLaterBtn");
+  const feedbackFormLaterBtn =
+    document.getElementById("feedbackFormLaterBtn");
+  const feedbackBackBtn =
+    document.getElementById("feedbackBackBtn");
 
-    const feedbackFloatingBtn = document.getElementById("feedbackFloatingBtn");
-    const feedbackWidgetSurveyBtn = document.getElementById("feedbackWidgetSurveyBtn");
+  const feedbackFloatingBtn =
+    document.getElementById("feedbackFloatingBtn");
+  const feedbackWidgetSurveyBtn =
+    document.getElementById("feedbackWidgetSurveyBtn");
+  const feedbackWidgetCloseBtn =
+    document.getElementById("feedbackWidgetCloseBtn");
 
-    const feedbackForm = document.getElementById("feedbackForm");
-    const submitFeedbackBtn = document.getElementById("submitFeedbackBtn");
-    const feedbackStatus = document.getElementById("feedbackStatus");
-    const feedbackThanks = document.getElementById("feedbackThanks");
+  const feedbackForm =
+    document.getElementById("feedbackForm");
+  const submitFeedbackBtn =
+    document.getElementById("submitFeedbackBtn");
+  const feedbackStatus =
+    document.getElementById("feedbackStatus");
+  const feedbackThanks =
+    document.getElementById("feedbackThanks");
 
-    const feedbackEnjoyed = document.getElementById("feedbackEnjoyed");
-    const feedbackDidntWork = document.getElementById("feedbackDidntWork");
-    const feedbackBetter = document.getElementById("feedbackBetter");
+  const feedbackEnjoyed =
+    document.getElementById("feedbackEnjoyed");
+  const feedbackDidntWork =
+    document.getElementById("feedbackDidntWork");
+  const feedbackBetter =
+    document.getElementById("feedbackBetter");
 
-    const feedbackTextareas = [feedbackEnjoyed, feedbackDidntWork, feedbackBetter].filter(Boolean);
+  const feedbackTextareas = [
+    feedbackEnjoyed,
+    feedbackDidntWork,
+    feedbackBetter
+  ].filter(Boolean);
 
-    let feedbackSubmitted = false;
+const feedbackSessionKey =
+    "bravesprouts_feedback_intro_login_key";
 
-    function autoResizeTextarea(textarea) {
-      if (!textarea) return;
+  const currentLoginKey = [
+    feedbackSystem.dataset.userId || "user",
+    feedbackSystem.dataset.loginCount || "0"
+  ].join("-");
 
-      textarea.style.height = "0px";
+  const feedbackIntroShownForThisLogin =
+    sessionStorage.getItem(feedbackSessionKey) ===
+    currentLoginKey;
 
-      const maxHeight = 118;
-      const newHeight = Math.min(textarea.scrollHeight, maxHeight);
+let feedbackSubmitted = false;
 
-      textarea.style.height = `${newHeight}px`;
-      textarea.style.overflowY = textarea.scrollHeight > maxHeight ? "auto" : "hidden";
-    }
+const feedbackDismissedSessionKey =
+  "bravesprouts_feedback_dismissed_login_key";
 
-    feedbackTextareas.forEach((textarea) => {
-      autoResizeTextarea(textarea);
+let feedbackBubbleDismissedForSession =
+  sessionStorage.getItem(feedbackDismissedSessionKey) ===
+  currentLoginKey;
 
-      textarea.addEventListener("input", function () {
-        autoResizeTextarea(this);
-      });
-    });
+  function autoResizeTextarea(textarea) {
+    if (!textarea) return;
 
-    function setFeedbackPanel(panelName) {
-      if (!feedbackIntroPanel || !feedbackFormPanel) return;
+    textarea.style.height = "0px";
 
-      if (panelName === "intro") {
-        feedbackIntroPanel.hidden = false;
-        feedbackFormPanel.hidden = true;
-        feedbackIntroPanel.classList.add("active");
-        feedbackFormPanel.classList.remove("active");
-      } else {
-        feedbackIntroPanel.hidden = true;
-        feedbackFormPanel.hidden = false;
-        feedbackIntroPanel.classList.remove("active");
-        feedbackFormPanel.classList.add("active");
-      }
-    }
+    const maxHeight = 118;
+    const newHeight = Math.min(
+      textarea.scrollHeight,
+      maxHeight
+    );
 
-    function openFeedbackIntro() {
-      if (!feedbackOverlay) return;
-
-      hideFeedbackBubble();
-      feedbackOverlay.classList.add("active");
-      document.body.classList.add("feedback-open");
-      setFeedbackPanel("intro");
-    }
-
-    function openFeedbackForm() {
-      if (!feedbackOverlay) return;
-
-      hideFeedbackBubble();
-      feedbackOverlay.classList.add("active");
-      document.body.classList.add("feedback-open");
-      setFeedbackPanel("form");
-
-      requestAnimationFrame(() => {
-        feedbackTextareas.forEach(autoResizeTextarea);
-
-        if (feedbackEnjoyed) {
-          feedbackEnjoyed.focus();
-        }
-      });
-    }
-
-    function closeFeedbackOverlay() {
-      if (feedbackOverlay) {
-        feedbackOverlay.classList.remove("active");
-      }
-
-      document.body.classList.remove("feedback-open");
-    }
-
-    function showFeedbackBubble() {
-      if (!feedbackFloatingBtn || !shouldShowFeedback || feedbackSubmitted) return;
-      feedbackFloatingBtn.classList.add("active");
-    }
-
-    function hideFeedbackBubble() {
-      if (feedbackFloatingBtn) {
-        feedbackFloatingBtn.classList.remove("active");
-      }
-    }
-
-    async function persistDismissedState() {
-      try {
-        await fetch("/dismiss-feedback-prompt", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          credentials: "same-origin",
-          body: JSON.stringify({})
-        });
-      } catch (error) {
-        console.error("Could not save dismissed feedback state:", error);
-      }
-    }
-
-    async function dismissFeedbackFlow() {
-      closeFeedbackOverlay();
-
-      if (!feedbackSubmitted) {
-        showFeedbackBubble();
-        await persistDismissedState();
-      }
-    }
-
-    function showThankYouToast() {
-      if (!feedbackThanks) return;
-
-      feedbackThanks.classList.add("active");
-
-      setTimeout(() => {
-        feedbackThanks.classList.remove("active");
-      }, 4200);
-    }
-
-    // If the parent has logged in enough times and has not submitted feedback,
-    // show the main request every time they land on the dashboard.
-    const feedbackSessionKey = "bravesprouts_feedback_intro_login_key";
-
-const currentLoginKey = [
-  feedbackSystem.dataset.userId || "user",
-  feedbackSystem.dataset.loginCount || "0"
-].join("-");
-
-const feedbackIntroShownForThisLogin =
-  sessionStorage.getItem(feedbackSessionKey) === currentLoginKey;
-
-if (shouldShowFeedback) {
-  if (!feedbackIntroShownForThisLogin) {
-    sessionStorage.setItem(feedbackSessionKey, currentLoginKey);
-
-    setTimeout(() => {
-      openFeedbackIntro();
-    }, 550);
-  } else {
-    showFeedbackBubble();
+    textarea.style.height = `${newHeight}px`;
+    textarea.style.overflowY =
+      textarea.scrollHeight > maxHeight
+        ? "auto"
+        : "hidden";
   }
+
+  feedbackTextareas.forEach((textarea) => {
+    autoResizeTextarea(textarea);
+
+    textarea.addEventListener("input", function () {
+      autoResizeTextarea(this);
+    });
+  });
+
+  function setFeedbackPanel(panelName) {
+    if (!feedbackIntroPanel || !feedbackFormPanel) return;
+
+    if (panelName === "intro") {
+      feedbackIntroPanel.hidden = false;
+      feedbackFormPanel.hidden = true;
+
+      feedbackIntroPanel.classList.add("active");
+      feedbackFormPanel.classList.remove("active");
+    } else {
+      feedbackIntroPanel.hidden = true;
+      feedbackFormPanel.hidden = false;
+
+      feedbackIntroPanel.classList.remove("active");
+      feedbackFormPanel.classList.add("active");
+    }
+  }
+
+  function openFeedbackIntro() {
+    if (!feedbackOverlay) return;
+
+    hideFeedbackBubble();
+
+    feedbackOverlay.classList.add("active");
+    document.body.classList.add("feedback-open");
+
+    setFeedbackPanel("intro");
+  }
+
+  function openFeedbackForm() {
+    if (!feedbackOverlay) return;
+
+    hideFeedbackBubble();
+
+    feedbackOverlay.classList.add("active");
+    document.body.classList.add("feedback-open");
+
+    setFeedbackPanel("form");
+
+    requestAnimationFrame(() => {
+      feedbackTextareas.forEach(autoResizeTextarea);
+
+      if (feedbackEnjoyed) {
+        feedbackEnjoyed.focus();
+      }
+    });
+  }
+
+  function closeFeedbackOverlay() {
+    if (feedbackOverlay) {
+      feedbackOverlay.classList.remove("active");
+    }
+
+    document.body.classList.remove("feedback-open");
+  }
+
+  function showFeedbackBubble() {
+  if (
+    !feedbackFloatingBtn ||
+    !shouldShowFeedback ||
+    feedbackSubmitted ||
+    feedbackBubbleDismissedForSession
+  ) {
+    return;
+  }
+
+  feedbackFloatingBtn.hidden = false;
+  feedbackFloatingBtn.classList.remove("is-closing");
+  feedbackFloatingBtn.classList.add("active");
 }
 
-    if (closeFeedbackBtn) {
-      closeFeedbackBtn.addEventListener("click", dismissFeedbackFlow);
-    }
+  function hideFeedbackBubble() {
+    if (!feedbackFloatingBtn) return;
 
-    if (closeFeedbackFormBtn) {
-      closeFeedbackFormBtn.addEventListener("click", dismissFeedbackFlow);
-    }
+    feedbackFloatingBtn.classList.remove("active");
+  }
 
-    if (feedbackLaterBtn) {
-      feedbackLaterBtn.addEventListener("click", dismissFeedbackFlow);
-    }
+  function closeFeedbackBubbleForSession() {
+  if (!feedbackFloatingBtn) return;
 
-    if (feedbackFormLaterBtn) {
-      feedbackFormLaterBtn.addEventListener("click", dismissFeedbackFlow);
-    }
+  feedbackBubbleDismissedForSession = true;
 
-    if (feedbackYesBtn) {
-      feedbackYesBtn.addEventListener("click", function () {
-        openFeedbackForm();
+  sessionStorage.setItem(
+    feedbackDismissedSessionKey,
+    currentLoginKey
+  );
+
+  feedbackFloatingBtn.classList.add("is-closing");
+
+  const finishClosing = () => {
+    feedbackFloatingBtn.classList.remove(
+      "active",
+      "is-closing"
+    );
+
+    feedbackFloatingBtn.hidden = true;
+  };
+
+  const prefersReducedMotion = window.matchMedia(
+    "(prefers-reduced-motion: reduce)"
+  ).matches;
+
+  if (prefersReducedMotion) {
+    finishClosing();
+    return;
+  }
+
+  window.setTimeout(finishClosing, 250);
+}
+
+  async function persistDismissedState() {
+    try {
+      await fetch("/dismiss-feedback-prompt", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        credentials: "same-origin",
+        body: JSON.stringify({})
       });
+    } catch (error) {
+      console.error(
+        "Could not save dismissed feedback state:",
+        error
+      );
     }
+  }
 
-    if (feedbackBackBtn) {
-      feedbackBackBtn.addEventListener("click", function () {
+  async function dismissFeedbackFlow() {
+    closeFeedbackOverlay();
+
+    if (!feedbackSubmitted) {
+      showFeedbackBubble();
+      await persistDismissedState();
+    }
+  }
+
+  function showThankYouToast() {
+    if (!feedbackThanks) return;
+
+    feedbackThanks.classList.add("active");
+
+    setTimeout(() => {
+      feedbackThanks.classList.remove("active");
+    }, 4200);
+  }
+
+  if (shouldShowFeedback) {
+    if (!feedbackIntroShownForThisLogin) {
+      sessionStorage.setItem(
+        feedbackSessionKey,
+        currentLoginKey
+      );
+
+      setTimeout(() => {
+        openFeedbackIntro();
+      }, 550);
+    } else {
+      showFeedbackBubble();
+    }
+  }
+
+  if (closeFeedbackBtn) {
+    closeFeedbackBtn.addEventListener(
+      "click",
+      dismissFeedbackFlow
+    );
+  }
+
+  if (closeFeedbackFormBtn) {
+    closeFeedbackFormBtn.addEventListener(
+      "click",
+      dismissFeedbackFlow
+    );
+  }
+
+  if (feedbackLaterBtn) {
+    feedbackLaterBtn.addEventListener(
+      "click",
+      dismissFeedbackFlow
+    );
+  }
+
+  if (feedbackFormLaterBtn) {
+    feedbackFormLaterBtn.addEventListener(
+      "click",
+      dismissFeedbackFlow
+    );
+  }
+
+  if (feedbackYesBtn) {
+    feedbackYesBtn.addEventListener(
+      "click",
+      function () {
+        openFeedbackForm();
+      }
+    );
+  }
+
+  if (feedbackBackBtn) {
+    feedbackBackBtn.addEventListener(
+      "click",
+      function () {
         dismissFeedbackFlow();
-      });
-    }
+      }
+    );
+  }
 
-    if (feedbackFloatingBtn) {
-      feedbackFloatingBtn.addEventListener("click", function () {
+  if (feedbackWidgetCloseBtn) {
+    feedbackWidgetCloseBtn.addEventListener(
+      "click",
+      function (event) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        closeFeedbackBubbleForSession();
+      }
+    );
+
+    feedbackWidgetCloseBtn.addEventListener(
+      "keydown",
+      function (event) {
+        event.stopPropagation();
+      }
+    );
+  }
+
+  if (feedbackFloatingBtn) {
+    feedbackFloatingBtn.addEventListener(
+      "click",
+      function (event) {
+        if (
+          event.target.closest(
+            "#feedbackWidgetCloseBtn"
+          )
+        ) {
+          return;
+        }
+
         openFeedbackForm();
-      });
+      }
+    );
 
-      feedbackFloatingBtn.addEventListener("keydown", function (event) {
-        if (event.key === "Enter" || event.key === " ") {
+    feedbackFloatingBtn.addEventListener(
+      "keydown",
+      function (event) {
+        if (event.target === feedbackWidgetCloseBtn) {
+          return;
+        }
+
+        if (
+          event.key === "Enter" ||
+          event.key === " "
+        ) {
           event.preventDefault();
           openFeedbackForm();
         }
-      });
-    }
+      }
+    );
+  }
 
-    if (feedbackWidgetSurveyBtn) {
-      feedbackWidgetSurveyBtn.addEventListener("click", function (event) {
+  if (feedbackWidgetSurveyBtn) {
+    feedbackWidgetSurveyBtn.addEventListener(
+      "click",
+      function (event) {
         event.stopPropagation();
         openFeedbackForm();
-      });
-    }
+      }
+    );
+  }
 
-    if (feedbackOverlay) {
-      feedbackOverlay.addEventListener("click", function (event) {
+  if (feedbackOverlay) {
+    feedbackOverlay.addEventListener(
+      "click",
+      function (event) {
         if (event.target === feedbackOverlay) {
           dismissFeedbackFlow();
         }
-      });
-    }
+      }
+    );
+  }
 
-    if (feedbackForm) {
-      feedbackForm.addEventListener("submit", async function (event) {
+  if (feedbackForm) {
+    feedbackForm.addEventListener(
+      "submit",
+      async function (event) {
         event.preventDefault();
 
         const payload = {
-          what_child_enjoyed: feedbackEnjoyed ? feedbackEnjoyed.value.trim() : "",
-          what_didnt_work: feedbackDidntWork ? feedbackDidntWork.value.trim() : "",
-          what_would_make_better: feedbackBetter ? feedbackBetter.value.trim() : ""
+          what_child_enjoyed: feedbackEnjoyed
+            ? feedbackEnjoyed.value.trim()
+            : "",
+
+          what_didnt_work: feedbackDidntWork
+            ? feedbackDidntWork.value.trim()
+            : "",
+
+          what_would_make_better: feedbackBetter
+            ? feedbackBetter.value.trim()
+            : ""
         };
 
         const allAnswersFilled =
-  payload.what_child_enjoyed &&
-  payload.what_didnt_work &&
-  payload.what_would_make_better;
+          payload.what_child_enjoyed &&
+          payload.what_didnt_work &&
+          payload.what_would_make_better;
 
-if (!allAnswersFilled) {
-  if (feedbackStatus) {
-    feedbackStatus.textContent = "Please answer all 3 questions before submitting.";
-  }
-  return;
-}
+        if (!allAnswersFilled) {
+          if (feedbackStatus) {
+            feedbackStatus.textContent =
+              "Please answer all 3 questions before submitting.";
+          }
+
+          return;
+        }
 
         if (submitFeedbackBtn) {
           submitFeedbackBtn.disabled = true;
-          submitFeedbackBtn.textContent = "Submitting...";
+          submitFeedbackBtn.textContent =
+            "Submitting...";
         }
 
         if (feedbackStatus) {
@@ -1940,40 +2790,52 @@ if (!allAnswersFilled) {
         }
 
         try {
-          const response = await fetch("/submit-feedback", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json"
-            },
-            credentials: "same-origin",
-            body: JSON.stringify(payload)
-          });
+          const response = await fetch(
+            "/submit-feedback",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json"
+              },
+              credentials: "same-origin",
+              body: JSON.stringify(payload)
+            }
+          );
 
           const data = await response.json();
 
           if (!response.ok || !data.success) {
-            throw new Error(data.error || "Could not submit feedback.");
+            throw new Error(
+              data.error ||
+                "Could not submit feedback."
+            );
           }
 
           feedbackSubmitted = true;
+
           closeFeedbackOverlay();
           hideFeedbackBubble();
           showThankYouToast();
         } catch (error) {
-          console.error("Feedback submit error:", error);
+          console.error(
+            "Feedback submit error:",
+            error
+          );
 
           if (feedbackStatus) {
-            feedbackStatus.textContent = error.message || "Something went wrong. Please try again.";
+            feedbackStatus.textContent =
+              error.message ||
+              "Something went wrong. Please try again.";
           }
 
           if (submitFeedbackBtn) {
             submitFeedbackBtn.disabled = false;
-            submitFeedbackBtn.textContent = "Submit feedback";
+            submitFeedbackBtn.textContent =
+              "Submit feedback";
           }
         }
-      });
-    }
+      }
+    );
   }
-
-
+  }
 });

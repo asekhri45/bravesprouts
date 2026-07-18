@@ -1,5 +1,10 @@
 document.addEventListener("DOMContentLoaded", function () {
   const matchPage = document.querySelector(".match-page");
+
+  function dlog(...args) {
+    if (window.APP_DEBUG) console.log(`[match_cards:${matchPage ? matchPage.dataset.activityId : "unknown"}]`, ...args);
+  }
+
   const cardGrid = document.getElementById("cardGrid");
   const gameArea = document.getElementById("gameArea");
   const childTurnCard = document.getElementById("childTurnCard");
@@ -1200,26 +1205,126 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   async function ensureMicPermission() {
-    if (starState.micDenied) return null;
-    if (mediaStream) return mediaStream;
+  if (starState.micDenied) return null;
 
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      starState.micDenied = true;
-      return null;
-    }
+  if (mediaStream) {
+    const liveAudioTrack = mediaStream
+      .getAudioTracks()
+      .find(track => track.readyState === "live");
 
-    try {
-      mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    if (liveAudioTrack) {
       starState.micReady = true;
       return mediaStream;
-    } catch (error) {
-      console.warn("Mic permission unavailable:", error);
-      starState.micDenied = true;
-      starState.waitingForResponse = false;
-      starState.questionCooldownUntil = Date.now() + 90 * 1000;
-      return null;
     }
+
+    mediaStream = null;
   }
+
+  const permissions = window.BraveSproutPermissions;
+
+  if (
+    !permissions ||
+    typeof permissions.requestMicrophone !== "function"
+  ) {
+    console.warn(
+      "BraveSproutPermissions.requestMicrophone is unavailable."
+    );
+
+    starState.micDenied = true;
+    starState.micReady = false;
+    return null;
+  }
+
+  try {
+    const result = await permissions.requestMicrophone({
+      keepStream: true
+    });
+
+    /*
+      Supports either:
+      - a MediaStream returned directly
+      - { success: true, stream }
+      - { ready: true, stream }
+    */
+    const returnedStream =
+      result instanceof MediaStream
+        ? result
+        : result?.stream || null;
+
+    const successful =
+      result instanceof MediaStream ||
+      result === true ||
+      result?.success === true ||
+      result?.ready === true;
+
+    if (!successful) {
+      throw new Error(
+        result?.message ||
+        "Microphone permission was not granted."
+      );
+    }
+
+    /*
+      Match Cards needs a live MediaStream for MediaRecorder.
+      If the shared helper did not preserve one, acquire it here
+      after permission has already been approved.
+    */
+    if (returnedStream) {
+      mediaStream = returnedStream;
+    } else if (
+      navigator.mediaDevices &&
+      navigator.mediaDevices.getUserMedia
+    ) {
+      mediaStream =
+        await navigator.mediaDevices.getUserMedia({
+          audio: true
+        });
+    } else {
+      throw new Error(
+        "This browser does not support microphone access."
+      );
+    }
+
+    const liveAudioTrack = mediaStream
+      .getAudioTracks()
+      .find(track => track.readyState === "live");
+
+    if (!liveAudioTrack) {
+      throw new Error(
+        "The microphone stream is not active."
+      );
+    }
+
+    starState.micReady = true;
+    starState.micDenied = false;
+
+    dlog("mic permission granted through shared helper");
+
+    return mediaStream;
+  } catch (error) {
+    console.warn("Mic permission unavailable:", error);
+    dlog(
+      "mic permission denied",
+      error?.name || error?.message || error
+    );
+
+    if (mediaStream) {
+      mediaStream.getTracks().forEach(track => {
+        track.stop();
+      });
+
+      mediaStream = null;
+    }
+
+    starState.micReady = false;
+    starState.micDenied = true;
+    starState.waitingForResponse = false;
+    starState.questionCooldownUntil =
+      Date.now() + 90 * 1000;
+
+    return null;
+  }
+}
 
   function getSupportedMimeType() {
     const options = [
@@ -1334,14 +1439,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
     const stream = await ensureMicPermission();
 
-    if (!stream) {
-      starState.waitingForResponse = false;
-      starState.currentQuestion = null;
-
-      await handleNoSpeechHeard(question);
-
-      return null;
-    }
+    if (!microphoneStream) {
+  console.warn(
+    "Match Cards was unable to connect to your microphone."
+  );
+}
 
     recordingChunks = [];
     starState.isListening = true;
@@ -1415,6 +1517,8 @@ document.addEventListener("DOMContentLoaded", function () {
       micControl.classList.remove("quiet-listening");
     }
 
+    dlog("recording stopped", { round: starState.roundNumber, chunks: recordingChunks.length });
+
     if (!recordingChunks.length) {
       await handleNoSpeechHeard(question);
       return null;
@@ -1430,12 +1534,15 @@ document.addEventListener("DOMContentLoaded", function () {
       const formData = new FormData();
       formData.append("audio", blob, "match-response.webm");
 
+      dlog("transcribe request start", { round: starState.roundNumber, size: blob.size, type: blob.type });
+
       const response = await fetch("/api/matching-game/transcribe", {
         method: "POST",
         body: formData
       });
 
       const data = await response.json();
+      dlog("transcribe response", { status: response.status, success: data.success, hasText: !!data.text });
 
       if (!data.success) {
         await handleNoSpeechHeard(question);
@@ -1453,6 +1560,7 @@ document.addEventListener("DOMContentLoaded", function () {
       return transcript;
     } catch (error) {
       console.error("Transcription error:", error);
+      dlog("transcribe request failed", error.message || error);
       await handleNoSpeechHeard(question);
       return null;
     }
@@ -2057,6 +2165,8 @@ document.addEventListener("DOMContentLoaded", function () {
   function startNextRound(options = {}) {
     if (nextRoundStarting || roundInProgress) return;
 
+    dlog("round transition", { fromRound: starState.roundNumber, stage: getStarStage() });
+
     nextRoundStarting = true;
 
     hideCompleteModalCompletely();
@@ -2165,7 +2275,13 @@ document.addEventListener("DOMContentLoaded", function () {
     stopRingtone();
     playCallAcceptedSound();
 
-    ensureMicPermission();
+    const microphoneStream = await ensureMicPermission();
+
+if (!microphoneStream) {
+  console.warn(
+    "Match Cards started without microphone access."
+  );
+}
 
     await loadSavedMatchingProgress();
 

@@ -1,0 +1,21 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "flask-preview",
+      "runtimeExecutable": ".venv/bin/python",
+      "runtimeArgs": ["/private/tmp/claude-501/-Users-aaravsekhri-Documents-GitHub-bravesprouts/6d9ca389-1470-4ad6-83b7-e93853fd2a0b/scratchpad/preview_runner.py"],
+      "port": 5010,
+      "env": {
+        "DATABASE_PATH": "/private/tmp/claude-501/-Users-aaravsekhri-Documents-GitHub-bravesprouts/6d9ca389-1470-4ad6-83b7-e93853fd2a0b/scratchpad/preview.db",
+        "SECRET_KEY": "preview-secret",
+        "FLASK_ENV": "development",
+        "FLASK_DEBUG": "1",
+        "ADMIN_EMAIL": "admin@preview.local",
+        "ADMIN_PASSWORD": "preview",
+        "OPENAI_API_KEY": "x",
+        "ELEVENLABS_API_KEY": "x"
+      }
+    }
+  ]
+}

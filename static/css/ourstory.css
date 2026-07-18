@@ -1032,3 +1032,166 @@ a:focus-visible {
     font-size: 0.77rem;
   }
 }
+/* ── Mobile nav CTA: consistency fix shared with home.css ──
+   This file has earlier, higher-specificity duplicate media-query blocks
+   (".nav-buttons { display: none }" at up to 950px) left over from prior
+   patches, which would otherwise hide the primary CTA. This final block
+   wins the cascade deliberately (last in source order, !important on the
+   contested properties) so mobile visitors always have a reachable CTA,
+   matching the homepage's mobile nav behavior. */
+@media (max-width: 950px) {
+    .top-tabs,
+    .navbar .top-tabs {
+        display: none !important;
+    }
+
+    .nav-buttons,
+    .navbar .nav-buttons {
+        display: flex !important;
+        opacity: 1 !important;
+        transform: none !important;
+        pointer-events: auto !important;
+    }
+
+    .nav-cta-secondary {
+        display: none !important;
+    }
+
+    .nav-cta-primary {
+        padding: 10px 14px;
+        font-size: 0.78rem;
+        white-space: nowrap;
+    }
+
+    .nav-cta-text-full {
+        display: none;
+    }
+
+    .nav-cta-text-short {
+        display: inline;
+    }
+}
+
+@media (min-width: 951px) {
+    .nav-cta-text-short {
+        display: none;
+    }
+}
+
+@media (max-width: 768px) {
+    :root {
+        --nav-height: 68px !important;
+    }
+
+    .navbar {
+        padding: 0 !important;
+    }
+
+    .nav-inner,
+    .navbar .nav-inner {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        height: var(--nav-height);
+    }
+
+    .logo,
+    .navbar .logo {
+        width: min(46vw, 190px) !important;
+        max-width: none !important;
+        height: auto;
+        max-height: 40px;
+    }
+}
+
+:root {
+    --announcement-height: 34px;
+
+    --color-blue-dark: #2563eb;
+    --color-blue-brand: #0b84fe;
+    --color-white: #ffffff;
+}
+
+/* ── Early-access announcement bar ── */
+
+.announcement-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: var(--announcement-height);
+    background: linear-gradient(
+        90deg,
+        var(--color-blue-dark),
+        var(--color-blue-brand)
+    );
+    color: var(--color-white);
+    overflow: hidden;
+    z-index: 1001;
+    display: flex;
+    align-items: center;
+}
+
+.announcement-track {
+    display: flex;
+    width: max-content;
+    animation: announcement-scroll 28s linear infinite;
+}
+
+.announcement-group {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.announcement-message {
+    padding: 0 36px;
+    font-size: 12.5px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+}
+
+@keyframes announcement-scroll {
+    from {
+        transform: translateX(0);
+    }
+
+    to {
+        transform: translateX(-50%);
+    }
+}
+
+/* Keep the banner accessible for people who disable animation. */
+@media (prefers-reduced-motion: reduce) {
+    .announcement-track {
+        animation: none;
+    }
+
+    .announcement-bar {
+        justify-content: center;
+    }
+
+    .announcement-group[aria-hidden="true"] {
+        display: none;
+    }
+
+    .announcement-group:not([aria-hidden="true"])
+        .announcement-message:not(:first-child) {
+        display: none;
+    }
+}
+
+@media (max-width: 600px) {
+    .announcement-message {
+        padding: 0 20px;
+        font-size: 11.5px;
+    }
+}
+
+.navbar {
+    position: fixed;
+    top: var(--announcement-height);
+}

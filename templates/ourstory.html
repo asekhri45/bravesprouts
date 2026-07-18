@@ -16,36 +16,43 @@
 
 {% block content %}
 
-<header class="navbar show-buttons">
-  <div class="nav-inner">
+<div
+    class="announcement-bar"
+    role="note"
+    aria-label="Early access announcement"
+>
+    <div class="announcement-track">
+        <div class="announcement-group">
+            <span class="announcement-message">
+                LIMITED EARLY ACCESS &middot; Welcoming our first 100 parent accounts
+            </span>
 
-    <a href="/" class="nav-logo-link" aria-label="MyBraveSprout Home">
-      <img
-        src="{{ url_for('static', filename='images/logo_v4.png') }}"
-        class="logo"
-        alt="MyBraveSprout"
-      >
-    </a>
+            <span class="announcement-message">
+                Growing carefully so every activity can keep improving
+            </span>
 
-    <nav class="top-tabs" aria-label="Main navigation">
-      <a href="/" class="top-tab">Home</a>
-      <a href="/our-story" class="top-tab active" aria-current="page">
-        Our Story
-      </a>
-      <a href="{{ url_for('parent_academy') }}" class="top-tab"> Parent Resources </a>
-      <a href="/acknowledgments2" class="top-tab">
-        Acknowledgments
-      </a>
-    </nav>
+            <span class="announcement-message">
+                Free &middot; Parent-guided &middot; No credit card
+            </span>
+        </div>
 
-    <div class="nav-buttons">
-      <a href="/login" class="hero-btn secondary">Login</a>
-      <a href="/signup" class="hero-btn primary">Get Started</a>
+        <div class="announcement-group" aria-hidden="true">
+            <span class="announcement-message">
+                LIMITED EARLY ACCESS &middot; Welcoming our first 100 parent accounts
+            </span>
+
+            <span class="announcement-message">
+                Growing carefully so every activity can keep improving
+            </span>
+
+            <span class="announcement-message">
+                Free &middot; Parent-guided &middot; No credit card
+            </span>
+        </div>
     </div>
+</div>
 
-  </div>
-</header>
-
+{% include "partials/nav.html" %}
 
 <main class="story">
 

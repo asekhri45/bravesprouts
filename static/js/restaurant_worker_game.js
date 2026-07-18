@@ -5,6 +5,8 @@ document.addEventListener("DOMContentLoaded", function () {
   const activityId = Number(page.dataset.activityId || 10);
   const childName = (page.dataset.childName || "there").trim() || "there";
 
+  function dlog(...args) { if (window.APP_DEBUG) console.log(`[restaurant_worker_game:${activityId}]`, ...args); }
+
   const invite = document.getElementById("restaurantInvite");
   const startBtn = document.getElementById("startRestaurantBtn");
   const stage = document.getElementById("restaurantStage");
@@ -3196,9 +3198,23 @@ function stopMouthAnimation() {
       } catch (error) { responseRecorder = null; }
     }
 
-    responseTimer = setTimeout(() => stopResolve(browserTranscript || ""), seconds * 1000);
+    responseTimer = setTimeout(() => {
+      dlog("response window timeout", { hasBrowserTranscript: !!browserTranscript, hasRecorder: !!responseRecorder });
+
+      if (browserTranscript || !responseRecorder || responseRecorder.state === "inactive") {
+        stopResolve(browserTranscript || "");
+        return;
+      }
+
+      // Stop the recorder so its own onstop handler can run server-side
+      // transcription instead of discarding whatever audio was captured in
+      // this window -- mirrors Activity 1 (Match Cards), where the hard
+      // timeout always stops-and-transcribes rather than resolving empty.
+      stopResponseCapture();
+    }, seconds * 1000);
     const transcript = await donePromise;
     stopResponseCapture();
+    dlog("response window resolved", { transcript });
     return cleanTranscript(transcript || browserTranscript || "");
   }
 

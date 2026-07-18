@@ -1,0 +1,39 @@
+{# Shared public navbar: home.html, parent_academy.html, ourstory.html, and
+   acknowledgments2.html all include this so logo sizing, CTA hierarchy,
+   mobile behavior, and active-tab state stay in sync across every public
+   page instead of drifting as four independent copies.
+
+   The CTA is intentionally unconditional: these are public marketing
+   pages, so they always show the same public-facing account actions
+   (Create Free Parent Account / Login) regardless of session state.
+   signup()/login() already redirect an already-authenticated visitor to
+   the right place after they click -- the public page itself never
+   turns into dashboard navigation.
+
+   Expects (optional, degrades sensibly if omitted):
+     active_page: "home" | "our_story" | "parent_academy" | "acknowledgments2"
+#}
+<header class="navbar show-buttons">
+    <div class="nav-inner">
+
+        <a href="{{ url_for('home') }}" class="nav-logo-link" aria-label="MyBraveSprout home">
+            <img src="{{ url_for('static', filename='images/logo_v4.png') }}" class="logo" alt="MyBraveSprout">
+        </a>
+
+        <nav class="top-tabs" aria-label="Main navigation">
+            <a href="{{ url_for('home') }}" class="top-tab{% if active_page == 'home' %} active{% endif %}"{% if active_page == 'home' %} aria-current="page"{% endif %}>Home</a>
+            <a href="{{ url_for('our_story') }}" class="top-tab{% if active_page == 'our_story' %} active{% endif %}"{% if active_page == 'our_story' %} aria-current="page"{% endif %}>Our Story</a>
+            <a href="{{ url_for('parent_academy') }}" class="top-tab{% if active_page == 'parent_academy' %} active{% endif %}"{% if active_page == 'parent_academy' %} aria-current="page"{% endif %}>Parent Resources</a>
+            <a href="{{ url_for('acknowledgments2') }}" class="top-tab{% if active_page == 'acknowledgments2' %} active{% endif %}"{% if active_page == 'acknowledgments2' %} aria-current="page"{% endif %}>Acknowledgments</a>
+        </nav>
+
+        <div class="nav-buttons">
+            <a href="{{ url_for('signup') }}" class="hero-btn primary nav-cta-primary">
+                <span class="nav-cta-text-full">Create Free Parent Account</span>
+                <span class="nav-cta-text-short">Sign Up</span>
+            </a>
+            <a href="{{ url_for('login') }}" class="hero-btn secondary nav-cta-secondary">Login</a>
+        </div>
+
+    </div>
+</header>

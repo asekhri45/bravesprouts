@@ -26,6 +26,7 @@ import re
 
 from flask_session import Session
 from flask_wtf import CSRFProtect
+from flask_wtf.csrf import CSRFError
 
 from flask import jsonify
 from dotenv import load_dotenv
@@ -39,7 +40,7 @@ import requests
 import os
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATABASE = os.path.join(BASE_DIR, "app.db")
+DATABASE = os.environ.get("DATABASE_PATH") or os.path.join(BASE_DIR, "app.db")
 
 RESEARCH_LIBRARY_PATH = os.path.join(BASE_DIR, "research_library.json")
 
@@ -78,6 +79,20 @@ app.config.update(
 
 Session(app)
 csrf = CSRFProtect(app)
+
+
+@app.errorhandler(CSRFError)
+def handle_csrf_error(e):
+    friendly_message = "Your session took too long and expired for security reasons. Please try again."
+
+    if request.path == "/login":
+        return render_template("login.html", error=friendly_message), 400
+    if request.path == "/signup":
+        return render_template("signup.html", error=friendly_message, form_values={}), 400
+    if request.path == "/parent-setup":
+        return render_template("parent_setup.html", error=friendly_message), 400
+
+    return render_template("csrf_error.html", error=friendly_message), 400
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 eleven_client = ElevenLabs(api_key=os.getenv("ELEVENLABS_API_KEY"))
@@ -278,21 +293,169 @@ def initialize_user_progress(cursor, user_id):
 
     return first_activity_id
 
+
+def admin_required(f):
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        if not session.get("is_admin"):
+            return redirect(url_for("admin_login"))
+        return f(*args, **kwargs)
+    return wrapper
+
+# Endpoints an authenticated-but-incomplete account (parent_setup_complete = 0)
+# may still reach. Everything else behind @login_required requires a
+# completed parent setup. Keep this list small and deliberate: adding a new
+# @login_required route does NOT require touching this set, since the
+# default behavior (below, in login_required) is to require completion.
+INCOMPLETE_ACCOUNT_ALLOWED_ENDPOINTS = {"parent_setup", "delete_account"}
+
+
+def ensure_parent_setup_column():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("PRAGMA table_info(users)")
+    existing_columns = {row["name"] for row in cursor.fetchall()}
+
+    if "parent_setup_complete" not in existing_columns:
+        cursor.execute(
+            "ALTER TABLE users ADD COLUMN parent_setup_complete INTEGER NOT NULL DEFAULT 1"
+        )
+
+    conn.commit()
+    conn.close()
+
+
+def get_or_load_parent_setup_complete():
+    """Read parent_setup_complete for the current session's user.
+
+    Never trusts a missing session key as "complete" -- if the flag isn't
+    already cached in the session, it is loaded from the database and the
+    session is populated with the real value before it is used.
+    """
+    if "parent_setup_complete" in session:
+        return session["parent_setup_complete"]
+
+    ensure_parent_setup_column()
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT parent_setup_complete FROM users WHERE user_id = ?",
+        (session.get("user_id"),)
+    )
+    row = cursor.fetchone()
+    conn.close()
+
+    complete = bool(row["parent_setup_complete"]) if row and row["parent_setup_complete"] is not None else False
+    session["parent_setup_complete"] = complete
+    return complete
+
+
+def login_required(f):
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        if "user_id" not in session:
+            return redirect("/login")
+
+        if request.endpoint not in INCOMPLETE_ACCOUNT_ALLOWED_ENDPOINTS:
+            if not get_or_load_parent_setup_complete():
+                return redirect(url_for("parent_setup"))
+
+        return f(*args, **kwargs)
+    return wrapper
+
+
+# Curated, homepage-only presentation layer over the real `activity` table.
+# Only currently-active, actually-playable activities appear here -- this is
+# a deliberate allowlist, not a query over every DB row, so an inactive or
+# "Coming Soon" placeholder activity can never show up on the homepage by
+# accident. Skill labels are homepage-only copy (approved separately from
+# the DB's own `description` text) and are not stored in the database.
+HOMEPAGE_ACTIVITY_SKILLS = {
+    "match_cards": "Responding & taking turns",
+    "drawing_game": "Describing & sharing ideas",
+    "restaurant_worker_game": "Making requests",
+    "mystery_animal": "Asking & answering questions",
+    "mystery_classroom_object": "Answering questions",
+    "mystery_food_item": "Answering questions",
+    "guessing_game": "Initiating conversation",
+    "classroom_guessing_game": "Asking questions",
+}
+
+# Explicit mapping to dedicated homepage-carousel images -- never derived
+# from the activity_name string, so this carousel's artwork can be swapped
+# independently of the dashboard's journey-card icons (static/images/<name>.png)
+# without touching any other page.
+#
+# These are cropped/resized/compressed derivatives of the real gameplay
+# screenshots (static/images/<name>_home_img.png -- left untouched), built to
+# a landscape ratio for the homepage card, with dashboard chrome (nav bars,
+# call controls) and, for match_cards, the child-name turn indicator cropped
+# out. See RESOURCE_IMAGE_SOURCES.md for how these were generated.
+HOMEPAGE_ACTIVITY_IMAGES = {
+    "match_cards": "match_cards_home_optimized.webp",
+    "drawing_game": "drawing_game_home_optimized.webp",
+    "restaurant_worker_game": "restaurant_worker_game_home_optimized.webp",
+    "mystery_animal": "mystery_animal_home_optimized.webp",
+    "mystery_classroom_object": "mystery_classroom_object_home_optimized.webp",
+    "mystery_food_item": "mystery_food_item_home_optimized.webp",
+    "guessing_game": "guessing_game_home_optimized.webp",
+    "classroom_guessing_game": "classroom_guessing_game_home_optimized.webp",
+}
+
+
+def get_homepage_activities():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    placeholders = ",".join("?" for _ in HOMEPAGE_ACTIVITY_SKILLS)
+    cursor.execute(f"""
+        SELECT activity_name, description, character_active, template_file, is_active
+        FROM activity
+        WHERE activity_name IN ({placeholders})
+    """, tuple(HOMEPAGE_ACTIVITY_SKILLS.keys()))
+    rows_by_name = {row["activity_name"]: row for row in cursor.fetchall()}
+    conn.close()
+
+    activities = []
+    for name, skill in HOMEPAGE_ACTIVITY_SKILLS.items():
+        row = rows_by_name.get(name)
+        # Excludes inactive rows and anything without a real template file
+        # (e.g. a "Coming Soon" placeholder) even if it's in the allowlist above.
+        if not row or not row["is_active"] or not row["template_file"]:
+            continue
+        activities.append({
+            "name": name,
+            "title": name.replace("_", " ").title(),
+            "skill": skill,
+            "description": row["description"] or "",
+            "character": row["character_active"] or "",
+            "image": HOMEPAGE_ACTIVITY_IMAGES[name],
+        })
+    return activities
+
+
 # ROUTES
 @app.route("/")
 @app.route("/home")
 def home():
-    return render_template("home.html")
+    return render_template(
+        "home.html",
+        homepage_activities=get_homepage_activities(),
+        active_page="home",
+    )
 
 
 @app.route("/login", methods=["GET", "POST"])
 @limiter.limit("10 per minute")
-@csrf.exempt
 def login():
     ensure_feedback_tables()
+    ensure_parent_setup_column()
 
     if request.method == "GET" and session.get("user_id"):
-        return redirect(url_for("dashboard"))
+        if get_or_load_parent_setup_complete():
+            return redirect(url_for("dashboard"))
+        return redirect(url_for("parent_setup"))
 
     if request.method == "POST":
         email = request.form["email"]
@@ -302,7 +465,7 @@ def login():
         cursor = conn.cursor()
 
         cursor.execute(
-            "SELECT user_id, password, parent_name, child_name, profile_icon FROM users WHERE email = ?",
+            "SELECT user_id, password, parent_name, child_name, profile_icon, parent_setup_complete FROM users WHERE email = ?",
             (email,)
         )
         user = cursor.fetchone()
@@ -316,13 +479,19 @@ def login():
 
         if check_password_hash(stored_hash, password):
             bump_login_count(user[0])
-            
+
+            is_complete = bool(user[5]) if len(user) > 5 and user[5] is not None else False
+
             session.clear()
             session["user_id"] = user[0]
             session["parent_name"] = user[2]
             session["child_name"] = user[3]
             session["profile_icon"] = user[4] if len(user) > 4 and user[4] else "profileicon.png"
+            session["parent_setup_complete"] = is_complete
             session.permanent = True
+
+            if not is_complete:
+                return redirect(url_for("parent_setup"))
 
             return redirect("/dashboard")
         else:
@@ -330,49 +499,111 @@ def login():
 
     return render_template("login.html")
 
+EMAIL_FORMAT_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
 @app.route("/signup", methods=["GET", "POST"])
-@csrf.exempt
+@limiter.limit("3 per minute")
+@limiter.limit("10 per hour")
 def signup():
+    """Creates a complete account using name, email, and password."""
+
     ensure_feedback_tables()
+    ensure_parent_setup_column()
+
+    if request.method == "GET" and session.get("user_id"):
+        return redirect(url_for("dashboard"))
+
     if request.method == "POST":
-        email = clean_short_setting(request.form.get("email"), 120).lower()
-        parent_name = clean_short_setting(request.form.get("parent_name"), 50)
-        parent_pin = clean_short_setting(request.form.get("parent_pin"), 4)
+        first_name = clean_short_setting(
+            request.form.get("first_name"),
+            50
+        )
+
+        last_name = clean_short_setting(
+            request.form.get("last_name"),
+            50
+        )
+
+        email = clean_short_setting(
+            request.form.get("email"),
+            120
+        ).lower()
+
         password = request.form.get("password", "")
-        confirm_password = request.form.get("confirm_password", "")
-        terms_check = 1 if request.form.get("terms_check") else 0
+        terms_submitted = bool(request.form.get("terms_check"))
 
-        if not email:
-            return render_template("signup.html", error="* Email is required")
+        form_values = {
+            "first_name": first_name,
+            "last_name": last_name,
+            "email": email
+        }
 
-        if not parent_name:
-            return render_template("signup.html", error="* Parent name is required")
+        if not first_name:
+            return render_template(
+                "signup.html",
+                error="* Please enter your first name",
+                form_values=form_values
+            )
 
-        if not re.fullmatch(r"\d{4}", parent_pin or ""):
-            return render_template("signup.html", error="* Parent PIN must be exactly 4 digits")
+        if not last_name:
+            return render_template(
+                "signup.html",
+                error="* Please enter your last name",
+                form_values=form_values
+            )
 
-        if password != confirm_password:
-            return render_template("signup.html", error="* Passwords do not match")
+        if not email or not EMAIL_FORMAT_RE.match(email):
+            return render_template(
+                "signup.html",
+                error="* Please enter a valid email address",
+                form_values=form_values
+            )
 
-        error = validate_password(password)
-        if error:
-            return render_template("signup.html", error=error)
+        if not terms_submitted:
+            return render_template(
+                "signup.html",
+                error=(
+                    "* You must accept the Terms of Use and "
+                    "Privacy Policy to continue"
+                ),
+                form_values=form_values
+            )
 
-        hashed_password = generate_password_hash(password)
+        password_error = validate_password(password)
 
-        child_name = None
-        child_dob = None
-        child_age = None
+        if password_error:
+            return render_template(
+                "signup.html",
+                error=password_error,
+                form_values=form_values
+            )
+
+        parent_name = f"{first_name} {last_name}".strip()
 
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        cursor.execute("SELECT user_id FROM users WHERE email = ?", (email,))
+        cursor.execute(
+            "SELECT user_id FROM users WHERE email = ?",
+            (email,)
+        )
+
         existing_user = cursor.fetchone()
 
         if existing_user:
             conn.close()
-            return render_template("signup.html", error="* Email already registered")
+
+            return render_template(
+                "signup.html",
+                error=(
+                    "* An account with this email already exists. "
+                    "Try logging in instead."
+                ),
+                form_values=form_values
+            )
+
+        hashed_password = generate_password_hash(password)
 
         cursor.execute("""
             INSERT INTO users (
@@ -384,18 +615,20 @@ def signup():
                 child_age,
                 parent_pin,
                 terms_check,
+                parent_setup_complete,
                 created_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
         """, (
             email,
             hashed_password,
             parent_name,
-            child_name,
-            child_dob,
-            child_age,
-            parent_pin,
-            terms_check
+            None,
+            None,
+            None,
+            None,
+            1,
+            1
         ))
 
         user_id = cursor.lastrowid
@@ -404,7 +637,7 @@ def signup():
             UPDATE users
             SET login_count = 1
             WHERE user_id = ?
-""",    (user_id,))
+        """, (user_id,))
 
         first_activity_id = initialize_user_progress(cursor, user_id)
 
@@ -423,28 +656,57 @@ def signup():
         session["parent_name"] = parent_name
         session["child_name"] = ""
         session["profile_icon"] = "profileicon.png"
+        session["parent_setup_complete"] = True
         session.permanent = True
 
-        print("SIGNED UP USER:", user_id, dict(session))
+        return redirect(url_for("dashboard", signup=1))
+
+    return render_template("signup.html", form_values={})
+
+
+@app.route("/parent-setup", methods=["GET", "POST"])
+@login_required
+def parent_setup():
+    """Step 2 of signup: parent name + 4-digit parent PIN.
+
+    Reachable by an authenticated account regardless of completeness state
+    (it's in INCOMPLETE_ACCOUNT_ALLOWED_ENDPOINTS) -- this is the route that
+    completes setup, so it can't itself require completed setup.
+    """
+    ensure_parent_setup_column()
+
+    if get_or_load_parent_setup_complete():
         return redirect(url_for("dashboard"))
-    
-    return render_template("signup.html")
 
-def admin_required(f):
-    @wraps(f)
-    def wrapper(*args, **kwargs):
-        if not session.get("is_admin"):
-            return redirect(url_for("admin_login"))
-        return f(*args, **kwargs)
-    return wrapper
+    if request.method == "POST":
+        parent_name = clean_short_setting(request.form.get("parent_name"), 50)
+        parent_pin = clean_short_setting(request.form.get("parent_pin"), 4)
 
-def login_required(f):
-    @wraps(f)
-    def wrapper(*args, **kwargs):
-        if "user_id" not in session:
-            return redirect("/login")
-        return f(*args, **kwargs)
-    return wrapper
+        if not parent_name:
+            return render_template("parent_setup.html", error="* Parent name is required")
+
+        if not re.fullmatch(r"\d{4}", parent_pin or ""):
+            return render_template("parent_setup.html", error="* Parent PIN must be exactly 4 digits")
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE users
+            SET parent_name = ?, parent_pin = ?, parent_setup_complete = 1
+            WHERE user_id = ?
+        """, (parent_name, parent_pin, session["user_id"]))
+        conn.commit()
+        conn.close()
+
+        session["parent_name"] = parent_name
+        session["parent_setup_complete"] = True
+
+        # `setup=1` lets dashboard_layout.html fire parent_setup_completed
+        # exactly once, strictly after this UPDATE has committed -- never
+        # on submit/click, and never re-fired on a later dashboard visit.
+        return redirect(url_for("dashboard", setup=1))
+
+    return render_template("parent_setup.html", error=None)
 
 
 def validate_password(password):
@@ -678,70 +940,128 @@ def admin_user_overview():
 
     now_et = datetime.now(ZoneInfo("America/New_York"))
 
-    today_start_et = now_et.replace(hour=0, minute=0, second=0, microsecond=0)
-    week_start_et = today_start_et - timedelta(days=today_start_et.weekday())
+    today_start_et = now_et.replace(
+        hour=0,
+        minute=0,
+        second=0,
+        microsecond=0
+    )
+
+    week_start_et = today_start_et - timedelta(
+        days=today_start_et.weekday()
+    )
+
     month_start_et = today_start_et.replace(day=1)
 
     def to_utc_sql(dt):
-        return dt.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+        return (
+            dt.astimezone(timezone.utc)
+            .strftime("%Y-%m-%d %H:%M:%S")
+        )
 
     today_start = to_utc_sql(today_start_et)
     week_start = to_utc_sql(week_start_et)
     month_start = to_utc_sql(month_start_et)
 
+    # ---------------------------------------------------------
+    # ADMIN SUMMARY STATISTICS
+    # ---------------------------------------------------------
+
     cursor.execute("""
         SELECT
             COUNT(*) AS total_users,
 
-            COUNT(CASE
-                WHEN created_at IS NOT NULL AND created_at >= ?
-                THEN 1
-            END) AS users_created_this_week,
+            COUNT(
+                CASE
+                    WHEN created_at IS NOT NULL
+                         AND created_at >= ?
+                    THEN 1
+                END
+            ) AS users_created_this_week,
 
-            COUNT(CASE
-                WHEN created_at IS NOT NULL AND created_at >= ?
-                THEN 1
-            END) AS users_created_today,
+            COUNT(
+                CASE
+                    WHEN created_at IS NOT NULL
+                         AND created_at >= ?
+                    THEN 1
+                END
+            ) AS users_created_today,
 
-            COUNT(CASE
-                WHEN created_at IS NOT NULL AND created_at >= ?
-                THEN 1
-            END) AS users_created_this_month
+            COUNT(
+                CASE
+                    WHEN created_at IS NOT NULL
+                         AND created_at >= ?
+                    THEN 1
+                END
+            ) AS users_created_this_month
+
         FROM users
-    """, (week_start, today_start, month_start))
+    """, (
+        week_start,
+        today_start,
+        month_start
+    ))
 
     user_stats = cursor.fetchone()
 
     cursor.execute("""
         SELECT
-            COUNT(DISTINCT CASE
-                WHEN completed_at >= ?
-                THEN user_id
-            END) AS users_interacted_this_week,
+            COUNT(
+                DISTINCT CASE
+                    WHEN completed_at >= ?
+                    THEN user_id
+                END
+            ) AS users_interacted_this_week,
 
-            COUNT(DISTINCT CASE
-                WHEN completed_at >= ?
-                THEN user_id
-            END) AS users_interacted_today,
+            COUNT(
+                DISTINCT CASE
+                    WHEN completed_at >= ?
+                    THEN user_id
+                END
+            ) AS users_interacted_today,
 
-            COUNT(DISTINCT CASE
-                WHEN completed_at >= ?
-                THEN user_id
-            END) AS users_interacted_this_month
+            COUNT(
+                DISTINCT CASE
+                    WHEN completed_at >= ?
+                    THEN user_id
+                END
+            ) AS users_interacted_this_month
+
         FROM session_log
-    """, (week_start, today_start, month_start))
+    """, (
+        week_start,
+        today_start,
+        month_start
+    ))
 
     interaction_stats = cursor.fetchone()
 
     admin_stats = {
-        "total_users": user_stats["total_users"] or 0,
-        "users_created_this_week": user_stats["users_created_this_week"] or 0,
-        "users_created_today": user_stats["users_created_today"] or 0,
-        "users_created_this_month": user_stats["users_created_this_month"] or 0,
-        "users_interacted_this_week": interaction_stats["users_interacted_this_week"] or 0,
-        "users_interacted_today": interaction_stats["users_interacted_today"] or 0,
-        "users_interacted_this_month": interaction_stats["users_interacted_this_month"] or 0
+        "total_users":
+            user_stats["total_users"] or 0,
+
+        "users_created_this_week":
+            user_stats["users_created_this_week"] or 0,
+
+        "users_created_today":
+            user_stats["users_created_today"] or 0,
+
+        "users_created_this_month":
+            user_stats["users_created_this_month"] or 0,
+
+        "users_interacted_this_week":
+            interaction_stats["users_interacted_this_week"] or 0,
+
+        "users_interacted_today":
+            interaction_stats["users_interacted_today"] or 0,
+
+        "users_interacted_this_month":
+            interaction_stats["users_interacted_this_month"] or 0
     }
+
+    # ---------------------------------------------------------
+    # USER OVERVIEW ROWS
+    # ---------------------------------------------------------
 
     cursor.execute("""
         SELECT
@@ -753,13 +1073,20 @@ def admin_user_overview():
             COALESCE(u.login_count, 0) AS login_count,
             COALESCE(u.has_seen_tour, 0) AS has_seen_tour,
 
-            COUNT(DISTINCT CASE
-                WHEN a.is_active = 1 THEN a.activity_id
-            END) AS total_levels,
+            COUNT(
+                DISTINCT CASE
+                    WHEN a.is_active = 1
+                    THEN a.activity_id
+                END
+            ) AS total_levels,
 
-            COUNT(DISTINCT CASE
-                WHEN a.is_active = 1 AND p.is_unlocked = 1 THEN a.activity_id
-            END) AS unlocked_levels,
+            COUNT(
+                DISTINCT CASE
+                    WHEN a.is_active = 1
+                         AND p.is_unlocked = 1
+                    THEN a.activity_id
+                END
+            ) AS unlocked_levels,
 
             CASE
                 WHEN pf.feedback_id IS NULL THEN 0
@@ -771,68 +1098,291 @@ def admin_user_overview():
             MAX(sl.completed_at) AS last_active
 
         FROM users u
+
         LEFT JOIN progress p
             ON u.user_id = p.user_id
+
         LEFT JOIN activity a
             ON p.activity_id = a.activity_id
+
         LEFT JOIN session_log sl
             ON u.user_id = sl.user_id
+
         LEFT JOIN parent_feedback pf
             ON pf.user_id = u.user_id
+
         GROUP BY u.user_id
-        ORDER BY last_active DESC
+
+        ORDER BY
+            CASE
+                WHEN last_active IS NULL THEN 1
+                ELSE 0
+            END,
+            last_active DESC,
+            u.parent_name ASC
     """)
 
     users = cursor.fetchall()
 
+    # ---------------------------------------------------------
+    # PROGRESS FOR EVERY LEVEL AND EVERY USER
+    # ---------------------------------------------------------
+    #
+    # CROSS JOIN ensures every active activity appears for every
+    # user, even if an older account is missing a progress row.
+    # ---------------------------------------------------------
+
     cursor.execute("""
         SELECT
             u.user_id,
+
             a.activity_id,
             a.activity_name,
             a.activity_order,
             a.level_of_realism,
 
-            COALESCE(p.time_spent_on_activity, 0) AS progress_time_spent,
-            COALESCE(p.active_minutes, 0) AS progress_active_minutes,
+            COALESCE(p.is_unlocked, 0) AS is_unlocked,
+            COALESCE(p.is_completed, 0) AS is_completed,
 
-            COALESCE(SUM(sl.active_minutes), 0) AS logged_active_minutes,
-            COALESCE(SUM(sl.minutes_spoken), 0) AS logged_minutes_spoken,
-            COUNT(sl.session_id) AS session_count,
-            MAX(sl.completed_at) AS last_played
+            COALESCE(
+                p.matching_rounds_completed,
+                0
+            ) AS matching_rounds_completed,
+
+            COALESCE(
+                p.mystery_animal_rounds_completed,
+                0
+            ) AS mystery_animal_rounds_completed,
+
+            COALESCE(
+                p.guessing_game_rounds_completed,
+                0
+            ) AS guessing_game_rounds_completed,
+
+            COALESCE(
+                p.drawing_rounds_completed,
+                0
+            ) AS drawing_rounds_completed,
+
+            COALESCE(
+                p.mystery_classroom_object_rounds_completed,
+                0
+            ) AS mystery_classroom_object_rounds_completed,
+
+            COALESCE(
+                p.library_guessing_game_rounds_completed,
+                0
+            ) AS library_guessing_game_rounds_completed,
+
+            COALESCE(
+                p.restaurant_orders_completed,
+                0
+            ) AS restaurant_orders_completed
 
         FROM users u
-        JOIN progress p
-            ON p.user_id = u.user_id
-        JOIN activity a
-            ON a.activity_id = p.activity_id
-            AND a.is_active = 1
-        LEFT JOIN session_log sl
-            ON sl.user_id = u.user_id
-            AND sl.activity_id = a.activity_id
 
-        GROUP BY u.user_id, a.activity_id
-        ORDER BY u.parent_name, a.level_of_realism, a.activity_order
+        CROSS JOIN activity a
+
+        LEFT JOIN progress p
+            ON p.user_id = u.user_id
+            AND p.activity_id = a.activity_id
+
+        WHERE a.is_active = 1
+
+        ORDER BY
+            u.user_id,
+            a.level_of_realism,
+            a.activity_order
     """)
 
-    level_time_rows = cursor.fetchall()
+    progress_rows = cursor.fetchall()
 
-    level_times_by_user = {}
+    # Each activity maps to its real progress column and target.
+    activity_progress_config = {
+        "match_cards": {
+            "progress_column": "matching_rounds_completed",
+            "total_rounds": 12,
+            "unit_singular": "round",
+            "unit_plural": "rounds"
+        },
 
-    for row in level_time_rows:
+        "drawing_game": {
+            "progress_column": "drawing_rounds_completed",
+            "total_rounds": 4,
+            "unit_singular": "round",
+            "unit_plural": "rounds"
+        },
+
+        "restaurant_worker_game": {
+            "progress_column": "restaurant_orders_completed",
+            "total_rounds": 3,
+            "unit_singular": "order",
+            "unit_plural": "orders"
+        },
+
+        "mystery_animal": {
+            "progress_column": "mystery_animal_rounds_completed",
+            "total_rounds": 9,
+            "unit_singular": "round",
+            "unit_plural": "rounds"
+        },
+
+        "mystery_classroom_object": {
+            "progress_column":
+                "mystery_classroom_object_rounds_completed",
+
+            "total_rounds": 9,
+            "unit_singular": "round",
+            "unit_plural": "rounds"
+        },
+
+        "guessing_game": {
+            "progress_column": "guessing_game_rounds_completed",
+            "total_rounds": 3,
+            "unit_singular": "round",
+            "unit_plural": "rounds"
+        },
+
+        "library_guessing_game": {
+            "progress_column":
+                "library_guessing_game_rounds_completed",
+
+            "total_rounds": 3,
+            "unit_singular": "round",
+            "unit_plural": "rounds"
+        }
+    }
+
+    level_progress_by_user = {}
+
+    for row in progress_rows:
         row_dict = dict(row)
 
-        logged_active = float(row_dict["logged_active_minutes"] or 0)
-        progress_active = float(row_dict["progress_active_minutes"] or 0)
-        progress_time = float(row_dict["progress_time_spent"] or 0)
+        activity_name = row_dict["activity_name"]
+        is_unlocked = bool(row_dict["is_unlocked"])
+        is_completed = bool(row_dict["is_completed"])
 
-        # Prefer session_log, then fall back to progress fields.
-        display_minutes = logged_active or progress_active or progress_time
+        config = activity_progress_config.get(activity_name)
 
-        row_dict["display_minutes"] = round(display_minutes, 1)
-        row_dict["logged_minutes_spoken"] = round(float(row_dict["logged_minutes_spoken"] or 0), 1)
+        # Some activities currently do not have a dedicated
+        # persistent round-progress column.
+        if config:
+            progress_column = config["progress_column"]
 
-        level_times_by_user.setdefault(row["user_id"], []).append(row_dict)
+            rounds_completed = int(
+                row_dict.get(progress_column) or 0
+            )
+
+            total_rounds = int(
+                config["total_rounds"]
+            )
+
+            # Keep displayed values inside valid limits.
+            rounds_completed = max(
+                0,
+                min(rounds_completed, total_rounds)
+            )
+
+            unit_singular = config["unit_singular"]
+            unit_plural = config["unit_plural"]
+
+            has_round_tracking = True
+
+        else:
+            rounds_completed = 0
+            total_rounds = None
+            unit_singular = "round"
+            unit_plural = "rounds"
+            has_round_tracking = False
+
+        # A completed activity should always visually display
+        # as having reached its target.
+        if is_completed and total_rounds is not None:
+            rounds_completed = total_rounds
+
+        if not is_unlocked:
+            status_type = "locked"
+            status_label = "Locked"
+            status_description = "This level has not been unlocked."
+
+        elif is_completed:
+            status_type = "completed"
+            status_label = "Completed"
+
+            if total_rounds is not None:
+                status_description = (
+                    f"{total_rounds} of "
+                    f"{total_rounds} {unit_plural} completed"
+                )
+            else:
+                status_description = "Activity completed."
+
+        elif not has_round_tracking:
+            status_type = "unlocked"
+            status_label = "Unlocked"
+            status_description = (
+                "This activity does not currently save "
+                "round-by-round progress."
+            )
+
+        elif rounds_completed <= 0:
+            status_type = "not-started"
+            status_label = "Not started"
+            status_description = (
+                f"Ready to begin {unit_singular} 1."
+            )
+
+        else:
+            next_round = min(
+                rounds_completed + 1,
+                total_rounds
+            )
+
+            status_type = "active"
+
+            if unit_singular == "order":
+                status_label = (
+                    f"Order {next_round} of {total_rounds}"
+                )
+            else:
+                status_label = (
+                    f"Round {next_round} of {total_rounds}"
+                )
+
+            completed_unit_label = (
+                unit_singular
+                if rounds_completed == 1
+                else unit_plural
+            )
+
+            status_description = (
+                f"{rounds_completed} of "
+                f"{total_rounds} "
+                f"{completed_unit_label} completed"
+            )
+
+        level_data = {
+            "activity_id": row_dict["activity_id"],
+            "activity_name": activity_name,
+            "activity_order": row_dict["activity_order"],
+            "level_of_realism": row_dict["level_of_realism"],
+
+            "is_unlocked": is_unlocked,
+            "is_completed": is_completed,
+
+            "has_round_tracking": has_round_tracking,
+            "rounds_completed": rounds_completed,
+            "total_rounds": total_rounds,
+
+            "status_type": status_type,
+            "status_label": status_label,
+            "status_description": status_description
+        }
+
+        level_progress_by_user.setdefault(
+            row_dict["user_id"],
+            []
+        ).append(level_data)
 
     conn.close()
 
@@ -840,9 +1390,49 @@ def admin_user_overview():
         "admin_user_overview.html",
         users=users,
         admin_stats=admin_stats,
-        level_times_by_user=level_times_by_user,
+        level_progress_by_user=level_progress_by_user,
         active_page="admin_user_overview"
     )
+
+DEFAULT_ACTIVITY_REQUIREMENTS = {
+    "requires_audio": True,
+    "requires_microphone": True,
+}
+
+ACTIVITY_REQUIREMENTS = {
+    "match_cards": {
+        "requires_audio": True,
+        "requires_microphone": True,
+    },
+    "drawing_game": {
+        "requires_audio": True,
+        "requires_microphone": True,
+    },
+    "restaurant_worker_game": {
+        "requires_audio": True,
+        "requires_microphone": True,
+    },
+    "mystery_animal": {
+        "requires_audio": True,
+        "requires_microphone": True,
+    },
+    "mystery_classroom_object": {
+        "requires_audio": True,
+        "requires_microphone": True,
+    },
+    "mystery_food_item": {
+        "requires_audio": True,
+        "requires_microphone": True,
+    },
+    "guessing_game": {
+        "requires_audio": True,
+        "requires_microphone": True,
+    },
+    "classroom_guessing_game": {
+        "requires_audio": True,
+        "requires_microphone": True,
+    },
+}
 
 @app.route("/dashboard")
 @login_required
@@ -872,6 +1462,8 @@ def dashboard():
     cursor.execute("""
     SELECT
         u.current_activity_id,
+        u.child_name,
+        u.parent_pin,
         COALESCE(u.has_seen_tour, 0) AS has_seen_tour,
         COALESCE(u.login_count, 0) AS login_count,
         u.feedback_prompt_dismissed_at,
@@ -886,6 +1478,12 @@ def dashboard():
     """, (session["user_id"],))
 
     user_row = cursor.fetchone()
+
+    child_name = user_row["child_name"] if user_row else ""
+    parent_pin = user_row["parent_pin"] if user_row else None
+
+    has_child_name = has_real_child_name(child_name)
+    has_parent_pin = bool(re.fullmatch(r"\d{4}", str(parent_pin or "").strip()))
 
     current_activity_id = user_row["current_activity_id"] if user_row else None
     has_seen_tour = user_row["has_seen_tour"] if user_row else 1
@@ -920,7 +1518,22 @@ def dashboard():
     ORDER BY a.level_of_realism, a.activity_order
     """, (session["user_id"],))
 
-    activities = cursor.fetchall()
+    activity_rows = cursor.fetchall()
+
+    activities = []
+
+    for row in activity_rows:
+        activity = dict(row)
+
+        requirements = ACTIVITY_REQUIREMENTS.get(
+            activity["activity_name"],
+            DEFAULT_ACTIVITY_REQUIREMENTS
+        )
+
+        activity["requires_audio"] = requirements["requires_audio"]
+        activity["requires_microphone"] = requirements["requires_microphone"]
+
+        activities.append(activity)
 
     cursor.execute("""
         SELECT
@@ -974,7 +1587,7 @@ def dashboard():
     return render_template(
         "dashboard.html",
         parent=session["parent_name"],
-        child=session["child_name"],
+        child=child_name,
         active_page="dashboard",
         profile_icon=session.get("profile_icon", "profileicon.png"),
         total_words=stats["total_words"],
@@ -990,7 +1603,9 @@ def dashboard():
         show_feedback_prompt=show_feedback_prompt,
         feedback_prompt_dismissed=feedback_prompt_dismissed,
         login_count=login_count,
-        show_feedback_widget=show_feedback_widget
+        show_feedback_widget=show_feedback_widget,
+        has_child_name=has_child_name,
+        has_parent_pin=has_parent_pin,
     )
 
 @app.route("/dismiss-feedback-prompt", methods=["POST"])
@@ -1250,7 +1865,10 @@ def save_child_name_before_activity():
 
 @app.route("/acknowledgments2")
 def acknowledgments2():
-    return render_template("acknowledgments2.html")
+    return render_template(
+        "acknowledgments2.html",
+        active_page="acknowledgments2",
+    )
 
 @app.route("/admin/feedback")
 def admin_feedback():
@@ -1426,13 +2044,26 @@ def get_has_seen_tour_for_user(user_id):
 @app.route("/delete-account", methods=["POST"])
 @login_required
 def delete_account():
+    """Deletes the account and every row linked to it by user_id.
+
+    Audited table list (every table in the schema with a user_id column):
+    chat_messages, chat_conversations, session_log, progress,
+    parent_feedback, users. Deleted children-before-parents in one
+    transaction so a failure partway through leaves nothing deleted.
+    """
     user_id = session["user_id"]
+
+    ensure_feedback_tables()  # guarantees parent_feedback exists before DELETE
 
     conn = get_db_connection()
     cursor = conn.cursor()
 
     try:
+        cursor.execute("DELETE FROM chat_messages WHERE user_id = ?", (user_id,))
+        cursor.execute("DELETE FROM chat_conversations WHERE user_id = ?", (user_id,))
+        cursor.execute("DELETE FROM session_log WHERE user_id = ?", (user_id,))
         cursor.execute("DELETE FROM progress WHERE user_id = ?", (user_id,))
+        cursor.execute("DELETE FROM parent_feedback WHERE user_id = ?", (user_id,))
         cursor.execute("DELETE FROM users WHERE user_id = ?", (user_id,))
         conn.commit()
     except Exception as e:
@@ -1690,6 +2321,94 @@ def add_no_chache_headers(response):
     response.headers["Expires"] = "0"
     return response
 
+@app.route("/save-activity-setup", methods=["POST"])
+@csrf.exempt
+@login_required
+@limiter.limit("10 per minute")
+def save_activity_setup():
+    data = request.get_json(silent=True) or {}
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT child_name, parent_pin
+        FROM users
+        WHERE user_id = ?
+    """, (session["user_id"],))
+    user = cursor.fetchone()
+
+    if not user:
+        conn.close()
+        return jsonify({
+            "success": False,
+            "error": "Account not found."
+        }), 404
+
+    existing_child_name = user["child_name"] or ""
+    existing_parent_pin = str(user["parent_pin"] or "").strip()
+
+    child_name = existing_child_name
+    parent_pin = existing_parent_pin
+
+    if not has_real_child_name(existing_child_name):
+        child_name = clean_short_setting(
+            data.get("child_name"),
+            50
+        )
+
+        if not has_real_child_name(child_name):
+            conn.close()
+            return jsonify({
+                "success": False,
+                "error": "Please enter your child’s name."
+            }), 400
+
+    if not existing_parent_pin:
+        parent_pin = clean_short_setting(
+            data.get("parent_pin"),
+            4
+        )
+
+        parent_pin_confirm = clean_short_setting(
+            data.get("parent_pin_confirm"),
+            4
+        )
+
+        if not re.fullmatch(r"\d{4}", parent_pin or ""):
+            conn.close()
+            return jsonify({
+                "success": False,
+                "error": "The parent PIN must be exactly four digits."
+            }), 400
+
+        if parent_pin != parent_pin_confirm:
+            conn.close()
+            return jsonify({
+                "success": False,
+                "error": "The two parent PIN entries do not match."
+            }), 400
+
+    cursor.execute("""
+        UPDATE users
+        SET child_name = ?, parent_pin = ?
+        WHERE user_id = ?
+    """, (
+        child_name,
+        parent_pin,
+        session["user_id"]
+    ))
+
+    conn.commit()
+    conn.close()
+
+    session["child_name"] = child_name
+
+    return jsonify({
+        "success": True,
+        "child_name": child_name
+    })
+
 @app.route("/activity/<int:activity_id>")
 @login_required
 def open_activity(activity_id):
@@ -1716,7 +2435,7 @@ def open_activity(activity_id):
     progress = cursor.fetchone()
 
     cursor.execute("""
-        SELECT child_name
+        SELECT child_name, parent_pin
         FROM users
         WHERE user_id = ?
     """, (session["user_id"],))
@@ -1727,22 +2446,53 @@ def open_activity(activity_id):
     if not progress or not progress["is_unlocked"]:
         return redirect(url_for("dashboard"))
 
-    child_name = user_row["child_name"] if user_row else session.get("child_name", "")
+    child_name = (
+        user_row["child_name"]
+        if user_row
+        else session.get("child_name", "")
+    )
 
-    if not has_real_child_name(child_name):
-        session["child_name"] = ""
+    parent_pin = (
+        user_row["parent_pin"]
+        if user_row
+        else None
+    )
+
+    has_child_name = has_real_child_name(child_name)
+    has_parent_pin = bool(re.fullmatch(r"\d{4}", str(parent_pin or "").strip()))
+
+    if not has_child_name or not has_parent_pin:
+        if not has_child_name:
+            session["child_name"] = ""
+
         return redirect(url_for(
             "dashboard",
-            child_name_required=1,
+            setup_required=1,
             activity_id=activity_id
         ))
 
     session["child_name"] = child_name
-
     template_file = activity["template_file"]
 
     session["needs_parent_pin_for_dashboard"] = True
     session.pop("parent_pin_dashboard_verified", None)
+
+    # progress.started_at is otherwise unused anywhere in this codebase, so
+    # it's safe to repurpose here purely to detect (and analytics-tag) a
+    # user's very first activity open, once, without touching any other logic.
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT COUNT(*) AS n FROM progress WHERE user_id = ? AND started_at IS NOT NULL",
+        (session["user_id"],)
+    )
+    is_first_activity = cursor.fetchone()["n"] == 0
+    cursor.execute(
+        "UPDATE progress SET started_at = COALESCE(started_at, CURRENT_TIMESTAMP) WHERE user_id = ? AND activity_id = ?",
+        (session["user_id"], activity_id)
+    )
+    conn.commit()
+    conn.close()
 
     return render_template(
         template_file,
@@ -1750,7 +2500,9 @@ def open_activity(activity_id):
         parent=session["parent_name"],
         child=session["child_name"],
         active_page="dashboard",
-        profile_icon=session.get("profile_icon", "profileicon.png")
+        profile_icon=session.get("profile_icon", "profileicon.png"),
+        is_first_activity=is_first_activity,
+        debug_mode=app.config["DEBUG"]
     )
 
 def calculate_child_age(child_dob):
@@ -4668,83 +5420,82 @@ MYSTERY_ANIMAL_LEVELS = [
     {
         "stage": "guided_choice",
         "response_mode": "choice",
-        "description": "Ask one concrete either/or or small-choice question. Do not ask yes/no. Do not ask for hints or clues.",
+        "description": (
+            "Ask one short, concrete choice question with only two answer paths. "
+            "Vary the wording naturally. Never use a long list and never ask a plain yes/no question."
+        ),
         "examples": [
-            "Is your animal big or small?",
-            "Does your animal mostly walk or swim?",
-            "Is your animal loud or quiet?"
+            "Does it live mostly on land, or mostly in water?",
+            "Is it bigger than a cat, or smaller than a cat?",
+            "Does it have four legs, or fewer than four?"
         ],
         "fallback_questions": [
-            "Is your animal big or small?",
-            "Is your animal loud or quiet?",
-            "Is your animal fast or slow?",
-            "Does your animal mostly walk or swim?",
-            "Does your animal mostly walk or fly?",
-            "Does your animal live mostly on land or in water?",
-            "Is your animal usually a pet or a wild animal?",
-            "Does your animal have fur or feathers?",
-            "Does your animal have legs or fins?",
-            "Is your animal usually found at home or outside?",
-            "Is your animal bigger than a backpack or smaller than a backpack?",
-            "Does your animal move on the ground or in the air?"
+            "Does it live mostly on land, or mostly in water?",
+            "Is it bigger than a cat, or smaller than a cat?",
+            "Does it have fur, or does it not have fur?",
+            "Does it usually fly, or stay on the ground?",
+            "Does it have four legs, or fewer than four?",
+            "Would it fit in your hand, or is it bigger than that?"
         ]
     },
     {
         "stage": "guided_clue",
-        "response_mode": "choice",
-        "description": "Ask one concrete guided clue question with related choices only. Avoid broad abstract questions.",
+        "response_mode": "short_phrase",
+        "description": (
+            "Ask one concrete question that can be answered in one to three words. "
+            "Use familiar ideas a young child can see or hear."
+        ),
         "examples": [
-            "Does your animal have fur or scales?",
-            "Does your animal live on a farm or in the wild?",
-            "Does your animal have a tail or no tail?"
+            "What color is it?",
+            "How does it move?",
+            "Where does it live?"
         ],
         "fallback_questions": [
-            "Does your animal have fur or scales?",
-            "Does your animal have wings or no wings?",
-            "Does your animal have a tail or no tail?",
-            "Does your animal live on a farm or in the wild?",
-            "Does your animal live in a house or outside?",
-            "Does your animal eat meat or plants?",
-            "Does your animal have four legs or fewer than four legs?",
-            "Does your animal swim in water or stay mostly on land?",
-            "Is your animal usually gentle or scary?",
-            "Is your animal real-life common or more of a zoo animal?"
+            "What color is it?",
+            "How does it move?",
+            "Where does it live?",
+            "What does it eat?",
+            "What sound does it make?",
+            "What part do you notice first?"
         ]
     },
     {
         "stage": "tiny_hint",
         "response_mode": "short_phrase",
-        "description": "Ask for one tiny concrete hint only after the early guided rounds.",
+        "description": (
+            "Ask for one easy visual or action clue. Avoid interview-style questions, comparisons, "
+            "or requests for unusual facts."
+        ),
         "examples": [
-            "Give me one tiny hint about what your animal looks like.",
-            "Tell me one body part your animal has.",
-            "Give me one small clue about how your animal moves."
+            "What color is it?",
+            "What does it do?",
+            "Where would I see it?"
         ],
         "fallback_questions": [
-            "Give me one tiny hint about what your animal looks like.",
-            "Tell me one body part your animal has.",
-            "Give me one small clue about how your animal moves.",
-            "Tell me one place your animal might be.",
-            "Tell me one thing your animal has on its body.",
-            "Give me one small clue that would help me guess."
+            "What color is it?",
+            "What does it do?",
+            "Where would I see it?",
+            "What does its body look like?",
+            "What sound does it make?"
         ]
     },
     {
         "stage": "open_hint",
         "response_mode": "open_hint",
-        "description": "Ask for a hint or clue more openly, but still keep it simple.",
+        "description": (
+            "Ask for one simple clue in a short sentence. Keep it concrete and child-friendly."
+        ),
         "examples": [
-            "Can you give me one more clue?",
-            "What is one thing I should know about your animal?",
-            "What clue should I remember before I guess?"
+            "Tell me what it looks like.",
+            "Tell me what it does.",
+            "Tell me where it lives."
         ],
         "fallback_questions": [
-            "Can you give me one more clue?",
-            "What is one thing I should know about your animal?",
-            "What clue should I remember before I guess?",
-            "Tell me one more thing about your animal.",
-            "Give me one clue that makes your animal different from other animals.",
-            "What is one small hint that would help me make a better guess?"
+            "Tell me what it looks like.",
+            "Tell me what it does.",
+            "Tell me where it lives.",
+            "Give me one more clue about its body.",
+            "Give me one more clue about how it moves."
         ]
     }
 ]
@@ -4754,7 +5505,8 @@ MYSTERY_ANIMAL_REQUIRED_ROUNDS = 9
 MYSTERY_ANIMAL_NEXT_GAME_OFFER_ROUND = 9
 MYSTERY_ANIMAL_PLAY_AGAIN_INTERVAL = 9
 MYSTERY_ANIMAL_NEXT_ACTIVITY_ID = 3
-MYSTERY_ANIMAL_MAX_QUESTIONS_PER_ROUND = 10
+MYSTERY_ANIMAL_MAX_QUESTIONS_PER_ROUND = 9
+MYSTERY_ANIMAL_MAX_GUESSES_PER_ROUND = 3
 
 MYSTERY_ANIMAL_COMMON_ANIMALS = {
     # This is NOT used as a closed candidate list. It is only used to recognize
@@ -4861,6 +5613,7 @@ def get_mystery_animal_default_state(rounds_completed=0):
         "skip_guess_once": False,
         "guess_cooldown_questions": 0,
         "last_guess_question_count": 0,
+        "guesses_made": 0,
         "last_acknowledgment_index": -1,
         "clear_answer_word_counts": [],
         "recent_question_families": [],
@@ -5143,7 +5896,7 @@ def complete_mystery_animal_and_unlock_next_for_user(rounds_completed=None):
 
 def should_mystery_animal_ask_round_choice(rounds_completed):
     rounds_completed = int(rounds_completed or 0)
-    return rounds_completed >= MYSTERY_ANIMAL_REQUIRED_ROUNDS
+    return rounds_completed > 0 and (rounds_completed % 2 == 0 or rounds_completed >= MYSTERY_ANIMAL_REQUIRED_ROUNDS)
 
 
 
@@ -5356,8 +6109,8 @@ def make_mystery_animal_guess_line(raw_guess):
         return None, None, None
 
     article = get_mystery_animal_article(broad)
-    question = f"Is it {article} {broad}?"
-    message = f"Hmm, I think I have a guess. {question}"
+    question = "Was my guess right, or should I keep guessing?"
+    message = f"Hmm, I think it is {article} {broad}. {question}"
     return broad, question, message
 
 def get_child_revealed_animal(text):
@@ -5710,134 +6463,55 @@ def maybe_add_mystery_animal_acknowledgment(
 
 
 MYSTERY_ANIMAL_STRUCTURED_QUESTIONS = {
+    # Rounds 1-3: short two-way choices. Wording varies so every prompt does
+    # not end with the same phrase, but each answer remains easy to say.
     "simple": [
-        {
-            "key": "size_backpack",
-            "question": "Is it bigger than a backpack, or smaller than a backpack?",
-            "stage": "guided_choice",
-            "response_mode": "choice"
-        },
-        {
-            "key": "land_water_air",
-            "question": "Does it mostly live on land, in water, or in the air?",
-            "stage": "guided_choice",
-            "response_mode": "choice"
-        },
-        {
-            "key": "pet_wild",
-            "question": "Is it usually a pet, a farm animal, or a wild animal?",
-            "stage": "guided_choice",
-            "response_mode": "choice"
-        },
-        {
-            "key": "legs_count",
-            "question": "Does it have no legs, two legs, four legs, or more than four legs?",
-            "stage": "guided_choice",
-            "response_mode": "choice"
-        },
-        {
-            "key": "body_covering",
-            "question": "Does it have fur, feathers, scales, smooth skin, or a hard shell?",
-            "stage": "guided_choice",
-            "response_mode": "choice"
-        },
-        {
-            "key": "movement_simple",
-            "question": "Does it mostly walk, run, jump, swim, crawl, or fly?",
-            "stage": "guided_choice",
-            "response_mode": "choice"
-        }
+        {"key": "habitat_land_water", "question": "Does it live mostly on land, or mostly in water?", "stage": "guided_choice", "response_mode": "choice"},
+        {"key": "size_cat", "question": "Is it bigger than a cat, or smaller than a cat?", "stage": "guided_choice", "response_mode": "choice"},
+        {"key": "fur_branch", "question": "Does it have fur, or does it not have fur?", "stage": "guided_choice", "response_mode": "choice"},
+        {"key": "flight_branch", "question": "Does it usually fly, or stay on the ground?", "stage": "guided_choice", "response_mode": "choice"},
+        {"key": "legs_four_split", "question": "Does it have four legs, or fewer than four?", "stage": "guided_choice", "response_mode": "choice"},
+        {"key": "legs_over_four_split", "question": "Does it have more than four legs, or four or fewer?", "stage": "guided_choice", "response_mode": "choice"},
+        {"key": "hand_size", "question": "Would it fit in your hand, or is it bigger than that?", "stage": "guided_choice", "response_mode": "choice"},
+        {"key": "pet_wild", "question": "Would people keep it as a pet, or would it usually live outside?", "stage": "guided_choice", "response_mode": "choice"},
+        {"key": "farm_wild", "question": "Would you see it on a farm, or somewhere in the wild?", "stage": "guided_choice", "response_mode": "choice"},
+        {"key": "swim_ground", "question": "Does it spend more time swimming, or moving on the ground?", "stage": "guided_choice", "response_mode": "choice"},
+        {"key": "climb_else", "question": "Does it usually climb, or does it move another way?", "stage": "guided_choice", "response_mode": "choice"},
+        {"key": "tail_branch", "question": "Does it have a tail, or no tail?", "stage": "guided_choice", "response_mode": "choice"},
+        {"key": "wings_branch", "question": "Does it have wings, or does it have no wings?", "stage": "guided_choice", "response_mode": "choice"},
+        {"key": "shell_branch", "question": "Does it have a shell, or a body without a shell?", "stage": "guided_choice", "response_mode": "choice"},
+        {"key": "long_round_body", "question": "Is its body long, or more round?", "stage": "guided_choice", "response_mode": "choice"},
+        {"key": "soft_hard", "question": "Does it look soft, or more hard?", "stage": "guided_choice", "response_mode": "choice"},
+        {"key": "day_night", "question": "Would you usually see it in the daytime, or at night?", "stage": "guided_choice", "response_mode": "choice"}
     ],
+    # Rounds 4-6: one-to-three-word answers.
     "details": [
-        {
-            "key": "size_hand",
-            "question": "Is it smaller than your hand, or bigger than your hand?",
-            "stage": "guided_choice",
-            "response_mode": "choice"
-        },
-        {
-            "key": "main_color",
-            "question": "What are the main colors of your animal?",
-            "stage": "guided_clue",
-            "response_mode": "one_word"
-        },
-        {
-            "key": "usual_place",
-            "question": "Where would I usually find this animal?",
-            "stage": "guided_clue",
-            "response_mode": "short_phrase"
-        },
-        {
-            "key": "food",
-            "question": "What kind of food does it eat?",
-            "stage": "guided_clue",
-            "response_mode": "short_phrase"
-        },
-        {
-            "key": "special_body_part",
-            "question": "What body part should I notice first?",
-            "stage": "tiny_hint",
-            "response_mode": "short_phrase"
-        },
-        {
-            "key": "movement_detail",
-            "question": "How does it move most of the time?",
-            "stage": "guided_clue",
-            "response_mode": "short_phrase"
-        },
-        {
-            "key": "animal_size_detail",
-            "question": "Is it about the size of your hand, your backpack, or a grown-up?",
-            "stage": "guided_clue",
-            "response_mode": "short_phrase"
-        }
+        {"key": "main_color", "question": "What color is it?", "stage": "guided_clue", "response_mode": "short_phrase"},
+        {"key": "movement_detail", "question": "How does it move?", "stage": "guided_clue", "response_mode": "short_phrase"},
+        {"key": "usual_place", "question": "Where does it live?", "stage": "guided_clue", "response_mode": "short_phrase"},
+        {"key": "food", "question": "What does it eat?", "stage": "guided_clue", "response_mode": "short_phrase"},
+        {"key": "sound_detail", "question": "What sound does it make?", "stage": "guided_clue", "response_mode": "short_phrase"},
+        {"key": "notice_first", "question": "What part do you notice first?", "stage": "guided_clue", "response_mode": "short_phrase"},
+        {"key": "animal_size_detail", "question": "About how big is it?", "stage": "guided_clue", "response_mode": "short_phrase"},
+        {"key": "body_shape", "question": "What shape is its body?", "stage": "guided_clue", "response_mode": "short_phrase"},
+        {"key": "number_of_legs", "question": "How many legs does it have?", "stage": "guided_clue", "response_mode": "short_phrase"},
+        {"key": "body_covering", "question": "What covers its body?", "stage": "guided_clue", "response_mode": "short_phrase"},
+        {"key": "tail_detail", "question": "What does its tail look like?", "stage": "guided_clue", "response_mode": "short_phrase"}
     ],
+    # Rounds 7-9: still concrete. No interview-style prompts.
     "hints": [
-        {
-            "key": "easy_look_hint",
-            "question": "What does your animal look like?",
-            "stage": "open_hint",
-            "response_mode": "open_hint"
-        },
-        {
-            "key": "easy_action_hint",
-            "question": "What does your animal do a lot?",
-            "stage": "open_hint",
-            "response_mode": "open_hint"
-        },
-        {
-            "key": "easy_place_hint",
-            "question": "Where might I see your animal?",
-            "stage": "open_hint",
-            "response_mode": "open_hint"
-        },
-        {
-            "key": "category_short_answer",
-            "question": "What kind of animal is it? You can say bird, fish, bug, bear, or something else.",
-            "stage": "guided_clue",
-            "response_mode": "short_phrase"
-        },
-        {
-            "key": "narrowing_choice",
-            "question": "Is it more known for how it looks, where it lives, or what it does?",
-            "stage": "guided_choice",
-            "response_mode": "choice"
-        },
-        {
-            "key": "best_clue",
-            "question": "What is one clue I have not asked about yet?",
-            "stage": "open_hint",
-            "response_mode": "open_hint"
-        },
-        {
-            "key": "final_helpful_hint",
-            "question": "What hint would help me make my best guess?",
-            "stage": "open_hint",
-            "response_mode": "open_hint"
-        }
+        {"key": "look_sentence", "question": "Tell me what it looks like.", "stage": "open_hint", "response_mode": "open_hint"},
+        {"key": "action_sentence", "question": "Tell me what it does.", "stage": "open_hint", "response_mode": "open_hint"},
+        {"key": "home_sentence", "question": "Tell me where it lives.", "stage": "open_hint", "response_mode": "open_hint"},
+        {"key": "body_clue", "question": "Give me one clue about its body.", "stage": "open_hint", "response_mode": "open_hint"},
+        {"key": "movement_clue", "question": "Give me one clue about how it moves.", "stage": "open_hint", "response_mode": "open_hint"},
+        {"key": "sound_clue", "question": "What sound should I listen for?", "stage": "guided_clue", "response_mode": "short_phrase"},
+        {"key": "place_clue", "question": "Where would I probably see it?", "stage": "guided_clue", "response_mode": "short_phrase"},
+        {"key": "face_clue", "question": "What does its face look like?", "stage": "guided_clue", "response_mode": "short_phrase"},
+        {"key": "feet_clue", "question": "What do its feet or legs look like?", "stage": "guided_clue", "response_mode": "short_phrase"},
+        {"key": "one_more_easy", "question": "Tell me one more easy clue.", "stage": "open_hint", "response_mode": "open_hint"}
     ]
 }
-
 
 def make_mystery_animal_question_item(key, question, stage="guided_choice", response_mode="choice"):
     return {
@@ -5850,118 +6524,86 @@ def make_mystery_animal_question_item(key, question, stage="guided_choice", resp
 
 
 def get_mystery_animal_adaptive_question(game_state, event_type="child_answer"):
-    """
-    Deterministic follow-up picker.
-
-    Star should sound smart because it asks the next useful branch of the
-    decision tree, not because it randomly rephrases the same broad question.
-    This function deliberately blocks back-to-back habitat/movement repeats.
-    """
+    """Choose a short follow-up that builds directly on known clues."""
     asked_keys = set(game_state.get("current_round_question_keys", []))
+    asked_keys.update(game_state.get("session_question_keys", []))
     unclear_question_keys = set(game_state.get("unclear_question_keys", []))
-    asked_families = set(game_state.get("asked_question_families", []))
     tags = get_mystery_animal_clue_tags(game_state)
-    last_family = game_state.get("last_pending_question_family") or get_question_family(game_state.get("last_question", ""))
+    band = get_mystery_animal_round_band(game_state)
 
-    def add(key, question, stage="guided_choice", response_mode="choice", family=None):
-        family = family or get_question_family(question)
+    def available(key):
+        return key not in asked_keys and key not in unclear_question_keys
 
-        if key in asked_keys or key in unclear_question_keys:
-            return None
+    # Early rounds use a real branch rather than a long menu of choices.
+    if band == "simple":
+        branches = []
 
-        # Do not ask a question that feels like the same thing in new words.
-        if family in asked_families:
-            return None
+        if "more_than_four_legs" in tags or "many_legs" in tags:
+            branches.extend([
+                make_mystery_animal_question_item("legs_eight_many", "Does it have eight legs, or many more than eight?"),
+                make_mystery_animal_question_item("web_branch", "Does it make a web, or does it not make one?")
+            ])
+        elif "four_or_fewer_legs" in tags or "has_legs" in tags:
+            branches.extend([
+                make_mystery_animal_question_item("legs_four_split", "Does it have four legs, or fewer than four?"),
+                make_mystery_animal_question_item("legs_two_zero", "Does it have two legs, or no legs?")
+            ])
 
-        # The child experiences habitat and movement questions as very similar
-        # when they are asked back-to-back: land/water/air vs walk/swim/fly.
-        if last_family in {"habitat", "movement"} and family in {"habitat", "movement"}:
-            return None
+        if "water" in tags:
+            branches.extend([
+                make_mystery_animal_question_item("water_all_time", "Does it stay in water most of the time, or come onto land too?"),
+                make_mystery_animal_question_item("fins_legs", "Does it have fins, or legs?")
+            ])
 
-        if key == "size_hand" and "big" in tags:
-            return None
+        if "land" in tags:
+            branches.extend([
+                make_mystery_animal_question_item("land_climb", "Does it usually climb, or stay closer to the ground?"),
+                make_mystery_animal_question_item("land_pet", "Would people keep it as a pet, or would it usually live outside?")
+            ])
 
-        if key == "size_person" and "small" in tags:
-            return None
+        if "fur" in tags:
+            branches.extend([
+                make_mystery_animal_question_item("fur_pet_wild", "Would it live with people, or mostly away from people?"),
+                make_mystery_animal_question_item("fur_size", "Is it bigger than a cat, or smaller than a cat?")
+            ])
 
-        return make_mystery_animal_question_item(key, question, stage, response_mode)
+        if "fly" in tags or "wings" in tags or "air" in tags:
+            branches.extend([
+                make_mystery_animal_question_item("feathers_skin", "Does it have feathers, or a different kind of body covering?"),
+                make_mystery_animal_question_item("big_small_flyer", "Is it bigger than a pigeon, or smaller than one?")
+            ])
 
-    candidates = []
+        for item in branches:
+            if available(item["key"]):
+                return item
+        return None
 
-    current_round_number = int(game_state.get("rounds_completed", 0) or 0) + 1
-    declared_category = get_mystery_animal_declared_category(game_state)
+    # Later rounds ask one concrete detail connected to what is already known.
+    later = []
+    if "water" in tags:
+        later.extend([
+            make_mystery_animal_question_item("water_move_detail", "How does it move in the water?", "guided_clue", "short_phrase"),
+            make_mystery_animal_question_item("water_body_detail", "What does its body look like?", "guided_clue", "short_phrase")
+        ])
+    if "fly" in tags or "wings" in tags:
+        later.extend([
+            make_mystery_animal_question_item("wing_look_detail", "What do its wings look like?", "guided_clue", "short_phrase"),
+            make_mystery_animal_question_item("flying_color_detail", "What color is it?", "guided_clue", "short_phrase")
+        ])
+    if "many_legs" in tags:
+        later.extend([
+            make_mystery_animal_question_item("many_legs_move", "How does it move?", "guided_clue", "short_phrase"),
+            make_mystery_animal_question_item("many_legs_body", "What does its body look like?", "guided_clue", "short_phrase")
+        ])
+    if "fur" in tags:
+        later.extend([
+            make_mystery_animal_question_item("fur_color_detail", "What color is its fur?", "guided_clue", "short_phrase"),
+            make_mystery_animal_question_item("fur_sound_detail", "What sound does it make?", "guided_clue", "short_phrase")
+        ])
 
-    if current_round_number >= 7 and declared_category:
-        candidates.append(add(
-            f"narrow_{declared_category}_type",
-            f"What kind of {declared_category} is it? You can tell me how it looks or what it does.",
-            stage="open_hint",
-            response_mode="open_hint",
-            family="type_detail"
-        ))
-        candidates.append(add(
-            f"different_{declared_category}_feature",
-            f"What makes it different from other {declared_category}s?",
-            stage="open_hint",
-            response_mode="open_hint",
-            family="type_detail"
-        ))
-
-    # If an answer gives a strong branch, ask the most useful narrowing question.
-    # These only run when they are not repeating the same family.
-    if "big" in tags:
-        candidates.append(add(
-            "size_person",
-            "Is it bigger than a person, or smaller than a person?",
-            family="size"
-        ))
-
-    if "small" in tags:
-        candidates.append(add(
-            "size_hand",
-            "Is it smaller than your hand, or bigger than your hand?",
-            family="size"
-        ))
-
-    if "air" in tags or "fly" in tags or "wings" in tags:
-        candidates.append(add(
-            "wings_covering",
-            "Does it have feathers, or wings without feathers?",
-            family="appearance"
-        ))
-
-    if "many_legs" in tags and "web" not in tags:
-        candidates.append(add(
-            "web_question",
-            "Does it make a web, or not really?",
-            family="appearance"
-        ))
-
-    if "water" in tags and "shell" not in tags and "scales" not in tags:
-        candidates.append(add(
-            "water_covering",
-            "Does it have scales, a shell, or smooth skin?",
-            family="appearance"
-        ))
-
-    if "fur" in tags and "pet" in tags:
-        candidates.append(add(
-            "bark_meow",
-            "Is it more like a dog, or more like a cat?",
-            family="category"
-        ))
-
-    if "crawl" in tags and "no_legs" in tags and "scales" not in tags:
-        candidates.append(add(
-            "snake_scales",
-            "Does it have scales?",
-            family="appearance"
-        ))
-
-    for item in candidates:
-        if item:
+    for item in later:
+        if available(item["key"]):
             return item
-
     return None
 
 
@@ -6046,22 +6688,29 @@ def get_question_history_set(game_state):
 def get_question_family(question):
     lowered = normalize_child_text(question).lower()
 
-    if any(word in lowered for word in ["small", "big", "bigger", "smaller", "size", "backpack", "hand", "person"]):
+    if any(word in lowered for word in ["small", "big", "bigger", "smaller", "size", "backpack", "hand", "person", "fit"]):
         return "size"
 
-    if any(word in lowered for word in ["land", "water", "where", "house", "outside", "farm", "zoo", "place", "live", "air", "sky"]):
+    if any(word in lowered for word in ["leg", "legs"]):
+        return "legs"
+
+    if any(word in lowered for word in ["land", "water", "where", "house", "outside", "farm", "zoo", "place", "live", "air", "sky", "people", "wild"]):
         return "habitat"
 
-    if any(word in lowered for word in ["fly", "walk", "swim", "crawl", "jump", "move", "hops", "runs", "float"]):
+    if any(word in lowered for word in ["fly", "walk", "swim", "crawl", "slither", "jump", "move", "hops", "runs", "float", "climb", "swing", "gallop"]):
         return "movement"
 
-    if any(word in lowered for word in ["fur", "wings", "wing", "tail", "legs", "leg", "fins", "body", "look", "color", "soft", "rough", "part", "picture", "feathers", "scales", "shell", "skin", "web", "beak"]):
+    if any(word in lowered for word in [
+        "fur", "hair", "feel", "soft", "hard", "rough", "smooth", "slimy", "slippery",
+        "fuzzy", "fluffy", "spiky", "prickly", "wings", "wing", "tail", "fins", "body",
+        "look", "color", "part", "picture", "feathers", "scales", "shell", "skin", "web", "beak"
+    ]):
         return "appearance"
 
     if any(word in lowered for word in ["eat", "food"]):
         return "food"
 
-    if any(word in lowered for word in ["pet", "wild", "farm", "zoo", "house"]):
+    if any(word in lowered for word in ["pet", "farm", "zoo", "house", "bark", "meow"]):
         return "category"
 
     if any(word in lowered for word in ["hint", "clue", "know", "guess", "special", "narrow"]):
@@ -6069,20 +6718,12 @@ def get_question_family(question):
 
     return "general"
 
-
 def pick_structured_mystery_animal_question(game_state, event_type="child_answer"):
-    """
-    Pick the next question from a true decision tree.
+    """Pick the next non-repeating question from the round-appropriate tree."""
+    import random
 
-    Important behavior changes:
-    - Never blocks early questions just because they were used in a previous
-      animal round. That was why round 1-3 could fall through into body-part
-      open hints.
-    - Never asks the same key in the current animal round.
-    - Avoids back-to-back habitat/movement questions that sound repetitive.
-    - In rounds 1-3, never falls back to open-ended body-part prompts.
-    """
     asked_this_round = set(game_state.get("current_round_question_keys", []))
+    asked_this_session = set(game_state.get("session_question_keys", []))
     unclear_question_keys = set(game_state.get("unclear_question_keys", []))
     asked_families = set(game_state.get("asked_question_families", []))
     tags = get_mystery_animal_clue_tags(game_state)
@@ -6094,24 +6735,23 @@ def pick_structured_mystery_animal_question(game_state, event_type="child_answer
     else:
         questions = list(MYSTERY_ANIMAL_STRUCTURED_QUESTIONS.get(band, []))
 
-        # Smarter order for each progression band. This is the actual tree.
         order_by_band = {
             "simple": [
-                "size_backpack",
-                "body_covering",
-                "legs_count",
-                "pet_wild",
-                "land_water_air",
-                "movement_simple"
+                "habitat_land_water",
+                "size_cat",
+                "fur_branch",
+                "legs_four_split",
+                "flight_branch",
+                "hand_size"
             ],
             "details": [
-                "main_color",
-                "usual_place",
-                "food",
+                "body_feel",
                 "movement_detail",
-                "animal_size_detail",
+                "usual_place",
+                "main_color",
+                "food",
                 "special_body_part",
-                "size_hand"
+                "animal_size_detail"
             ],
             "hints": [
                 "easy_look_hint",
@@ -6125,27 +6765,27 @@ def pick_structured_mystery_animal_question(game_state, event_type="child_answer
         }
 
         priority = order_by_band.get(band, [])
-        questions.sort(key=lambda item: priority.index(item.get("key")) if item.get("key") in priority else 99)
+        # Keep a gentle difficulty order, but shuffle within nearby priority
+        # groups so round one and round two do not sound identical.
+        random.shuffle(questions)
+        questions.sort(key=lambda item: (priority.index(item.get("key")) // 3) if item.get("key") in priority else 99)
 
         def allowed(item, avoid_family=True):
             key = item.get("key")
             question = item.get("question", "")
             family = get_question_family(question)
-            last_family = game_state.get("last_pending_question_family") or get_question_family(game_state.get("last_question", ""))
+            last_family = (
+                game_state.get("last_pending_question_family")
+                or get_question_family(game_state.get("last_question", ""))
+            )
 
-            if key in asked_this_round or key in unclear_question_keys:
+            if key in asked_this_round or key in asked_this_session or key in unclear_question_keys:
                 return False
 
             if key == "size_hand" and "big" in tags:
                 return False
 
             if key == "size_person" and "small" in tags:
-                return False
-
-            if key == "movement_simple" and "land_water_air" in asked_this_round:
-                return False
-
-            if key == "land_water_air" and any(k in asked_this_round for k in {"movement_simple", "movement_land", "water_movement", "movement_many_legs"}):
                 return False
 
             if last_family in {"habitat", "movement"} and family in {"habitat", "movement"}:
@@ -6160,24 +6800,24 @@ def pick_structured_mystery_animal_question(game_state, event_type="child_answer
         if not available:
             available = [item for item in questions if allowed(item, avoid_family=False)]
 
-        # For the first three activity rounds, stay concrete no matter what.
         if not available and band == "simple":
             simple_fallbacks = [
-                make_mystery_animal_question_item("simple_color", "Is it mostly one color, or many colors?", "guided_choice", "choice"),
-                make_mystery_animal_question_item("simple_tail", "Does it have a tail, or no tail?", "guided_choice", "choice"),
-                make_mystery_animal_question_item("simple_noise", "Is it usually quiet, or loud?", "guided_choice", "choice")
+                make_mystery_animal_question_item("simple_land_water", "Does it live mostly on land, or mostly in water?", "guided_choice", "choice"),
+                make_mystery_animal_question_item("simple_size", "Is it bigger than a cat, or smaller than a cat?", "guided_choice", "choice"),
+                make_mystery_animal_question_item("simple_fur", "Does it have fur, or does it not have fur?", "guided_choice", "choice"),
+                make_mystery_animal_question_item("simple_legs", "Does it have four legs, or fewer than four?", "guided_choice", "choice")
             ]
             available = [
                 item for item in simple_fallbacks
                 if item["key"] not in asked_this_round and item["key"] not in unclear_question_keys
             ] or [item for item in simple_fallbacks if item["key"] not in asked_this_round] or simple_fallbacks
 
-        # For rounds 4-6, concrete detail prompts are okay, but avoid broad hint wording.
         if not available and band == "details":
             detail_fallbacks = [
-                make_mystery_animal_question_item("detail_tail", "Does it have a long tail, a short tail, or no tail?", "guided_choice", "choice"),
-                make_mystery_animal_question_item("detail_skin", "Is its body soft, rough, smooth, or hard?", "guided_choice", "choice"),
-                make_mystery_animal_question_item("detail_home", "Does it live near people, on a farm, in the wild, or in water?", "guided_choice", "choice")
+                make_mystery_animal_question_item("detail_feel", "What does it feel like?", "guided_clue", "short_phrase"),
+                make_mystery_animal_question_item("detail_move", "How does it move?", "guided_clue", "short_phrase"),
+                make_mystery_animal_question_item("detail_place", "Where would you usually see it?", "guided_clue", "short_phrase"),
+                make_mystery_animal_question_item("detail_color", "What color is it?", "guided_clue", "short_phrase")
             ]
             available = [
                 item for item in detail_fallbacks
@@ -6186,11 +6826,11 @@ def pick_structured_mystery_animal_question(game_state, event_type="child_answer
 
         if not available:
             hint_fallbacks = [
-                make_mystery_animal_question_item("extra_hint_look", "What does your animal look like?", "open_hint", "open_hint"),
-                make_mystery_animal_question_item("extra_hint_action", "What does your animal do a lot?", "open_hint", "open_hint"),
-                make_mystery_animal_question_item("extra_hint_place", "Where might I see your animal?", "open_hint", "open_hint"),
-                make_mystery_animal_question_item("extra_hint_choice", "Is your clue mostly about how it looks, where it lives, or what it does?", "guided_choice", "choice"),
-                make_mystery_animal_question_item("extra_hint_clue", "What is one clue I have not asked about yet?", "open_hint", "open_hint")
+                make_mystery_animal_question_item("extra_hint_look", "Tell me what it looks like.", "open_hint", "open_hint"),
+                make_mystery_animal_question_item("extra_hint_action", "Tell me what it does.", "open_hint", "open_hint"),
+                make_mystery_animal_question_item("extra_hint_place", "Tell me where it lives.", "open_hint", "open_hint"),
+                make_mystery_animal_question_item("extra_hint_body", "Give me one clue about its body.", "open_hint", "open_hint"),
+                make_mystery_animal_question_item("extra_hint_move", "Give me one clue about how it moves.", "open_hint", "open_hint")
             ]
             available = [
                 item for item in hint_fallbacks
@@ -6201,14 +6841,13 @@ def pick_structured_mystery_animal_question(game_state, event_type="child_answer
             last_key = game_state.get("last_question_key")
             available = [item for item in available if item.get("key") != last_key] or available
 
-        chosen = available[0]
+        # Select from the first few equally appropriate questions rather than
+        # always taking index zero. This preserves progression while varying order.
+        chosen = random.choice(available[:min(4, len(available))])
 
     key = chosen["key"]
     game_state["pending_question_key"] = key
-
-    family = get_question_family(chosen.get("question", ""))
-    game_state["last_pending_question_family"] = family
-
+    game_state["last_pending_question_family"] = get_question_family(chosen.get("question", ""))
     return chosen
 
 def choose_non_repeating_question(level, game_state):
@@ -6283,12 +6922,15 @@ def get_fallback_mystery_animal_question(level, game_state=None, event_type="chi
 
 
 def get_mystery_animal_clue_tags(game_state):
-    """
-    Convert the current round's Q/A history into tags/constraints.
-    These tags are treated as evidence and hard filters before Star guesses.
-    """
+    """Convert natural child answers into reusable clue tags."""
     tags = set()
     qa_items = game_state.get("qa_history") or game_state.get("known_clues", [])
+
+    soft_words = {"soft", "furry", "fur", "hair", "hairy", "fluffy", "fuzzy", "wool", "woolly"}
+    scale_words = {"scale", "scales", "scaly"}
+    smooth_words = {"smooth", "slimy", "slippery", "slick"}
+    rough_words = {"rough", "bumpy", "scratchy"}
+    spiky_words = {"spiky", "prickly", "spines", "quills"}
 
     for item in qa_items:
         if not isinstance(item, dict):
@@ -6298,157 +6940,246 @@ def get_mystery_animal_clue_tags(game_state):
         question = normalize_child_text(item.get("question", "")).lower()
         answer = normalize_child_text(item.get("answer", "")).lower()
         combined = f"{question} {answer}".lower()
-
         words = set(re.findall(r"[a-z']+", answer))
 
-        # Broad category clues should be remembered as constraints, not guessed
-        # back to the child. Example: "it is a type of bird" means Star should
-        # now narrow within birds.
         for category in ["bird", "bear", "fish", "bug", "insect", "spider", "snake", "frog", "cat", "dog", "monkey", "reptile", "mammal"]:
             if re.search(rf"\b(type|kind|sort|family) of {category}s?\b", answer) or re.search(rf"\b{category}s? (type|kind|sort|family)\b", answer):
                 tags.add(f"category_{category}")
 
-        if key == "size_backpack" or "backpack" in question:
-            if any(word in words for word in {"big", "bigger", "large", "larger", "huge"}) or "bigger than" in answer:
-                tags.add("big")
-            if any(word in words for word in {"small", "smaller", "little", "tiny"}) or "smaller than" in answer:
-                tags.add("small")
+        if key in {"size_backpack", "size_backpack_fit"} or "backpack" in question:
+            too_big_phrases = [
+                "too big", "too large", "would not fit", "wouldn't fit", "does not fit",
+                "doesn't fit", "won't fit", "cannot fit", "can't fit", "not fit"
+            ]
+            fit_phrases = ["would fit", "it fits", "fits", "inside", "in a backpack", "small enough"]
 
-        if key == "size_hand" or "your hand" in question:
-            if any(word in words for word in {"big", "bigger", "larger"}) or "bigger than" in answer:
-                tags.add("bigger_than_hand")
-            if any(word in words for word in {"small", "smaller", "tiny"}) or "smaller than" in answer:
-                tags.add("smaller_than_hand")
-                tags.add("small")
+            if any(phrase in answer for phrase in too_big_phrases) or words.intersection({"big", "large", "huge", "bigger"}):
+                tags.update({"big", "too_big_for_backpack"})
+            elif any(phrase in answer for phrase in fit_phrases) or words.intersection({"fit", "small", "little", "tiny"}):
+                tags.update({"small", "fits_backpack"})
 
-        if key == "size_person" or "person" in question:
-            if any(word in words for word in {"big", "bigger", "larger"}) or "bigger than" in answer:
-                tags.add("bigger_than_person")
-                tags.add("big")
-            if any(word in words for word in {"small", "smaller"}) or "smaller than" in answer:
-                tags.add("smaller_than_person")
+        if key in {"size_hand_or_big", "size_backpack_fit"}:
+            if words.intersection({"hand", "hold", "small", "little", "tiny", "fit", "backpack"}) and not words.intersection({"big", "large", "huge"}):
+                tags.update({"small", "fits_backpack"})
+            if words.intersection({"big", "large", "huge", "bigger"}) or "too big" in answer:
+                tags.update({"big", "too_big_for_backpack"})
 
-        if key == "land_water_air" or "land" in question or "water" in question or "air" in question:
-            if "water" in words or "ocean" in words or "pond" in words or "sea" in words:
+        if key == "legs_choice":
+            if words.intersection({"none", "zero", "no"}):
+                tags.add("no_legs")
+            if "two" in words or "2" in answer:
+                tags.add("two_legs")
+            if "four" in words or "4" in answer:
+                tags.add("four_legs")
+            if words.intersection({"lots", "many", "six", "eight"}) or "more than four" in answer:
+                tags.add("many_legs")
+
+        if key == "covering_choice":
+            if words.intersection({"fur", "furry", "hair", "hairy", "fluffy", "fuzzy"}):
+                tags.update({"fur", "soft"})
+            if words.intersection({"feather", "feathers", "feathery"}):
+                tags.update({"feathers", "soft"})
+            if words.intersection({"scale", "scales", "scaly"}):
+                tags.update({"scales", "not_soft"})
+            if words.intersection({"smooth", "slimy", "slippery"}):
+                tags.update({"smooth_skin", "smooth"})
+
+        if key == "movement_choice":
+            if words.intersection({"walk", "walking", "run", "running"}): tags.add("walk")
+            if words.intersection({"swim", "swimming"}): tags.add("swim")
+            if words.intersection({"fly", "flying"}): tags.add("fly")
+            if words.intersection({"crawl", "crawling"}): tags.add("crawl")
+            if words.intersection({"jump", "jumping", "hop", "hopping"}): tags.add("jump")
+
+        if key == "home_choice":
+            if words.intersection({"home", "house", "pet"}): tags.add("pet")
+            if "farm" in words: tags.add("farm")
+            if words.intersection({"wild", "forest", "jungle", "woods"}): tags.add("wild")
+            if "zoo" in words: tags.add("wild")
+
+        if key == "tail_or_body" and "tail" in words:
+            tags.add("tail")
+
+        if key == "land_water_air":
+            if words.intersection({"land", "ground"}): tags.add("land")
+            if words.intersection({"water", "ocean", "sea", "lake", "river", "pond"}): tags.add("water")
+            if words.intersection({"air", "sky"}): tags.add("air")
+
+        if key == "legs_yes_no":
+            if is_yes_response(answer) or words.intersection({"has", "legs"}):
+                tags.add("has_legs")
+            if is_no_response(answer) or words.intersection({"none", "zero"}) or "no legs" in answer:
+                tags.discard("has_legs")
+                tags.add("no_legs")
+
+        elif key == "legs_two_or_more":
+            if "four" in words or "4" in answer:
+                tags.update({"more_than_two_legs", "four_legs"})
+            elif words.intersection({"more", "many", "lots", "six", "eight", "multiple"}) or "6" in answer or "8" in answer:
+                tags.add("more_than_two_legs")
+                if words.intersection({"many", "lots", "six", "eight", "multiple"}) or "6" in answer or "8" in answer:
+                    tags.add("many_legs")
+            elif "two" in words or "2" in answer:
+                tags.add("two_legs")
+
+        elif key == "legs_four_or_many":
+            if "four" in words or "4" in answer:
+                tags.add("four_legs")
+            if words.intersection({"many", "lots", "six", "eight", "multiple", "more"}) or "6" in answer or "8" in answer:
+                tags.add("many_legs")
+
+        elif key == "legs_count" or ("legs" in question and key not in {"legs_yes_no", "legs_two_or_more", "legs_four_or_many"}):
+            if words.intersection({"no", "zero", "none"}) or "0" in answer:
+                tags.add("no_legs")
+            if "two" in words or "2" in answer:
+                tags.add("two_legs")
+            if "four" in words or "4" in answer:
+                tags.add("four_legs")
+            if words.intersection({"more", "lots", "many", "six", "eight", "multiple"}) or "6" in answer or "8" in answer or "more than four" in answer:
+                tags.add("many_legs")
+
+        if key == "wings_yes_no" or key == "simple_wings":
+            if is_yes_response(answer) or words.intersection({"wing", "wings"}):
+                tags.add("wings")
+            if is_no_response(answer):
+                tags.add("no_wings")
+
+        if key in {"land_water", "land_water_air"} or any(word in question for word in ["land", "water", "air"]):
+            if words.intersection({"water", "ocean", "pond", "sea", "lake", "river"}):
                 tags.add("water")
-            if "air" in words or "sky" in words:
+            if words.intersection({"air", "sky"}):
                 tags.add("air")
-            if "land" in words or "ground" in words or "tree" in words:
+            if words.intersection({"land", "ground", "tree", "outside", "forest", "jungle", "woods", "desert", "grass"}):
                 tags.add("land")
 
-        if key == "pet_wild" or "pet" in question or "wild" in question or "farm" in question:
-            if "wild" in words or "zoo" in words:
+        if key == "pet_yes_no":
+            if is_yes_response(answer):
+                tags.add("pet")
+            elif is_no_response(answer):
+                tags.add("not_pet")
+
+        if key == "pet_wild" or any(word in question for word in ["pet", "wild", "farm"]):
+            if words.intersection({"wild", "forest", "jungle", "woods", "zoo"}):
                 tags.add("wild")
-            if "pet" in words or "house" in words or "home" in words:
+            if "pet" in words:
                 tags.add("pet")
             if "farm" in words:
                 tags.add("farm")
 
-        if key == "legs_count" or "legs" in question:
-            if any(word in words for word in {"no", "zero", "none"}) or "0" in answer:
-                tags.add("no_legs")
-            if any(word in words for word in {"two"}) or "2" in answer:
-                tags.add("two_legs")
-            if any(word in words for word in {"four"}) or "4" in answer:
-                tags.add("four_legs")
-            if any(word in words for word in {"more", "lots", "many", "six", "eight", "multiple"}) or "6" in answer or "8" in answer or "more than four" in answer:
-                tags.add("many_legs")
-
-        if key in {"body_covering", "wings_covering"} or any(word in question for word in ["fur", "feathers", "scales", "smooth skin", "shell"]):
-            if "fur" in words or "furry" in words:
+        if key in {"body_feel", "detail_feel", "body_covering", "wings_covering"} or any(word in question for word in ["feel", "fur", "hair", "soft", "rough", "smooth", "scales", "shell"]):
+            soft_is_negated = any(phrase in answer for phrase in ["not soft", "isn't soft", "is not soft"])
+            if words.intersection(soft_words) and not soft_is_negated:
+                tags.add("soft")
+            if words.intersection({"fur", "furry", "hair", "hairy", "fluffy", "fuzzy", "wool", "woolly"}):
                 tags.add("fur")
-            if "feather" in answer or "feathers" in words:
-                tags.add("feathers")
-            if "scale" in answer or "scales" in words or "scaly" in words:
-                tags.add("scales")
-            if "smooth" in words or "skin" in words:
-                tags.add("smooth_skin")
-            if "shell" in words:
-                tags.add("shell")
+            if words.intersection({"feather", "feathers", "feathery"}):
+                tags.update({"feathers", "soft"})
+            if words.intersection(scale_words):
+                tags.update({"scales", "not_soft"})
+            if words.intersection(smooth_words):
+                tags.update({"smooth_skin", "smooth"})
+            if words.intersection(rough_words):
+                tags.update({"rough", "not_soft"})
+            if words.intersection(spiky_words):
+                tags.update({"spiky", "not_soft"})
+            if "shell" in words or "shelled" in words:
+                tags.update({"shell", "hard_body", "not_soft"})
+            if words.intersection({"hard", "solid"}):
+                tags.update({"hard_body", "not_soft"})
+            if "not soft" in answer or "isn't soft" in answer or "is not soft" in answer:
+                tags.add("not_soft")
 
-        if key in {"movement_simple", "movement_detail", "movement_many_legs", "water_movement"} or any(word in question for word in ["walk", "swim", "fly", "crawl", "jump", "move"]):
-            if any(word in words for word in {"jump", "jumps", "jumping", "hop", "hops", "hopping"}):
+        if key in {"movement_simple", "movement_detail", "detail_move", "movement_many_legs", "water_movement", "no_legs_movement"} or any(word in question for word in ["walk", "swim", "fly", "crawl", "slither", "jump", "move"]):
+            if words.intersection({"jump", "jumps", "jumping", "hop", "hops", "hopping"}):
                 tags.add("jump")
-            if any(word in words for word in {"fly", "flies", "flying"}):
+            if words.intersection({"fly", "flies", "flying"}):
                 tags.add("fly")
-            if any(word in words for word in {"swim", "swims", "swimming"}):
+            if words.intersection({"swim", "swims", "swimming", "paddle", "paddles"}):
                 tags.add("swim")
-            if any(word in words for word in {"walk", "walks", "walking", "run", "runs", "running"}):
+            if words.intersection({"walk", "walks", "walking", "run", "runs", "running"}):
                 tags.add("walk")
-            if any(word in words for word in {"crawl", "crawls", "crawling"}):
+            if words.intersection({"crawl", "crawls", "crawling"}):
                 tags.add("crawl")
+            if words.intersection({"slither", "slithers", "slithering", "wriggle", "wriggles", "wiggle", "wiggles"}):
+                tags.update({"slither", "crawl"})
+            if words.intersection({"climb", "climbs", "climbing"}):
+                tags.add("climb")
+            if words.intersection({"swing", "swings", "swinging"}):
+                tags.add("swing")
+            if words.intersection({"gallop", "gallops", "galloping", "trot", "trots", "trotting"}):
+                tags.update({"gallop", "walk"})
+            if words.intersection({"waddle", "waddles", "waddling"}):
+                tags.add("waddle")
 
         if key == "web_question" or "web" in question:
-            if "yes" in words or "yeah" in words or "web" in words:
+            if is_yes_response(answer) or "web" in words:
                 tags.add("web")
-            if "no" in words or "not" in words:
+            if is_no_response(answer):
                 tags.add("no_web")
 
-        if key in {"shell_or_arms", "shell_question"} or "hard shell" in question or "no shell" in question:
-            if "shell" in words or "hard" in words:
-                tags.add("shell")
-            if "no" in words or "not" in words:
-                tags.add("no_shell")
+        if key == "tail_yes_no" or key == "simple_tail":
+            if is_yes_response(answer) or "tail" in words:
+                tags.add("tail")
+            if is_no_response(answer):
+                tags.add("no_tail")
 
-        if key == "bark_meow" or "dog" in question or "cat" in question:
-            if "dog" in words or "bark" in words:
+        if key in {"pet_yes_no", "simple_pet"}:
+            if is_yes_response(answer):
+                tags.add("pet")
+            elif is_no_response(answer):
+                tags.add("not_pet")
+
+        if key == "bark_meow" or "bark" in question or "meow" in question:
+            if words.intersection({"dog", "bark", "barks", "woof"}):
                 tags.add("dog_like")
-            if "cat" in words or "meow" in words:
+            if words.intersection({"cat", "meow", "meows", "purr"}):
                 tags.add("cat_like")
 
-        # Catch useful clues even if they came from a more open-ended answer.
-        if any(phrase in combined for phrase in ["has fur", "with fur", "furry"]):
-            tags.add("fur")
-        if any(phrase in combined for phrase in ["has feathers", "with feathers"]):
-            tags.add("feathers")
-        if any(word in words for word in {"feather", "feathers", "feathery"}):
-            tags.add("feathers")
-        if any(word in words for word in {"beak", "beaks", "bill"}):
+        # Natural clues from any open response.
+        if words.intersection({"fur", "furry", "hair", "hairy", "fluffy", "fuzzy", "wool", "woolly"}):
+            tags.update({"fur", "soft"})
+        if words.intersection({"feather", "feathers", "feathery"}):
+            tags.update({"feathers", "soft"})
+        if words.intersection({"beak", "beaks", "bill"}):
             tags.add("beak")
-        if any(word in words for word in {"wing", "wings"}):
+        if words.intersection({"wing", "wings"}):
             tags.add("wings")
-        if any(phrase in combined for phrase in ["has scales", "with scales", "scaly"]):
-            tags.add("scales")
+        if words.intersection(scale_words):
+            tags.update({"scales", "not_soft"})
+        if words.intersection(smooth_words):
+            tags.update({"smooth_skin", "smooth"})
+        if words.intersection(rough_words):
+            tags.update({"rough", "not_soft"})
+        if words.intersection(spiky_words):
+            tags.update({"spiky", "not_soft"})
+        if words.intersection({"shell", "shelled"}):
+            tags.update({"shell", "hard_body", "not_soft"})
         if "web" in answer:
             tags.add("web")
-        if any(word in answer for word in ["spider", "arachnid"]):
+        if words.intersection({"spider", "arachnid"}):
             tags.add("spider_like")
-        if any(word in answer for word in ["jump", "jumps", "jumping", "hop", "hops", "hopping"]):
+        if words.intersection({"jump", "jumps", "jumping", "hop", "hops", "hopping"}):
             tags.add("jump")
-        if any(word in answer for word in ["crawl", "crawls", "crawling"]):
+        if words.intersection({"crawl", "crawls", "crawling"}):
             tags.add("crawl")
-        if "bigger than a backpack" in combined or "larger than a backpack" in combined:
-            tags.add("big")
-        if "smaller than a backpack" in combined:
-            tags.add("small")
+        if words.intersection({"slither", "slithers", "slithering", "wriggle", "wriggles"}):
+            tags.update({"slither", "crawl"})
         if "eight legs" in combined or "8 legs" in combined or "more than four legs" in combined:
             tags.add("many_legs")
 
-        # High-signal round 4-6 clues. These make Star smarter without changing
-        # the round 1-3 question flow. They are evidence, not hard-coded answers.
-        if any(phrase in combined for phrase in [
-            "antarctica", "antarctic", "south pole", "ice", "icy", "snow", "snowy", "very cold", "cold place"
-        ]):
+        if any(phrase in combined for phrase in ["antarctica", "antarctic", "south pole", "ice", "icy", "snow", "snowy", "very cold", "cold place"]):
             tags.add("cold_place")
             if any(phrase in combined for phrase in ["antarctica", "antarctic", "south pole"]):
                 tags.add("antarctica")
 
-        if any(phrase in answer for phrase in ["waddle", "waddles", "waddling"]):
-            tags.add("waddle")
-
-        if ("black" in words and "white" in words) or any(phrase in combined for phrase in [
-            "black and white", "white and black", "black white", "white black"
-        ]):
+        if ("black" in words and "white" in words) or any(phrase in combined for phrase in ["black and white", "white and black", "black white", "white black"]):
             tags.add("black_white")
 
-        # If the answer to a food question is fish, remember that it eats fish.
-        # Do not treat that as the animal being a fish.
         if key == "food" or "food" in question or "eat" in question:
-            if any(word in words for word in {"fish", "fishes"}):
+            if words.intersection({"fish", "fishes"}):
                 tags.add("eats_fish")
 
     return tags
-
 
 def get_mystery_animal_clue_dictionary(game_state):
     """
@@ -6506,155 +7237,229 @@ def normalize_mystery_animal_clue_value(question_key, question, answer):
     if not answer_l:
         return None
 
-    if question_key == "legs_count" or "legs" in question_l:
-        if any(word in words for word in {"no", "zero", "none"}) or "0" in answer_l:
+    if question_key == "legs_yes_no":
+        if is_no_response(answer_l) or "no legs" in answer_l:
             return "no legs"
-        if any(word in words for word in {"two"}) or "2" in answer_l:
-            return "two legs"
-        if any(word in words for word in {"four"}) or "4" in answer_l:
+        if is_yes_response(answer_l) or "legs" in words:
+            return "has legs"
+
+    if question_key == "legs_two_or_more":
+        if "four" in words or "4" in answer_l:
             return "four legs"
-        if any(word in words for word in {"more", "many", "lots", "six", "eight", "multiple"}) or "6" in answer_l or "8" in answer_l or "more than four" in answer_l:
+        if words.intersection({"more", "many", "lots", "six", "eight", "multiple"}) or "6" in answer_l or "8" in answer_l:
+            return "more than two legs"
+        if "two" in words or "2" in answer_l:
+            return "two legs"
+
+    if question_key == "legs_four_or_many":
+        if "four" in words or "4" in answer_l:
+            return "four legs"
+        if words.intersection({"many", "lots", "six", "eight", "multiple", "more"}) or "6" in answer_l or "8" in answer_l:
+            return "more than four legs"
+
+    if question_key == "legs_count" or ("legs" in question_l and question_key not in {"legs_yes_no", "legs_two_or_more", "legs_four_or_many"}):
+        if words.intersection({"no", "zero", "none"}) or "0" in answer_l:
+            return "no legs"
+        if "two" in words or "2" in answer_l:
+            return "two legs"
+        if "four" in words or "4" in answer_l:
+            return "four legs"
+        if words.intersection({"more", "many", "lots", "six", "eight", "multiple"}) or "6" in answer_l or "8" in answer_l:
             return "more than four legs"
 
     if "backpack" in question_l:
-        if any(word in words for word in {"small", "smaller", "little", "tiny"}) or "smaller than" in answer_l:
-            return "smaller than a backpack"
-        if any(word in words for word in {"big", "bigger", "large", "larger"}) or "bigger than" in answer_l:
-            return "bigger than a backpack"
+        if any(phrase in answer_l for phrase in ["too big", "too large", "wouldn't fit", "would not fit", "doesn't fit", "does not fit", "won't fit", "can't fit"]):
+            return "too big for a backpack"
+        if any(phrase in answer_l for phrase in ["would fit", "fits", "inside", "in a backpack"]) or words.intersection({"fit", "small", "little", "tiny"}):
+            return "fits inside a backpack"
 
     if "hand" in question_l:
-        if any(word in words for word in {"small", "smaller", "tiny"}) or "smaller than" in answer_l:
-            return "smaller than a hand"
-        if any(word in words for word in {"big", "bigger", "large", "larger"}) or "bigger than" in answer_l:
-            return "bigger than a hand"
+        if any(phrase in answer_l for phrase in ["too big", "wouldn't fit", "would not fit", "doesn't fit", "does not fit"]):
+            return "too big for a hand"
+        if any(phrase in answer_l for phrase in ["would fit", "fits", "in my hand"]) or words.intersection({"fit", "small", "tiny"}):
+            return "fits in a hand"
 
-    if any(word in question_l for word in ["crawl", "walk", "jump", "swim", "fly", "move"]):
+    if question_key in {"body_feel", "detail_feel"} or "feel" in question_l:
+        descriptors = []
+        soft_is_negated = any(phrase in answer_l for phrase in ["not soft", "isn't soft", "is not soft"])
+        descriptor_groups = [
+            ("furry or hairy", {"fur", "furry", "hair", "hairy", "fluffy", "fuzzy", "wool", "woolly"}),
+            ("feathery", {"feather", "feathers", "feathery"}),
+            ("scaly", {"scale", "scales", "scaly"}),
+            ("smooth or slippery", {"smooth", "slimy", "slippery", "slick"}),
+            ("rough", {"rough", "bumpy", "scratchy"}),
+            ("spiky or prickly", {"spiky", "prickly", "spines", "quills"}),
+            ("hard or shelled", {"hard", "shell", "shelled", "solid"}),
+            ("soft", {"soft"})
+        ]
+        for label, options in descriptor_groups:
+            if label == "soft" and soft_is_negated:
+                continue
+            if words.intersection(options):
+                descriptors.append(label)
+        if soft_is_negated:
+            descriptors.append("not soft")
+        if descriptors:
+            return ", ".join(dict.fromkeys(descriptors))
+
+    if any(word in question_l for word in ["crawl", "walk", "jump", "swim", "fly", "slither", "move"]):
         found = []
-        if any(word in words for word in {"crawl", "crawls", "crawling"}):
-            found.append("crawls")
-        if any(word in words for word in {"walk", "walks", "walking", "run", "runs", "running"}):
-            found.append("walks")
-        if any(word in words for word in {"jump", "jumps", "jumping", "hop", "hops", "hopping"}):
-            found.append("jumps")
-        if any(word in words for word in {"swim", "swims", "swimming"}):
-            found.append("swims")
-        if any(word in words for word in {"fly", "flies", "flying"}):
-            found.append("flies")
+        movement_groups = [
+            ("slithers", {"slither", "slithers", "slithering", "wriggle", "wriggles", "wiggle", "wiggles"}),
+            ("crawls", {"crawl", "crawls", "crawling"}),
+            ("walks or runs", {"walk", "walks", "walking", "run", "runs", "running"}),
+            ("jumps or hops", {"jump", "jumps", "jumping", "hop", "hops", "hopping"}),
+            ("swims", {"swim", "swims", "swimming", "paddle", "paddles"}),
+            ("flies", {"fly", "flies", "flying"}),
+            ("climbs", {"climb", "climbs", "climbing"}),
+            ("swings", {"swing", "swings", "swinging"}),
+            ("gallops", {"gallop", "gallops", "galloping", "trot", "trots", "trotting"}),
+            ("waddles", {"waddle", "waddles", "waddling"})
+        ]
+        for label, options in movement_groups:
+            if words.intersection(options):
+                found.append(label)
         if found:
-            return ", ".join(found)
+            return ", ".join(dict.fromkeys(found))
 
-    if any(word in question_l for word in ["land", "water", "air", "live"]):
+    if any(word in question_l for word in ["land", "water", "air", "live", "where", "see"]):
         found = []
-        if any(word in words for word in {"land", "ground", "tree", "outside"}):
+        if words.intersection({"land", "ground", "tree", "outside", "forest", "jungle", "woods", "desert", "grass"}):
             found.append("land")
-        if any(word in words for word in {"water", "ocean", "sea", "pond", "lake"}):
+        if words.intersection({"water", "ocean", "sea", "pond", "lake", "river"}):
             found.append("water")
-        if any(word in words for word in {"air", "sky"}):
+        if words.intersection({"air", "sky"}):
             found.append("air")
+        if words.intersection({"home", "house", "people", "neighborhood"}):
+            found.append("near people")
+        if "farm" in words:
+            found.append("farm")
+        if words.intersection({"wild", "forest", "jungle", "woods", "zoo"}):
+            found.append("wild")
         if found:
-            return ", ".join(found)
+            return ", ".join(dict.fromkeys(found))
 
     return answer_l[:80]
-
 
 def get_mystery_animal_required_guess_tags(game_state):
     clue_tags = set(get_mystery_animal_clue_tags(game_state))
 
     answer_text = " ".join(
-        str(item.get('answer', ''))
+        str(item.get("answer", ""))
         for item in (game_state.get("qa_history") or game_state.get("known_clues", []))
         if isinstance(item, dict)
     ).lower()
+    answer_words = set(re.findall(r"[a-z']+", answer_text))
 
-    if "wild" in answer_text:
+    if "wild" in answer_words:
         clue_tags.add("wild")
-    if "pet" in answer_text:
+    if "pet" in answer_words:
         clue_tags.add("pet")
-    if "farm" in answer_text:
+    if "farm" in answer_words:
         clue_tags.add("farm")
-    if "fur" in answer_text or "furry" in answer_text:
-        clue_tags.add("fur")
-    if "feather" in answer_text:
-        clue_tags.add("feathers")
-    if "beak" in answer_text or " bill" in f" {answer_text}":
+    if answer_words.intersection({"fur", "furry", "hair", "hairy", "fluffy", "fuzzy", "wool", "woolly"}):
+        clue_tags.update({"fur", "soft"})
+    if answer_words.intersection({"feather", "feathers", "feathery"}):
+        clue_tags.update({"feathers", "soft"})
+    if answer_words.intersection({"scale", "scales", "scaly"}):
+        clue_tags.update({"scales", "not_soft"})
+    if answer_words.intersection({"smooth", "slimy", "slippery", "slick"}):
+        clue_tags.update({"smooth_skin", "smooth"})
+    if answer_words.intersection({"rough", "bumpy", "scratchy"}):
+        clue_tags.update({"rough", "not_soft"})
+    if answer_words.intersection({"spiky", "prickly", "spines", "quills"}):
+        clue_tags.update({"spiky", "not_soft"})
+    if answer_words.intersection({"shell", "shelled"}):
+        clue_tags.update({"shell", "hard_body", "not_soft"})
+    elif answer_words.intersection({"hard", "solid"}):
+        clue_tags.update({"hard_body", "not_soft"})
+    if "not soft" in answer_text:
+        clue_tags.add("not_soft")
+
+    if "beak" in answer_words or "bill" in answer_words:
         clue_tags.add("beak")
-    if "wing" in answer_text:
+    if answer_words.intersection({"wing", "wings"}):
         clue_tags.add("wings")
-    if "scale" in answer_text or "scaly" in answer_text:
-        clue_tags.add("scales")
-    if "web" in answer_text:
+    if "web" in answer_words:
         clue_tags.add("web")
-    if any(word in answer_text for word in ["bark", "barks", "barking", "woof", "dog-like", "dog like"]):
+
+    if answer_words.intersection({"bark", "barks", "barking", "woof"}) or "dog-like" in answer_text or "dog like" in answer_text:
         clue_tags.add("dog_like")
-    if any(word in answer_text for word in ["meow", "meows", "meowing", "purr", "purrs", "whisker", "whiskers", "cat-like", "cat like"]):
+    if answer_words.intersection({"meow", "meows", "meowing", "purr", "purrs", "whisker", "whiskers"}) or "cat-like" in answer_text or "cat like" in answer_text:
         clue_tags.add("cat_like")
-    if any(word in answer_text for word in ["trunk"]):
+
+    if "trunk" in answer_words:
         clue_tags.add("trunk")
     if any(phrase in answer_text for phrase in ["long neck", "really tall neck", "tall neck"]):
         clue_tags.add("long_neck")
-    if any(word in answer_text for word in ["stripe", "stripes", "striped"]):
+    if answer_words.intersection({"stripe", "stripes", "striped"}):
         clue_tags.add("stripes")
-    if any(word in answer_text for word in ["spot", "spots", "spotted"]):
+    if answer_words.intersection({"spot", "spots", "spotted"}):
         clue_tags.add("spots")
-    if any(word in answer_text for word in ["horn", "horns"]):
+    if answer_words.intersection({"horn", "horns"}):
         clue_tags.add("horns")
-    if any(word in answer_text for word in ["antler", "antlers"]):
+    if answer_words.intersection({"antler", "antlers"}):
         clue_tags.add("antlers")
+
     if (
         "black and white" in answer_text
         or "white and black" in answer_text
-        or "black white" in answer_text
-        or "white black" in answer_text
-        or ("black" in answer_text and "white" in answer_text)
+        or ("black" in answer_words and "white" in answer_words)
     ):
         clue_tags.add("black_white")
-    if re.search(r"\bwhite\b", answer_text):
-        clue_tags.add("white")
-    if re.search(r"\bblack\b", answer_text):
-        clue_tags.add("black")
-    if re.search(r"\bbrown\b", answer_text):
-        clue_tags.add("brown")
-    if any(word in answer_text for word in ["mane"]):
+    for color in ["white", "black", "brown"]:
+        if color in answer_words:
+            clue_tags.add(color)
+
+    if "mane" in answer_words:
         clue_tags.add("mane")
-    if any(word in answer_text for word in ["quack", "quacks", "duck"]):
+    if answer_words.intersection({"quack", "quacks", "duck"}):
         clue_tags.add("duck_like")
-    if any(word in answer_text for word in ["buzz", "buzzes", "buzzing", "stinger", "sting"]):
+    if answer_words.intersection({"buzz", "buzzes", "buzzing", "stinger", "sting"}):
         clue_tags.add("bee_like")
-    if any(word in answer_text for word in ["jump", "jumps", "jumping", "hop", "hops", "hopping"]):
+
+    if answer_words.intersection({"jump", "jumps", "jumping", "hop", "hops", "hopping"}):
         clue_tags.add("jump")
-    if any(word in answer_text for word in ["swim", "swims", "swimming"]):
+    if answer_words.intersection({"swim", "swims", "swimming", "paddle", "paddles"}):
         clue_tags.add("swim")
-    if any(word in answer_text for word in ["fly", "flies", "flying"]):
+    if answer_words.intersection({"fly", "flies", "flying"}):
         clue_tags.add("fly")
-    if any(word in answer_text for word in ["crawl", "crawls", "crawling"]):
+    if answer_words.intersection({"crawl", "crawls", "crawling"}):
         clue_tags.add("crawl")
+    if answer_words.intersection({"slither", "slithers", "slithering", "wriggle", "wriggles"}):
+        clue_tags.update({"slither", "crawl"})
+    if answer_words.intersection({"climb", "climbs", "climbing"}):
+        clue_tags.add("climb")
+    if answer_words.intersection({"swing", "swings", "swinging"}):
+        clue_tags.add("swing")
+    if answer_words.intersection({"gallop", "gallops", "galloping", "trot", "trots", "trotting"}):
+        clue_tags.update({"gallop", "walk"})
+
     if "eight legs" in answer_text or "8 legs" in answer_text or "more than four legs" in answer_text:
         clue_tags.add("many_legs")
     if any(phrase in answer_text for phrase in ["antarctica", "antarctic", "south pole"]):
-        clue_tags.add("antarctica")
-        clue_tags.add("cold_place")
+        clue_tags.update({"antarctica", "cold_place"})
     elif any(phrase in answer_text for phrase in ["ice", "icy", "snow", "snowy", "very cold", "cold place"]):
         clue_tags.add("cold_place")
-    if any(phrase in answer_text for phrase in ["waddle", "waddles", "waddling"]):
+    if answer_words.intersection({"waddle", "waddles", "waddling"}):
         clue_tags.add("waddle")
-    if any(phrase in answer_text for phrase in ["eats fish", "eat fish", "fish to eat", "food is fish", "fish"]):
-        # This is intentionally tagged as food evidence, not as a fish identity.
+    if any(phrase in answer_text for phrase in ["eats fish", "eat fish", "fish to eat", "food is fish"]):
         clue_tags.add("eats_fish")
 
-    return {
-        tag for tag in clue_tags
-        if tag in {
-            "big", "small", "bigger_than_hand", "smaller_than_hand", "bigger_than_person", "smaller_than_person",
-            "water", "air", "land", "wild", "pet", "farm",
-            "fur", "feathers", "scales", "smooth_skin", "shell", "beak", "wings",
-            "jump", "fly", "swim", "walk", "crawl", "web", "no_web", "soft_arms",
-            "no_legs", "two_legs", "four_legs", "many_legs",
-            "dog_like", "cat_like", "spider_like", "trunk", "long_neck", "stripes", "spots",
-            "horns", "antlers", "black_white", "mane", "duck_like", "bee_like",
-            "antarctica", "cold_place", "eats_fish", "waddle", "white", "black", "brown"
-        }
+    allowed = {
+        "big", "small", "fits_backpack", "too_big_for_backpack",
+        "bigger_than_hand", "smaller_than_hand", "bigger_than_person", "smaller_than_person",
+        "water", "air", "land", "wild", "pet", "farm", "not_pet",
+        "fur", "feathers", "scales", "smooth_skin", "smooth",
+        "rough", "spiky", "hard_body", "shell", "beak", "wings", "no_wings",
+        "jump", "fly", "swim", "walk", "crawl", "slither", "climb", "swing", "gallop", "waddle",
+        "web", "no_web", "soft_arms", "tail", "no_tail",
+        "has_legs", "more_than_two_legs", "no_legs", "two_legs", "four_legs", "many_legs",
+        "dog_like", "cat_like", "spider_like", "trunk", "long_neck", "stripes", "spots",
+        "horns", "antlers", "black_white", "mane", "duck_like", "bee_like",
+        "antarctica", "cold_place", "eats_fish", "white", "black", "brown"
     }
-
+    return {tag for tag in clue_tags if tag in allowed}
 
 def mystery_animal_guess_contradicts_clues(guess, game_state):
     """
@@ -6724,94 +7529,74 @@ def get_mystery_animal_answer_families(game_state):
 
         if key.startswith("size") or family == "size":
             families.add("size")
-        elif key in {"land_water_air", "usual_place"} or family == "habitat":
+        elif key in {"land_water", "land_water_air", "usual_place"} or family == "habitat":
             families.add("habitat")
-        elif key in {"legs_count"}:
+        elif key in {"legs_yes_no", "legs_two_or_more", "legs_four_or_many", "legs_count"} or family == "legs":
             families.add("legs")
-        elif "movement" in key or family == "movement":
+        elif "movement" in key or key in {"detail_move", "no_legs_movement"} or family == "movement":
             families.add("movement")
-        elif key in {"body_covering", "wings_covering", "shell_question", "web_question", "special_body_part"} or family == "appearance":
+        elif key in {
+            "body_feel", "detail_feel", "body_covering", "wings_covering",
+            "wings_yes_no", "shell_question", "web_question", "special_body_part"
+        } or family == "appearance":
             families.add("appearance")
-        elif key in {"pet_wild"} or family == "category":
+        elif key in {"pet_yes_no", "pet_wild", "bark_meow"} or family == "category":
             families.add("category")
-        elif key in {"food"} or family == "food":
+        elif key == "food" or family == "food":
             families.add("food")
         else:
             families.add(family or "general")
 
     return families
 
-
 MYSTERY_ANIMAL_GUESS_PROFILES = {
-    # Broad categories first. These make Star willing to make educated guesses
-    # without needing an impossible closed list of every species.
     "bird": {"feathers", "wings", "beak", "fly", "air", "two_legs"},
-    "fish": {"water", "swim", "scales", "no_legs"},
-    "snake": {"no_legs", "crawl", "scales", "land"},
+    "fish": {"water", "swim", "scales", "smooth_skin", "no_legs"},
+    "snake": {"no_legs", "slither", "crawl", "scales", "smooth_skin", "land"},
     "spider": {"many_legs", "crawl", "web", "land"},
-    "crab": {"many_legs", "water", "crawl", "shell"},
-    "turtle": {"shell", "water", "four_legs", "swim"},
+    "crab": {"many_legs", "water", "crawl", "shell", "hard_body"},
+    "turtle": {"shell", "hard_body", "water", "four_legs", "swim"},
     "frog": {"jump", "water", "land", "smooth_skin", "small"},
-    "dog": {"pet", "fur", "four_legs", "dog_like", "walk"},
-    "cat": {"pet", "fur", "four_legs", "cat_like", "walk"},
-    "rabbit": {"small", "fur", "four_legs", "jump", "pet"},
-    "horse": {"big", "farm", "fur", "four_legs", "walk"},
-    "cow": {"big", "farm", "four_legs", "walk"},
-    "pig": {"farm", "four_legs", "walk"},
+    "dog": {"pet", "fur", "four_legs", "dog_like", "walk", "tail"},
+    "cat": {"pet", "fur", "four_legs", "cat_like", "walk", "tail"},
+    "rabbit": {"small", "fits_backpack", "fur", "four_legs", "jump", "pet"},
+    "horse": {"big", "too_big_for_backpack", "farm", "fur", "four_legs", "walk", "gallop", "tail"},
+    "cow": {"big", "too_big_for_backpack", "farm", "four_legs", "walk", "tail"},
+    "pig": {"farm", "four_legs", "walk", "tail"},
     "sheep": {"farm", "fur", "four_legs"},
     "goat": {"farm", "four_legs", "horns"},
-    "lion": {"wild", "fur", "four_legs", "cat_like", "big"},
-    "tiger": {"wild", "fur", "four_legs", "cat_like", "big"},
-    "bear": {"wild", "fur", "four_legs", "big"},
-    "polar bear": {"wild", "fur", "four_legs", "big", "white", "cold_place", "swim", "eats_fish"},
-    "panda": {"wild", "fur", "four_legs", "big", "black_white"},
-    "grizzly bear": {"wild", "fur", "four_legs", "big", "brown"},
-    "elephant": {"wild", "big", "four_legs"},
-    "giraffe": {"wild", "big", "four_legs"},
-    "zebra": {"wild", "four_legs"},
-    "monkey": {"wild", "fur", "walk", "small"},
-    "kangaroo": {"jump", "big", "land", "wild"},
-    "duck": {"bird", "feathers", "beak", "wings", "water", "swim", "two_legs"},
-    "penguin": {"bird", "feathers", "beak", "wings", "water", "swim", "two_legs", "no_fly", "black_white", "antarctica", "cold_place", "eats_fish", "waddle", "white", "black", "brown"},
-    "butterfly": {"wings", "fly", "small", "air"},
-    "bee": {"wings", "fly", "small", "air"},
-    "dolphin": {"water", "swim", "big", "smooth_skin"},
-    "whale": {"water", "swim", "big", "smooth_skin"},
-    "shark": {"water", "swim", "big"},
-    "octopus": {"water", "swim", "soft_arms"},
-    "crocodile": {"water", "land", "scales", "four_legs", "crawl"},
-    "lizard": {"land", "scales", "four_legs", "crawl"},
-    "squirrel": {"small", "fur", "four_legs", "land"},
-    "mouse": {"small", "fur", "four_legs", "land"},
-    "hamster": {"small", "fur", "four_legs", "pet"},
-    "fox": {"wild", "fur", "four_legs", "dog_like"},
-    "wolf": {"wild", "fur", "four_legs", "dog_like"},
-    "deer": {"wild", "four_legs", "antlers"},
-    "snail": {"small", "crawl", "shell"}
-}
-
-MYSTERY_ANIMAL_GUESS_PROFILES.update({
-    "elephant": {"wild", "big", "four_legs", "trunk"},
-    "giraffe": {"wild", "big", "four_legs", "long_neck", "spots"},
-    "zebra": {"wild", "four_legs", "stripes", "black_white"},
-    "tiger": {"wild", "fur", "four_legs", "cat_like", "big", "stripes"},
-    "leopard": {"wild", "fur", "four_legs", "cat_like", "spots"},
-    "cheetah": {"wild", "fur", "four_legs", "cat_like", "spots"},
-    "lion": {"wild", "fur", "four_legs", "cat_like", "big", "mane"},
-    "goat": {"farm", "four_legs", "horns"},
-    "deer": {"wild", "four_legs", "antlers"},
+    "lion": {"wild", "fur", "four_legs", "cat_like", "big", "too_big_for_backpack", "tail", "mane"},
+    "tiger": {"wild", "fur", "four_legs", "cat_like", "big", "too_big_for_backpack", "tail", "stripes"},
+    "leopard": {"wild", "fur", "four_legs", "cat_like", "spots", "tail"},
+    "cheetah": {"wild", "fur", "four_legs", "cat_like", "spots", "tail"},
+    "bear": {"wild", "fur", "four_legs", "big", "too_big_for_backpack"},
+    "polar bear": {"wild", "fur", "four_legs", "big", "too_big_for_backpack", "white", "cold_place", "swim", "eats_fish"},
+    "panda": {"wild", "fur", "four_legs", "big", "too_big_for_backpack", "black_white"},
+    "grizzly bear": {"wild", "fur", "four_legs", "big", "too_big_for_backpack", "brown"},
+    "elephant": {"wild", "rough", "big", "too_big_for_backpack", "four_legs", "trunk"},
+    "giraffe": {"wild", "big", "too_big_for_backpack", "four_legs", "long_neck", "spots"},
+    "zebra": {"wild", "fur", "four_legs", "stripes", "black_white"},
+    "monkey": {"wild", "fur", "walk", "climb", "swing", "small", "tail"},
+    "kangaroo": {"jump", "big", "too_big_for_backpack", "land", "wild", "tail"},
     "duck": {"feathers", "beak", "wings", "water", "swim", "two_legs", "duck_like"},
-    "bee": {"wings", "fly", "small", "air", "bee_like"},
-    "butterfly": {"wings", "fly", "small", "air"},
-    "shark": {"water", "swim", "big", "teeth"},
-    "whale": {"water", "swim", "big", "smooth_skin"},
-    "dolphin": {"water", "swim", "smooth_skin"},
-    "octopus": {"water", "swim", "soft_arms"},
-    "polar bear": {"wild", "fur", "four_legs", "big", "white", "cold_place", "swim", "eats_fish"},
-    "panda": {"wild", "fur", "four_legs", "big", "black_white"},
-    "grizzly bear": {"wild", "fur", "four_legs", "big", "brown"},
-    "penguin": {"feathers", "beak", "wings", "water", "swim", "two_legs", "black_white", "antarctica", "cold_place", "eats_fish", "waddle", "white", "black", "brown"}
-})
+    "penguin": {"feathers", "beak", "wings", "water", "swim", "two_legs", "black_white", "antarctica", "cold_place", "eats_fish", "waddle", "white", "black", "brown"},
+    "butterfly": {"wings", "fly", "small", "fits_backpack", "air"},
+    "bee": {"wings", "fly", "small", "fits_backpack", "air", "bee_like"},
+    "dolphin": {"water", "swim", "big", "smooth_skin"},
+    "whale": {"water", "swim", "big", "too_big_for_backpack", "smooth_skin"},
+    "shark": {"water", "swim", "big", "too_big_for_backpack", "smooth_skin", "teeth"},
+    "octopus": {"water", "swim", "smooth_skin", "soft_arms", "no_legs"},
+    "crocodile": {"water", "land", "scales", "rough", "four_legs", "crawl", "tail"},
+    "lizard": {"land", "scales", "rough", "four_legs", "crawl", "tail"},
+    "squirrel": {"small", "fits_backpack", "fur", "four_legs", "land", "tail", "climb"},
+    "mouse": {"small", "fits_backpack", "fur", "four_legs", "land", "tail"},
+    "hamster": {"small", "fits_backpack", "fur", "four_legs", "pet"},
+    "fox": {"wild", "fur", "four_legs", "dog_like", "tail"},
+    "wolf": {"wild", "fur", "four_legs", "dog_like", "tail"},
+    "deer": {"wild", "four_legs", "antlers", "tail"},
+    "snail": {"small", "fits_backpack", "crawl", "shell", "hard_body", "smooth_skin"},
+    "hedgehog": {"small", "fits_backpack", "land", "four_legs", "spiky"}
+}
 
 # Now that the profile dictionary exists, use it as the set of broad guesses Star can make.
 MYSTERY_ANIMAL_BROAD_GUESS_ANIMALS = set(MYSTERY_ANIMAL_GUESS_PROFILES.keys()).union({
@@ -6841,8 +7626,17 @@ def get_rule_based_mystery_animal_guess(game_state):
     if "many_legs" in tags and "water" in tags and "shell" in tags:
         return "crab"
 
-    if "no_legs" in tags and ("crawl" in tags or "scales" in tags):
+    if "no_legs" in tags and ("slither" in tags or "scales" in tags):
         return "snake"
+
+    if "spiky" in tags and "small" in tags and "land" in tags:
+        return "hedgehog"
+
+    if "gallop" in tags and ("farm" in tags or "pet" in tags) and "four_legs" in tags:
+        return "horse"
+
+    if ("climb" in tags or "swing" in tags) and "fur" in tags and "wild" in tags:
+        return "monkey"
 
     # Only use narrow rules for very distinctive combinations.
     # Do not assume "cold/white/Antarctica" means penguin; that can also be a bear-like clue.
@@ -6944,7 +7738,8 @@ def get_profile_based_mystery_animal_guess(game_state):
                 "feathers", "beak", "web", "shell", "many_legs", "no_legs",
                 "dog_like", "cat_like", "trunk", "long_neck", "stripes", "spots",
                 "antlers", "horns", "black_white", "mane", "duck_like", "bee_like",
-                "antarctica", "cold_place", "eats_fish", "waddle", "white", "black", "brown"
+                "antarctica", "cold_place", "eats_fish", "waddle", "white", "black", "brown",
+                "slither", "spiky", "hard_body", "gallop", "climb", "swing"
             }:
                 score += 1
 
@@ -6970,11 +7765,17 @@ def get_profile_based_mystery_animal_guess(game_state):
     if best_score >= 3 and best_score - next_score >= 1:
         return best_animal
 
+    if best_score >= 2 and best_score - next_score >= 2 and len(tags) >= 3:
+        return best_animal
+
     return None
 
 @app.route("/our-story")
 def our_story():
-    return render_template("ourstory.html")
+    return render_template(
+        "ourstory.html",
+        active_page="our_story",
+    )
 
 def is_mystery_animal_guess_ready(game_state):
     """
@@ -6999,7 +7800,8 @@ def is_mystery_animal_guess_ready(game_state):
         {"many_legs", "crawl"},
         {"many_legs", "web"},
         {"many_legs", "water"},
-        {"no_legs", "crawl"},
+        {"no_legs", "slither"},
+        {"no_legs", "scales"},
         {"water", "big", "swim"},
         {"water", "shell"},
         {"air", "fly"},
@@ -7009,6 +7811,9 @@ def is_mystery_animal_guess_ready(game_state):
         {"pet", "fur", "dog_like"},
         {"pet", "fur", "cat_like"},
         {"jump", "big", "land"},
+        {"spiky", "small", "land"},
+        {"gallop", "four_legs", "farm"},
+        {"climb", "fur", "wild"},
     ]
 
     if any(combo.issubset(tags) for combo in strong_combos):
@@ -7121,7 +7926,7 @@ Return JSON only:
         except (TypeError, ValueError):
             confidence = 0
 
-        if confidence >= 0.55 and guess and guess not in rejected:
+        if confidence >= 0.48 and guess and guess not in rejected:
             if (
                 is_probably_valid_mystery_animal_guess(guess)
                 and not mystery_animal_guess_contradicts_clues(guess, game_state)
@@ -7276,7 +8081,7 @@ def apply_mystery_animal_comfort_update(game_state, event_type, child_response, 
 
             game_state["possible_guess"] = None
             game_state["skip_guess_once"] = True
-            game_state["guess_cooldown_questions"] = 1
+            game_state["guess_cooldown_questions"] = random.choice([1, 2])
 
         elif event_type == "no_response":
             # Do not treat silence or a missed answer as "no."
@@ -7639,7 +8444,7 @@ def mystery_animal_message():
         else:
             message = (
                 f"{base_message} "
-                f"{child_name}, do you want to play another round, or do you want to end early for today?"
+                f"{child_name}, would you like to keep playing, or end for now?"
             )
 
         return make_mystery_animal_audio_response(
@@ -7786,7 +8591,7 @@ def mystery_animal_message():
 
         if ready_to_unlock_next:
             message = (
-                "That's okay. You can say play again, or you can say end here."
+                "That's okay. Would you rather play again, or end here?"
             )
         else:
             message = (
@@ -7858,7 +8663,7 @@ def mystery_animal_message():
 
         try:
             return make_mystery_animal_audio_response(
-                message="That's okay. What animal were you thinking of? You can say just the animal.",
+                message="That's okay. What animal were you thinking of? Just tell me the animal.",
                 stage="give_up_reveal",
                 response_mode="animal_reveal",
                 expects_response=True,
@@ -8045,23 +8850,23 @@ def mystery_animal_message():
     )
 
     guess_ready = is_mystery_animal_guess_ready(game_state)
+    guesses_made = int(game_state.get("guesses_made", 0) or 0)
+    first_guess_ready = questions_asked >= 2 and (guess_ready or questions_asked >= 3)
+    later_guess_ready = rejected_guess_count >= 1 and questions_since_last_guess >= 1 and guess_ready
 
     should_guess = (
         clear_answer_for_guessing
+        and guesses_made < MYSTERY_ANIMAL_MAX_GUESSES_PER_ROUND
         and not bool(game_state.get("skip_guess_once", False))
         and guess_cooldown_questions <= 0
         and (len(known_clues) >= 2 or bool(rule_guess_available))
-        and guess_ready
-        and (
-            confident_guess_available
-            or questions_since_last_guess >= 2
-            or rejected_guess_count >= 1
-            or previous_response_mode == "open_hint"
-        )
+        and (first_guess_ready if guesses_made == 0 else later_guess_ready)
     )
 
     max_questions_reached = (
-        questions_asked >= MYSTERY_ANIMAL_MAX_QUESTIONS_PER_ROUND
+        (questions_asked >= MYSTERY_ANIMAL_MAX_QUESTIONS_PER_ROUND
+         or (int(game_state.get("guesses_made", 0) or 0) >= MYSTERY_ANIMAL_MAX_GUESSES_PER_ROUND
+             and questions_since_last_guess >= 1))
         and not bool(game_state.get("give_up_asked", False))
         and previous_response_mode not in {"guess_confirmation", "round_choice", "animal_reveal"}
         and game_state.get("stage") != "give_up_reveal"
@@ -8105,10 +8910,11 @@ Hard rules:
 - Use the clues already given as hard constraints. If the child says more than four legs, never guess a four-legged animal.
 - Do not jump into open-ended questions unless the required response level says to.
 - Keep Star's line to 1-2 short sentences.
-- In rounds 1 through 3, ask simple guided-choice questions with clear answer options.
+- In rounds 1 through 3, use exactly two familiar answer paths. Never give a long list and never ask a plain yes/no question.
+- In rounds 1 through 3, never list several animal-science categories such as fur, feathers, scales, skin, and shell in one question.
 - In rounds 1 through 3, avoid open-ended hints.
-- In rounds 4 through 6, ask clear concrete detail questions. These may ask for one word or a short phrase.
-- In rounds 7 through 9, use a mix of easy open-ended questions, short-answer questions, and occasional either/or questions. Start with concrete open-ended prompts like what it looks like, what it does, or where it is seen. Do not open with vague prompts like "Can you give me a hint?"
+- In rounds 4 through 6, use short concrete questions such as "What color is it?", "How does it move?", and "Where does it live?"
+- In rounds 7 through 9, keep questions concrete and child-friendly. Ask what it looks like, what it does, where it lives, what sound it makes, or what body part is easiest to notice. Never ask for surprising facts or what makes it different from similar animals.
 
 Acknowledging child responses:
 - When the child gives a clear answer or hint, acknowledge the clue before asking the next question.
@@ -8176,7 +8982,7 @@ Output JSON only:
   "message": "Star's spoken line",
   "stage": "intro | guided_choice | guided_clue | tiny_hint | open_hint | guess | support | complete",
   "expects_response": true,
-  "response_mode": "none | choice | one_word | short_phrase | open_hint | guess_confirmation",
+  "response_mode": "none | yes_no | choice | one_word | short_phrase | open_hint | guess_confirmation",
   "is_question": true,
   "question_text": "the exact question Star asked, or null",
   "game_complete": false,
@@ -8494,6 +9300,7 @@ Remember:
 
             if stage == "guess":
                 game_state["last_guess_question_count"] = int(game_state.get("questions_asked", 0))
+                game_state["guesses_made"] = int(game_state.get("guesses_made", 0) or 0) + 1
 
         history.append({
             "event_type": event_type,
@@ -18754,6 +19561,7 @@ def library_guessing_game_transcribe():
 def parent_academy():
     return render_template(
         "parent_academy.html",
+        active_page="parent_academy",
     )
 
 @app.route("/parent-academy")
@@ -19122,6 +19930,84 @@ def exercise_detective_transcribe():
             "error": str(e)
         }), 500
     
+# Editorial hero photos for individual article pages -- deliberately
+# separate from the sm_*.png card illustrations used on the listing/category
+# pages (see RESOURCE_IMAGE_SOURCES.md for full licensing details). A small,
+# thoughtfully-curated set of real, royalty-free photos reused across
+# articles that share a theme, rather than one unique photo per article.
+RESOURCE_HERO_PHOTOS = {
+    "classroom": {
+        "filename": "resources/classroom_bright.webp",
+        "alt": "A bright, empty elementary school classroom with desks and a chalkboard",
+        "caption": "School settings often feel very different from the comfort of home.",
+    },
+    "conversation": {
+        "filename": "resources/parent_child_conversation.webp",
+        "alt": "A mother and daughter sitting on a bed, talking closely together",
+        "caption": "Quiet, one-on-one conversation is often where communication feels safest.",
+    },
+    "reading": {
+        "filename": "resources/parent_child_reading.webp",
+        "alt": "A mother and son reading a book together on a couch at home",
+        "caption": "Familiar routines at home can be where a child feels most at ease.",
+    },
+    "boardgame": {
+        "filename": "resources/family_board_game.webp",
+        "alt": "A family playing a board game together around a coffee table",
+        "caption": "Low-pressure, shared activities create natural chances to communicate.",
+    },
+    "walk": {
+        "filename": "resources/family_walk_woods.webp",
+        "alt": "A parent and child walking together, holding hands, on a wooded path",
+        "caption": "Support often looks like steady, everyday presence rather than a single conversation.",
+    },
+    "thoughtful": {
+        "filename": "resources/child_thoughtful_table.webp",
+        "alt": "A child sitting quietly at a table, looking away in thought",
+        "caption": "Anxiety can look like quiet withdrawal rather than obvious distress.",
+    },
+    "playing": {
+        "filename": "resources/children_playing_field.webp",
+        "alt": "Children playing together outdoors in a grassy field",
+        "caption": "Peer settings bring their own social pressures and comforts.",
+    },
+}
+
+# Maps each article slug to one of the RESOURCE_HERO_PHOTOS keys above.
+ARTICLE_HERO_PHOTO_KEY = {
+    "what-is-selective-mutism": "thoughtful",
+    "is-selective-mutism-just-shyness": "thoughtful",
+    "what-causes-selective-mutism": "thoughtful",
+    "the-science-of-anxiety": "thoughtful",
+    "why-home-but-not-school": "classroom",
+    "why-does-my-child-freeze": "thoughtful",
+    "why-does-my-child-whisper": "conversation",
+    "why-only-certain-people": "conversation",
+    "why-one-teacher-but-not-another": "classroom",
+    "why-is-it-harder-around-other-children": "playing",
+    "why-avoid-eye-contact": "thoughtful",
+    "why-do-they-seem-comfortable-but-not-speak": "reading",
+    "why-did-my-child-stop-speaking-again": "thoughtful",
+    "why-speak-less-in-new-places": "thoughtful",
+    "why-use-gestures-instead-of-words": "conversation",
+    "why-do-they-speak-through-me": "conversation",
+    "why-do-they-shut-down-or-get-upset": "thoughtful",
+    "why-are-mornings-before-school-so-hard": "classroom",
+    "how-can-i-help-my-child-at-school": "classroom",
+    "is-it-okay-to-reward-my-child-for-speaking": "boardgame",
+    "what-if-my-child-refuses-therapy": "conversation",
+    "can-my-child-grow-out-of-selective-mutism": "walk",
+    "should-i-force-my-child-to-speak": "reading",
+    "is-whispering-a-good-sign": "conversation",
+    "what-should-i-tell-relatives-about-sm": "walk",
+    "how-to-reduce-speaking-pressure": "walk",
+    "what-parents-should-avoid": "reading",
+    "praise-vs-pressure": "boardgame",
+    "should-i-answer-for-my-child": "conversation",
+    "creating-speaking-opportunities": "boardgame",
+    "handling-setbacks": "thoughtful",
+}
+
 PARENT_ACADEMY_ARTICLES = {
     "what-is-selective-mutism": {
         "title": "What Is Selective Mutism?",
@@ -19482,6 +20368,20 @@ PARENT_ACADEMY_CATEGORIES = {
     }
 }
 
+# Fold the per-category image/art/slug info into PARENT_ACADEMY_ARTICLES so
+# article pages (hero image, OG image, related-resource cards) don't need a
+# second lookup through PARENT_ACADEMY_CATEGORIES for data that already
+# exists there -- single source of truth, computed once at import time.
+for _category_slug, _category in PARENT_ACADEMY_CATEGORIES.items():
+    for _item in _category["articles"]:
+        _article = PARENT_ACADEMY_ARTICLES.get(_item["slug"])
+        if _article is not None:
+            _article["image"] = _item["image"]
+            _article["art"] = _item["art"]
+            _article["category_slug"] = _category_slug
+del _category_slug, _category, _item, _article
+
+
 @app.route("/parent-resources/category/<category_slug>")
 def parent_academy_category(category_slug):
     category = PARENT_ACADEMY_CATEGORIES.get(category_slug)
@@ -19502,10 +20402,25 @@ def parent_academy_category(category_slug):
                 "art": item["art"]
             })
 
+    canonical_url = url_for("parent_academy_category", category_slug=category_slug, _external=True)
+
+    breadcrumb_jsonld = {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+            {"@type": "ListItem", "position": 1, "name": "Home", "item": url_for("home", _external=True)},
+            {"@type": "ListItem", "position": 2, "name": "Parent Resources", "item": url_for("parent_academy", _external=True)},
+            {"@type": "ListItem", "position": 3, "name": category["title"], "item": canonical_url}
+        ]
+    }
+
     return render_template(
         "parent_academy_category.html",
         category=category,
-        articles=articles
+        category_slug=category_slug,
+        articles=articles,
+        canonical_url=canonical_url,
+        breadcrumb_jsonld=breadcrumb_jsonld
     )
 
 @app.route("/parent-academy/category/<category_slug>")
@@ -19525,9 +20440,77 @@ def parent_academy_article(slug):
     if not article:
         abort(404)
 
+    category = PARENT_ACADEMY_CATEGORIES.get(article.get("category_slug"))
+    related_articles = []
+
+    if category:
+        for item in category["articles"]:
+            if item["slug"] == slug:
+                continue
+            related_article = PARENT_ACADEMY_ARTICLES.get(item["slug"])
+            if related_article:
+                related_articles.append({**related_article, "slug": item["slug"]})
+            if len(related_articles) == 3:
+                break
+
+    canonical_url = url_for("parent_academy_article", slug=slug, _external=True)
+    hero_photo = RESOURCE_HERO_PHOTOS.get(ARTICLE_HERO_PHOTO_KEY.get(slug))
+    image_url = url_for("static", filename="images/" + hero_photo["filename"], _external=True) if hero_photo else None
+
+    breadcrumb_items = [
+        {"name": "Home", "url": url_for("home", _external=True)},
+        {"name": "Parent Resources", "url": url_for("parent_academy", _external=True)},
+    ]
+    if category:
+        breadcrumb_items.append({
+            "name": category["title"],
+            "url": url_for("parent_academy_category", category_slug=article["category_slug"], _external=True)
+        })
+    breadcrumb_items.append({"name": article["title"], "url": canonical_url})
+
+    article_jsonld = {
+        "@context": "https://schema.org",
+        "@type": "Article",
+        "headline": article["title"],
+        "description": article["summary"],
+        "url": canonical_url,
+        "mainEntityOfPage": {"@type": "WebPage", "@id": canonical_url},
+        "publisher": {
+            "@type": "Organization",
+            "name": "MyBraveSprout",
+            "logo": {
+                "@type": "ImageObject",
+                "url": url_for("static", filename="images/logo_v4.png", _external=True)
+            }
+        }
+    }
+    if image_url:
+        article_jsonld["image"] = image_url
+
+    breadcrumb_jsonld = {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+            {
+                "@type": "ListItem",
+                "position": i + 1,
+                "name": item["name"],
+                "item": item["url"]
+            }
+            for i, item in enumerate(breadcrumb_items)
+        ]
+    }
+
     return render_template(
         "parent_academy_article.html",
-        article=article
+        article=article,
+        slug=slug,
+        related_articles=related_articles,
+        canonical_url=canonical_url,
+        image_url=image_url,
+        hero_photo=hero_photo,
+        article_jsonld=article_jsonld,
+        breadcrumb_jsonld=breadcrumb_jsonld
     )
 
 @app.route("/parent-academy/article/<slug>")
@@ -19582,6 +20565,15 @@ def sitemap():
         "\n".join(xml_lines),
         mimetype="application/xml"
     )
+
+@app.route("/debug/speech-harness")
+def debug_speech_harness():
+    # Deterministic diagnostic for the shared MediaRecorder + SpeechRecognition
+    # concurrent-capture coordination pattern (mocked events, no real audio or
+    # network calls). Never reachable outside local/dev debug mode.
+    if not app.config["DEBUG"]:
+        abort(404)
+    return render_template("debug_speech_harness.html")
 
 @app.route("/ask-bravesprouts")
 @login_required
@@ -21040,37 +22032,6 @@ def acknowledgments():
         profile_icon=session.get("profile_icon", "profileicon.png")
     )
 
-@app.route("/forgot-password", methods=["GET", "POST"])
-@csrf.exempt
-def forgot_password():
-    if request.method == "POST":
-        email = request.form.get("email", "").strip().lower()
-
-        conn = get_db_connection()
-        user = conn.execute(
-            "SELECT * FROM users WHERE email = ?",
-            (email,)
-        ).fetchone()
-        conn.close()
-
-        if not user:
-            flash("We couldn't find a BraveSprouts account with that email. Please check the email or create a new account.")
-            return redirect(url_for("forgot_password"))
-
-        token = serializer.dumps(email, salt="password-reset-salt")
-        reset_url = url_for("reset_password", token=token, _external=True)
-
-        try:
-            send_password_reset_email(email, reset_url)
-            print("Password reset link:", reset_url)
-        except Exception as e:
-            print("EMAIL ERROR:", repr(e))
-            print("Password reset link:", reset_url)
-
-        return redirect(reset_url)
-
-    return render_template("forgot_password.html")
-
 @app.route("/reset-password/<token>", methods=["GET", "POST"])
 @csrf.exempt
 def reset_password(token):
@@ -21128,39 +22089,6 @@ def reset_password(token):
 
     conn.close()
     return render_template("reset_password.html")
-
-def send_password_reset_email(to_email, reset_url):
-    sender_email = os.getenv("MAIL_USERNAME")
-    sender_password = os.getenv("MAIL_PASSWORD")
-
-    subject = "Reset your BraveSprouts password"
-
-    body = f"""
-Hi,
-
-We received a request to reset your BraveSprouts password.
-
-Click the link below to reset your password:
-{reset_url}
-
-This link will expire in 1 hour.
-
-If you did not request this, you can ignore this email.
-
-Best,
-BraveSprouts
-"""
-
-    message = MIMEMultipart()
-    message["From"] = sender_email
-    message["To"] = to_email
-    message["Subject"] = subject
-
-    message.attach(MIMEText(body, "plain"))
-
-    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
-        server.login(sender_email, sender_password)
-        server.sendmail(sender_email, to_email, message.as_string())
 
 # =========================
 
@@ -23717,6 +24645,348 @@ def restaurant_game_transcribe():
     except Exception as e:
         print("Restaurant game transcription error:", repr(e))
         return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route("/forgot-parent-pin", methods=["GET", "POST"])
+@limiter.limit("10 per minute")
+@csrf.exempt
+@login_required
+def forgot_parent_pin():
+    """
+    Verifies the logged-in parent's account password before allowing
+    them to change the parent PIN.
+    """
+    if request.method == "POST":
+        password = request.form.get("password", "")
+
+        conn = get_db_connection()
+        user = conn.execute(
+            """
+            SELECT password
+            FROM users
+            WHERE user_id = ?
+            """,
+            (session["user_id"],)
+        ).fetchone()
+        conn.close()
+
+        if not user or not check_password_hash(user["password"], password):
+            return render_template(
+                "forgot_parent_pin.html",
+                error="Incorrect password. Please try again."
+            )
+
+        # Temporary authorization to visit the reset-PIN page.
+        session["parent_pin_reset_authorized"] = True
+
+        return redirect(url_for("reset_parent_pin"))
+
+    return render_template("forgot_parent_pin.html", error=None)
+
+
+@app.route("/reset-parent-pin", methods=["GET", "POST"])
+@limiter.limit("10 per minute")
+@csrf.exempt
+@login_required
+def reset_parent_pin():
+    """
+    Allows PIN changes only after the user's password was verified.
+    """
+    if not session.get("parent_pin_reset_authorized"):
+        return redirect(url_for("forgot_parent_pin"))
+
+    if request.method == "POST":
+        new_pin = clean_short_setting(request.form.get("new_pin"), 4)
+        confirm_pin = clean_short_setting(request.form.get("confirm_pin"), 4)
+
+        if not re.fullmatch(r"\d{4}", new_pin or ""):
+            return render_template(
+                "reset_parent_pin.html",
+                error="Your PIN must contain exactly four numbers."
+            )
+
+        if new_pin != confirm_pin:
+            return render_template(
+                "reset_parent_pin.html",
+                error="The PINs do not match."
+            )
+
+        conn = get_db_connection()
+        conn.execute(
+            """
+            UPDATE users
+            SET parent_pin = ?
+            WHERE user_id = ?
+            """,
+            (new_pin, session["user_id"])
+        )
+        conn.commit()
+        conn.close()
+
+        # Remove the temporary authorization after one use.
+        session.pop("parent_pin_reset_authorized", None)
+
+        # The password verification is enough to grant dashboard access.
+        session["parent_pin_dashboard_verified"] = True
+        session.pop("needs_parent_pin_for_dashboard", None)
+
+        flash("Your parent PIN has been updated.")
+        return redirect(url_for("dashboard"))
+
+    return render_template("reset_parent_pin.html", error=None)
+
+@app.route("/forgot-password", methods=["GET", "POST"])
+@limiter.limit("5 per 15 minutes")
+@csrf.exempt
+def forgot_password():
+    if request.method == "POST":
+        email = request.form.get("email", "").strip().lower()
+
+        if not email:
+            return render_template(
+                "forgot_password.html",
+                error="Please enter your email address.",
+                submitted_email=email
+            )
+
+        conn = get_db_connection()
+
+        user = conn.execute(
+            """
+            SELECT user_id, email
+            FROM users
+            WHERE LOWER(email) = ?
+            """,
+            (email,)
+        ).fetchone()
+
+        conn.close()
+
+        # Save it temporarily so the confirmation page can resend it.
+        session["password_reset_email"] = email
+
+        if user:
+            token = serializer.dumps(
+                email,
+                salt="password-reset-salt"
+            )
+
+            reset_url = url_for(
+                "reset_password",
+                token=token,
+                _external=True
+            )
+
+            try:
+                send_password_reset_email(email, reset_url)
+
+            except Exception:
+                app.logger.exception(
+                    "Password reset email failed for %s",
+                    email
+                )
+
+                return render_template(
+                    "forgot_password.html",
+                    error=(
+                        "We couldn't send the reset email right now. "
+                        "Please try again in a few minutes."
+                    ),
+                    submitted_email=email
+                )
+
+        return render_template(
+            "forgot_password_sent.html",
+            email=email
+        )
+
+    prefilled_email = session.get("password_reset_email", "")
+
+    return render_template(
+        "forgot_password.html",
+        submitted_email=prefilled_email
+    )
+
+    # Convenient when the user reached this page while already logged in.
+    if session.get("user_id"):
+        conn = get_db_connection()
+        user = conn.execute(
+            "SELECT email FROM users WHERE user_id = ?",
+            (session["user_id"],)
+        ).fetchone()
+        conn.close()
+
+        if user:
+            prefilled_email = user["email"]
+
+    return render_template(
+        "forgot_password.html",
+        submitted_email=prefilled_email
+    )
+
+@app.route("/resend-password-reset", methods=["POST"])
+@limiter.limit("3 per 10 minutes")
+@csrf.exempt
+def resend_password_reset():
+    email = session.get("password_reset_email", "").strip().lower()
+
+    if not email:
+        flash(
+            "Please enter your email address again.",
+            "error"
+        )
+
+        return redirect(url_for("forgot_password"))
+
+    conn = get_db_connection()
+
+    user = conn.execute(
+        """
+        SELECT user_id, email
+        FROM users
+        WHERE LOWER(email) = ?
+        """,
+        (email,)
+    ).fetchone()
+
+    conn.close()
+
+    if user:
+        token = serializer.dumps(
+            email,
+            salt="password-reset-salt"
+        )
+
+        reset_url = url_for(
+            "reset_password",
+            token=token,
+            _external=True
+        )
+
+        try:
+            send_password_reset_email(email, reset_url)
+
+        except Exception:
+            app.logger.exception(
+                "Resending password reset email failed for %s",
+                email
+            )
+
+            flash(
+                "We couldn't resend the email right now. Please try again shortly.",
+                "error"
+            )
+
+            return render_template(
+                "forgot_password_sent.html",
+                email=email
+            )
+
+    flash(
+        "Another password reset email has been sent. Please check your inbox and spam folder.",
+        "success"
+    )
+
+    return render_template(
+        "forgot_password_sent.html",
+        email=email
+    )
+
+def send_password_reset_email(to_email, reset_url):
+    sender_email = os.getenv(
+        "MAIL_USERNAME",
+        "aaravsekhri04@gmail.com"
+    ).strip()
+
+    sender_password = os.getenv("MAIL_PASSWORD", "").strip()
+
+    if not sender_email or not sender_password:
+        raise RuntimeError(
+            "MAIL_USERNAME or MAIL_PASSWORD is not configured."
+        )
+
+    subject = "Reset your MyBraveSprout password"
+
+    body = f"""Hi,
+
+We received a request to reset your MyBraveSprout password.
+
+Use the secure link below to choose a new password:
+
+{reset_url}
+
+This link will expire in one hour.
+
+If you did not request this reset, you can safely ignore this email.
+
+Please check your spam or junk folder if you have trouble finding this message.
+
+Best,
+The MyBraveSprout Team
+"""
+
+    message = MIMEMultipart()
+    message["From"] = f"MyBraveSprout <{sender_email}>"
+    message["To"] = to_email
+    message["Subject"] = subject
+
+    message.attach(MIMEText(body, "plain", "utf-8"))
+
+    with smtplib.SMTP_SSL(
+        "smtp.gmail.com",
+        465,
+        timeout=20
+    ) as server:
+        server.login(sender_email, sender_password)
+        server.send_message(message)
+
+
+# ---------------------------------------------------------------------------
+# Mystery Animal decision-tree redesign (kept in three small support modules)
+# ---------------------------------------------------------------------------
+# These overrides intentionally preserve the existing route, session, audio,
+# progress, and front-end contract. Only question selection and candidate-based
+# guessing are replaced.
+try:
+    from question import select_next_question as _ma_select_next_question, early_question_count as _ma_early_question_count
+    from question import infer_candidates as _ma_infer_candidates
+    from guessing import choose_database_guess as _ma_choose_database_guess
+    from guessing import should_make_guess as _ma_should_make_guess
+
+    MYSTERY_ANIMAL_EARLY_QUESTION_COUNT = _ma_early_question_count()  # exactly 60 phrasings
+
+    _legacy_get_rule_based_mystery_animal_guess = get_rule_based_mystery_animal_guess
+    _legacy_is_mystery_animal_guess_ready = is_mystery_animal_guess_ready
+
+    def pick_structured_mystery_animal_question(game_state, event_type="child_answer"):
+        """Select a non-repeating, high-information child-friendly question."""
+        round_number = int(game_state.get("rounds_completed", 0) or 0) + 1
+        chosen = _ma_select_next_question(game_state, round_number)
+        game_state["pending_question_key"] = chosen["key"]
+        game_state["last_pending_question_family"] = get_question_family(chosen["question"])
+        game_state["candidate_count"] = int(chosen.get("candidate_count", len(_ma_infer_candidates(game_state))))
+        return chosen
+
+    def get_rule_based_mystery_animal_guess(game_state):
+        """Prefer the candidate engine when it has narrowed the field safely."""
+        qa_count = len(game_state.get("qa_history") or game_state.get("known_clues", []))
+        candidates = _ma_infer_candidates(game_state)
+        if qa_count >= 2 and 0 < len(candidates) <= 10:
+            database_guess = _ma_choose_database_guess(game_state)
+            if database_guess and not mystery_animal_guess_contradicts_clues(database_guess, game_state):
+                return database_guess
+        return _legacy_get_rule_based_mystery_animal_guess(game_state)
+
+    def is_mystery_animal_guess_ready(game_state):
+        """Guess after 2-3 useful questions, then after 1-2 new clues."""
+        if _ma_should_make_guess(game_state):
+            return True
+        return _legacy_is_mystery_animal_guess_ready(game_state)
+
+    def has_confident_mystery_animal_guess(game_state):
+        return is_mystery_animal_guess_ready(game_state)
+
+except Exception as mystery_animal_module_error:
+    print("Mystery Animal module fallback:", repr(mystery_animal_module_error))
 
 
 if __name__ == "__main__":

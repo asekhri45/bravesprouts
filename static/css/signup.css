@@ -54,7 +54,13 @@ input, button, textarea, select, a {
 
 .page {
     width: 100%;
+    /* min-height: 100vh doesn't shrink when the mobile keyboard opens,
+       since vh is measured against the layout viewport rather than the
+       visible one. 100dvh (dynamic viewport height) tracks the actual
+       visible area; browsers that don't support dvh simply ignore that
+       declaration and keep the vh fallback above it. */
     min-height: 100vh;
+    min-height: 100dvh;
     padding: 25px 38px 36px;
 }
 
@@ -65,10 +71,25 @@ input, button, textarea, select, a {
     margin-bottom: 25px;
 }
 
+.logo-link {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 41px;
+}
+
 .logo {
     height: 36px;
     width: auto;
-    margin-left: 41px;
+    margin-left: 0;
+}
+
+.step-indicator {
+    margin-right: 45px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--color-text-muted);
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
 }
 
 .back-home {
@@ -101,6 +122,7 @@ input, button, textarea, select, a {
     justify-content: center;
     gap: 45px;
     min-height: calc(100vh - 145px);
+    min-height: calc(100dvh - 145px);
 }
 
 /* ── Card ── */
@@ -115,6 +137,16 @@ input, button, textarea, select, a {
     box-shadow: 0 10px 32px var(--color-shadow-card);
     border: 1px solid var(--color-border-card);
     margin-left: -100px;
+}
+
+/* Step 2 (parent setup) has no illustration panel beside it, so the
+   offset that otherwise balances the two-column layout doesn't apply. */
+.login-layout-single {
+    max-width: 700px;
+}
+
+.login-layout-single .login-card {
+    margin-left: 0;
 }
 
 .login-card h1 {
@@ -437,6 +469,92 @@ input[type="date"]:valid {
     font-weight: 600;
 }
 
+/* ── New Step 1 form elements ── */
+
+.field-label {
+    /* .field-label already exists above for the (removed) DOB row;
+       redeclared here with the same rules so it also applies to the new
+       persistent email/password labels regardless of source order. */
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-text-placeholder);
+    margin: 0 0 7px 5px;
+}
+
+.field-error {
+    min-height: 18px;
+    margin: -8px 4px 10px;
+    font-size: 13px;
+    font-weight: 600;
+    color: rgb(219, 83, 83);
+}
+
+.field-error:empty {
+    margin: 0;
+}
+
+.input-group.has-error {
+    border-color: rgb(219, 83, 83);
+}
+
+.password-toggle-btn {
+    background: transparent;
+    border: none;
+    padding: 0;
+    margin-left: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.password-requirements {
+    list-style: none;
+    margin: -4px 4px 16px;
+    padding: 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px 12px;
+}
+
+.password-requirements li {
+    font-size: 12.5px;
+    color: var(--color-text-muted);
+    padding-left: 18px;
+    position: relative;
+}
+
+.password-requirements li::before {
+    content: "\2022";
+    position: absolute;
+    left: 4px;
+    color: var(--color-text-placeholder);
+}
+
+.password-requirements li.valid {
+    color: #1a9d5c;
+}
+
+.password-requirements li.valid::before {
+    content: "\2713";
+    color: #1a9d5c;
+}
+
+.login-btn[disabled] {
+    opacity: 0.7;
+    cursor: default;
+    pointer-events: none;
+}
+
+.login-btn .btn-label::after {
+    content: "";
+}
+
+.login-btn[disabled] .btn-label::after {
+    content: "\2026";
+}
+
 @media (max-width: 1150px) {
     html,
     body {
@@ -459,10 +577,22 @@ input[type="date"]:valid {
         margin-left: 0;
     }
 
+    .logo-link {
+        margin-left: 0;
+    }
+
+    .step-indicator {
+        margin-right: 0;
+    }
+
     .back-home {
         margin-right: 0;
         padding: 11px 20px;
         font-size: 15px;
+    }
+
+    .password-requirements {
+        grid-template-columns: 1fr;
     }
 
     .login-layout {
@@ -527,4 +657,64 @@ input[type="date"]:valid {
         font-size: 1rem;
         gap: 8px;
     }
+}
+
+.name-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.name-field {
+  min-width: 0;
+}
+
+.name-field .input-group {
+  width: 100%;
+}
+
+.name-field input {
+  width: 100%;
+}
+
+@media (max-width: 600px) {
+  .name-fields {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+}
+
+/* Reduce vertical spacing between signup fields */
+.login-form {
+  gap: 0;
+}
+
+.field-label {
+  margin-top: 10px;
+  margin-bottom: 5px;
+}
+
+.input-group {
+  margin-bottom: 0;
+}
+
+.field-error {
+  min-height: 0;
+  margin: 3px 0 0;
+}
+
+/* Keeps the name labels aligned */
+.name-fields {
+  gap: 12px;
+  margin-bottom: 0;
+}
+
+.name-field .field-label {
+  margin-top: 0;
+}
+
+/* Reduce space below the password requirements */
+.password-requirements {
+  margin-top: 7px;
+  margin-bottom: 12px;
 }

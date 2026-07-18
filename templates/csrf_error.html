@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block title %}Session Expired | MyBraveSprout{% endblock %}
+
+{% block content %}
+<div style="max-width:480px; margin:120px auto; text-align:center; padding:0 24px;">
+    <h1 style="font-size:1.6rem; margin-bottom:12px;">Your session expired</h1>
+    <p style="color:#6b7280; margin-bottom:24px;">
+        {{ error or "For your security, this page timed out. Please go back and try again." }}
+    </p>
+    <a href="/" class="hero-btn primary" style="text-decoration:none; display:inline-block; padding:14px 28px; border-radius:16px;">
+        Return home
+    </a>
+</div>
+{% endblock %}

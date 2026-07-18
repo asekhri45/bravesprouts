@@ -41,6 +41,14 @@ document.addEventListener("DOMContentLoaded", function () {
   let sessionDone = false;
   let starSpeaking = false;
 
+  // Guards a single response window against being resolved twice --
+  // MediaRecorder and SpeechRecognition now run concurrently (see
+  // startListeningForChild), so both a recognition result AND the
+  // recorder's own stop/transcribe path could otherwise fire for the same
+  // round. Whichever settles first sets this to true; every other
+  // resolution path checks it and becomes a no-op.
+  let roundResolved = false;
+
   let recognition = null;
   let recognitionActive = false;
   let recognitionStartedAt = 0;
@@ -60,7 +68,21 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Use browser speech recognition first, matching the working Mystery Animal / Classroom Object flow.
   // If the browser cannot hear anything, fall back to recorded audio transcription.
+  //
+  // NOTE: USE_BROWSER_SPEECH_RECOGNITION was referenced below (in
+  // startListeningForChild and continueListeningAfterThinkingSound) but was
+  // never declared anywhere in this file or elsewhere in the repo -- every
+  // call to those functions threw "ReferenceError: USE_BROWSER_SPEECH_RECOGNITION
+  // is not defined" before either SpeechRecognition or MediaRecorder ever
+  // started, meaning this activity's microphone never activated at all.
+  // Declaring it here (true, matching the comment above and every sibling
+  // activity's default behavior) is the actual fix for that -- unrelated to
+  // and more severe than the onerror-fallback bug fixed elsewhere in this file.
+  const USE_BROWSER_SPEECH_RECOGNITION = true;
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+
+  const activityId = document.querySelector("[data-activity-id]")?.dataset.activityId || "unknown";
+  function dlog(...args) { if (window.APP_DEBUG) console.log(`[mystery_food_item:${activityId}]`, ...args); }
   let triedRecorderForThisTurn = false;
 
   const LISTEN_AFTER_STAR_AUDIO_MS = 650;
@@ -696,17 +718,26 @@ document.addEventListener("DOMContentLoaded", function () {
   async function startListeningForChild() {
     if (isListening || waitingForStarResponse || starSpeaking || sessionDone || !gameActive) return;
 
-    triedRecorderForThisTurn = false;
+    roundResolved = false;
+    triedRecorderForThisTurn = true;
     hideResponseButtons();
     setListeningUI(true);
 
+    // MediaRecorder always captures the full response window from this
+    // point forward, regardless of whether SpeechRecognition is available
+    // or how it ends up erroring out. This mirrors Match Cards: browser
+    // recognition is purely a fast-path optimization layered on top, never
+    // a precondition for audio being captured. If SpeechRecognition never
+    // fires a usable result, the recorder (already running since t=0) still
+    // has the child's full response and gets sent to the server -- no
+    // audio spoken before a recognition error/timeout is lost.
+    await startAudioRecorderFallback();
+
+    if (roundResolved || sessionDone || !gameActive) return;
+
     if (USE_BROWSER_SPEECH_RECOGNITION && SpeechRecognition) {
       startLiveSpeechRecognition();
-      return;
     }
-
-    triedRecorderForThisTurn = true;
-    startAudioRecorderFallback();
   }
 
   function startLiveSpeechRecognition() {
@@ -762,16 +793,17 @@ document.addEventListener("DOMContentLoaded", function () {
 
     recognition.onerror = function (event) {
       console.warn("Speech recognition error:", event.error);
+      dlog("recognition error", event.error);
 
-      if (
-        event.error === "not-allowed" ||
-        event.error === "service-not-allowed" ||
-        event.error === "audio-capture"
-      ) {
-        stopLiveSpeechRecognition(true);
-        triedRecorderForThisTurn = true;
-        startAudioRecorderFallback();
-      }
+      if (recognitionStoppedByUs || roundResolved) return;
+
+      // MediaRecorder has been capturing this entire response window
+      // concurrently since startListeningForChild(), so a recognition error
+      // -- "no-speech", "network", or otherwise -- never loses any audio.
+      // Just stop the (now useless) recognizer; the recorder's own
+      // silence-detector/timeout remains the authoritative decision-maker
+      // for this round, exactly like Match Cards.
+      stopLiveSpeechRecognition(true);
     };
 
     recognition.onend = function () {
@@ -803,7 +835,7 @@ document.addEventListener("DOMContentLoaded", function () {
     };
 
     recognitionHardCapTimer = setTimeout(function () {
-      if (!isListening || waitingForStarResponse || sessionDone || !gameActive) return;
+      if (!recognitionActive || roundResolved || waitingForStarResponse || sessionDone || !gameActive) return;
 
       const cleanedTranscript = cleanTranscriptForMeaning(lastLiveTranscript);
 
@@ -812,26 +844,24 @@ document.addEventListener("DOMContentLoaded", function () {
         return;
       }
 
+      // No usable live transcript within the recognition-specific time
+      // budget -- just stop trying to recognize. Do NOT decide the round
+      // here: the MediaRecorder started concurrently in
+      // startListeningForChild is still running and remains the
+      // authoritative source for this response window.
+      dlog("recognition hard cap reached with no usable live transcript, deferring to recorder");
       stopLiveSpeechRecognition(true);
-
-      if (!triedRecorderForThisTurn) {
-        triedRecorderForThisTurn = true;
-        setStatus("I’m listening.");
-        startAudioRecorderFallback();
-        return;
-      }
-
-      resetThinkingState();
-      requestStarMessage("no_response", "");
     }, getLiveHardCapDuration());
 
     try {
       recognition.start();
     } catch (error) {
-      console.warn("Speech recognition could not start, using backup recorder:", error);
+      // The concurrently-running recorder (started in startListeningForChild
+      // before this function was called) is unaffected -- no need to start
+      // it again here.
+      console.warn("Speech recognition could not start:", error);
+      dlog("recognition failed to start", error.name || error);
       stopLiveSpeechRecognition(true);
-      triedRecorderForThisTurn = true;
-      startAudioRecorderFallback();
     }
   }
 
@@ -851,16 +881,41 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function submitLiveTranscript(cleanedTranscript) {
-    if (waitingForStarResponse || sessionDone || !gameActive) return;
+    if (waitingForStarResponse || sessionDone || !gameActive || roundResolved) return;
+    roundResolved = true;
 
     console.log("Sending live transcript:", cleanedTranscript);
+    dlog("live recognition won the race", { transcript: cleanedTranscript });
 
     resetThinkingState();
     stopLiveSpeechRecognition(true);
+
+    // A live transcript already won the race -- cancel the concurrently
+    // running recorder without letting its own "stop" handler send a
+    // second (redundant) transcription request or a duplicate round
+    // advancement for the same response window.
+    cancelConcurrentRecorder();
+
     setListeningUI(false);
     hideResponseButtons();
 
     requestStarMessage("child_answer", cleanedTranscript);
+  }
+
+  function cancelConcurrentRecorder() {
+    clearMaxRecordTimer();
+    cleanupMicAnalysis();
+
+    if (mediaRecorder && mediaRecorder.state !== "inactive") {
+      ignoreNextRecording = true;
+      try {
+        mediaRecorder.stop();
+      } catch (error) {
+        console.error("Could not cancel concurrent recorder:", error);
+      }
+    } else {
+      stopActiveStream();
+    }
   }
 
   function stopLiveSpeechRecognition(markStoppedByUs) {
@@ -958,14 +1013,21 @@ document.addEventListener("DOMContentLoaded", function () {
         cleanupMicAnalysis();
         stopActiveStream();
 
-        if (shouldIgnore) {
+        if (shouldIgnore || roundResolved) {
           ignoreNextRecording = false;
           return;
         }
 
+        // The recorder is the authoritative end of the response window now
+        // -- stop recognition (if it's still running) so a late
+        // onresult/onerror can't also try to resolve this same round.
+        roundResolved = true;
+        if (recognitionActive || recognition) stopLiveSpeechRecognition(true);
+
         const audioBlob = new Blob(audioChunks, {
           type: "audio/webm"
         });
+        dlog("recording stopped", { size: audioBlob.size, type: audioBlob.type });
 
         // Do not reject the child response only because local volume detection
         // did not cross the threshold. Quiet voices, laptop mics, and background
@@ -997,15 +1059,19 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function stopListeningForChild() {
+    // Recognition and the recorder run concurrently now, so both need to be
+    // stopped here -- previously this returned early after stopping
+    // recognition alone, which (in the old mutually-exclusive model) was
+    // correct because the recorder was never running at the same time.
     if (recognitionActive) {
       stopLiveSpeechRecognition(true);
+    }
+
+    if (!mediaRecorder || mediaRecorder.state === "inactive") {
       setListeningUI(false);
       hideResponseButtons();
       return;
     }
-
-    if (!mediaRecorder) return;
-    if (mediaRecorder.state === "inactive") return;
 
     try {
       mediaRecorder.stop();
@@ -1015,6 +1081,7 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function cancelListening() {
+    roundResolved = true;
     clearRecognitionSubmitTimer();
 
     if (recognitionActive || recognition) {

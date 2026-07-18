@@ -1,100 +1,279 @@
 {% extends "base.html" %}
 
-{% block title %}MyBraveSprout Sign Up{% endblock %}
+{% block title %}Create Your Free Account | MyBraveSprout{% endblock %}
 
 {% block head %}
-<link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/signup.css') }}?v=2">
+<link
+  href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap"
+  rel="stylesheet"
+>
+<link
+  rel="stylesheet"
+  href="{{ url_for('static', filename='css/signup.css') }}?v=4"
+>
 {% endblock %}
 
 {% block content %}
-<div class="page">
+<div class="page" data-analytics-event="signup_page_view">
+
   <header class="topbar">
-    <img src="{{ url_for('static', filename='images/logo_v4.png') }}" class="logo" alt="MyBraveSprout logo">
-    <a href="/" class="back-home">← Back to Home</a>
+    <a href="/" class="logo-link" aria-label="MyBraveSprout home">
+      <img
+        src="{{ url_for('static', filename='images/logo_v4.png') }}"
+        class="logo"
+        alt="MyBraveSprout"
+      >
+    </a>
   </header>
 
   <main class="login-layout">
-    <section class="login-card">
-      <h1>Welcome!</h1>
-      <p class="subtitle">Create your MyBraveSprout parent account</p>
 
-      <form method="POST" class="login-form" id="signupForm">
+    <section class="login-card">
+
+      <h1>Create your free account</h1>
+
+      <p class="subtitle">
+        Create an account to start practicing with MyBraveSprout.
+      </p>
+
+      <form
+        class="login-form"
+        method="POST"
+        id="signupForm"
+        novalidate
+      >
+        <input
+          type="hidden"
+          name="csrf_token"
+          value="{{ csrf_token() }}"
+        >
+
         {% if error %}
-          <div class="error-message">{{ error }}</div>
+          <div
+            class="error-message"
+            role="alert"
+            id="formError"
+            tabindex="-1"
+          >
+            {{ error }}
+          </div>
         {% endif %}
 
-        <div class="input-group">
-          <img src="{{ url_for('static', filename='images/profile.svg') }}" class="input-icon" alt="">
-          <input type="text" placeholder="Parent Name" name="parent_name" id="parent_name" maxlength="50" required>
+        <div class="name-fields">
+
+          <div class="name-field">
+            <label class="field-label" for="firstName">
+              First name
+            </label>
+
+            <div class="input-group">
+              <input
+                type="text"
+                name="first_name"
+                id="firstName"
+                autocomplete="given-name"
+                value="{{ form_values.first_name if form_values else '' }}"
+                required
+              >
+            </div>
+
+            <p
+              class="field-error"
+              id="firstNameError"
+              aria-live="polite"
+            ></p>
+          </div>
+
+          <div class="name-field">
+            <label class="field-label" for="lastName">
+              Last name
+            </label>
+
+            <div class="input-group">
+              <input
+                type="text"
+                name="last_name"
+                id="lastName"
+                autocomplete="family-name"
+                value="{{ form_values.last_name if form_values else '' }}"
+                required
+              >
+            </div>
+
+            <p
+              class="field-error"
+              id="lastNameError"
+              aria-live="polite"
+            ></p>
+          </div>
+
         </div>
 
-        <div class="input-group">
-          <img src="{{ url_for('static', filename='images/emailiconblue.svg') }}" class="input-icon" alt="">
-          <input type="email" placeholder="Email address" name="email" id="email" maxlength="120" required>
-        </div>
+        <label class="field-label" for="email">
+          Email address
+        </label>
 
         <div class="input-group">
-          <img src="{{ url_for('static', filename='images/lockiconblue.svg') }}" class="input-icon" alt="">
+          <img
+            src="{{ url_for('static', filename='images/emailiconblue.svg') }}"
+            class="input-icon"
+            alt=""
+          >
+
           <input
-            type="password"
-            placeholder="4-digit Parent PIN"
-            name="parent_pin"
-            id="parent_pin"
-            inputmode="numeric"
-            pattern="[0-9]{4}"
-            minlength="4"
-            maxlength="4"
+            type="email"
+            name="email"
+            id="email"
+            autocomplete="email"
+            inputmode="email"
+            value="{{ form_values.email if form_values else '' }}"
             required
           >
         </div>
 
-        <div class="pin-note">
-          You’ll use this PIN to access parent-only areas.
-        </div>
+        <p
+          class="field-error"
+          id="emailError"
+          aria-live="polite"
+        ></p>
+
+        <label class="field-label" for="password">
+          Password
+        </label>
 
         <div class="input-group">
-          <img src="{{ url_for('static', filename='images/lockiconblue.svg') }}" class="input-icon" alt="">
-          <input type="password" id="password" name="password" placeholder="Password" required>
+          <img
+            src="{{ url_for('static', filename='images/lockiconblue.svg') }}"
+            class="input-icon"
+            alt=""
+          >
+
+          <input
+            type="password"
+            name="password"
+            id="password"
+            autocomplete="new-password"
+            required
+          >
+
+          <button
+            type="button"
+            class="password-toggle-btn"
+            id="togglePassword"
+            aria-label="Show password"
+          >
+            <img
+              src="{{ url_for('static', filename='images/eye-closed.png') }}"
+              class="password-toggle"
+              id="togglePasswordIcon"
+              alt="Show password"
+              data-eye-open="{{ url_for('static', filename='images/eye-opened.png') }}"
+              data-eye-closed="{{ url_for('static', filename='images/eye-closed.png') }}"
+            >
+          </button>
         </div>
 
-        <div class="input-group">
-          <img src="{{ url_for('static', filename='images/lockiconblue.svg') }}" class="input-icon" alt="">
-          <input type="password" id="confirm_password" name="confirm_password" placeholder="Confirm Password" required>
-        </div>
+        <ul
+          class="password-requirements"
+          id="passwordRequirements"
+        >
+          <li data-rule="length">
+            At least 8 characters
+          </li>
+
+          <li data-rule="upper">
+            One uppercase letter
+          </li>
+
+          <li data-rule="lower">
+            One lowercase letter
+          </li>
+
+          <li data-rule="special">
+            One special character
+          </li>
+        </ul>
 
         <label class="terms-checked">
-          <input type="checkbox" name="terms_check" required>
+          <input
+            type="checkbox"
+            name="terms_check"
+            id="termsCheck"
+            required
+          >
+
           <span>
             I agree to the
-            <a href="/terms-of-use" target="_blank">Terms of Use</a>
+            <a
+              href="/terms-of-use"
+              target="_blank"
+              rel="noopener"
+            >
+              Terms of Use
+            </a>
             and
-            <a href="/privacy-policy" target="_blank">Privacy Policy</a>
+            <a
+              href="/privacy-policy"
+              target="_blank"
+              rel="noopener"
+            >
+              Privacy Policy
+            </a>
           </span>
         </label>
 
+        <p
+          class="field-error"
+          id="termsError"
+          aria-live="polite"
+        ></p>
+
         <div class="login-buttons">
-          <button type="submit" class="login-btn">SIGN UP ⌯⌲</button>
+          <button
+            type="submit"
+            class="login-btn"
+            id="submitBtn"
+            data-analytics-event="signup_submit_attempt"
+          >
+            <span class="btn-label">
+              Create Free Account
+            </span>
+          </button>
         </div>
+
       </form>
 
       <div class="signup-row">
         <span>Already have an account?</span>
-        <a href="/login">Login →</a>
+        <a href="/login">Log in &rarr;</a>
       </div>
+
     </section>
 
     <section class="illustration-area">
       <div class="bg-circle big"></div>
       <div class="bg-circle small"></div>
       <div class="bg-blob"></div>
-      <div class="sparkle sparkle-1">✦</div>
-      <div class="sparkle sparkle-2">✦</div>
 
-      <img src="{{ url_for('static', filename='images/signup2.gif') }}" class="image-placeholder" alt="">
+      <div class="sparkle sparkle-1">
+        &#10022;
+      </div>
+
+      <div class="sparkle sparkle-2">
+        &#10022;
+      </div>
+
+      <img
+        src="{{ url_for('static', filename='images/signup2.gif') }}"
+        class="image-placeholder"
+        alt=""
+      >
     </section>
+
   </main>
+
 </div>
 
-<script src="{{ url_for('static', filename='js/register.js') }}?v=2"></script>
+<script src="{{ url_for('static', filename='js/analytics.js') }}"></script>
+<script src="{{ url_for('static', filename='js/register.js') }}?v=4"></script>
 {% endblock %}

@@ -6,10 +6,25 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard_layout.css') }}?v=6">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/bravesprouts_tour.css') }}?v=1">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}?v=20">
+<link
+  rel="stylesheet"
+  href="{{ url_for('static', filename='css/activity_setup_modal.css') }}?v=1"
+>
 
 <script src="{{ url_for('static', filename='js/chart.umd.js') }}" defer></script>
 <script src="{{ url_for('static', filename='js/dashboard.js') }}" defer></script>
 <script src="{{ url_for('static', filename='js/bravesprouts_tour.js') }}?v=1" defer></script>
+<script>
+    // parent_setup() redirects here with ?setup=1 exactly once, only after
+    // the Step 2 database UPDATE (parent_setup_complete = 1) has committed
+    // -- so this fires strictly after server-side success, never on submit.
+    (function () {
+        if (window.location.search.indexOf("setup=1") !== -1 && typeof gtag === "function") {
+            gtag("event", "parent_setup_completed", {});
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+    })();
+</script>
 {% endblock %}
 
 {% block content %}
@@ -227,31 +242,44 @@
 
   <!-- Bottom-right widget -->
   <div
-    class="feedback-widget {% if show_feedback_widget %}active{% endif %}"
-    id="feedbackFloatingBtn"
-    role="button"
-    tabindex="0"
-    aria-label="Open feedback survey"
+  class="feedback-widget {% if show_feedback_widget %}active{% endif %}"
+  id="feedbackFloatingBtn"
+  role="button"
+  tabindex="0"
+  aria-label="Open feedback survey"
+>
+  <button
+    type="button"
+    class="feedback-widget-close"
+    id="feedbackWidgetCloseBtn"
+    aria-label="Close feedback prompt"
   >
-    <img
-      src="{{ url_for('static', filename='images/feedback_star_widget.png') }}"
-      alt="Star"
-      class="feedback-widget-star"
-    >
+    ×
+  </button>
 
-    <div class="feedback-widget-card">
-      <div class="feedback-widget-copy">
-        <strong>Got 30 secs?</strong>
-        <span>Help make MyBraveSprout better!</span>
-        <small>Your feedback helps other children with selective mutism.</small>
-      </div>
+  <img
+    src="{{ url_for('static', filename='images/feedback_star_widget.png') }}"
+    alt="Star"
+    class="feedback-widget-star"
+  >
 
-      <button type="button" class="feedback-widget-button" id="feedbackWidgetSurveyBtn">
-        Take Survey
-        <span aria-hidden="true">↗</span>
-      </button>
+  <div class="feedback-widget-card">
+    <div class="feedback-widget-copy">
+      <strong>Got 30 secs?</strong>
+      <span>Help make MyBraveSprout better!</span>
+      <small>Your feedback helps other children with selective mutism.</small>
     </div>
+
+    <button
+      type="button"
+      class="feedback-widget-button"
+      id="feedbackWidgetSurveyBtn"
+    >
+      Take Survey
+      <span aria-hidden="true">↗</span>
+    </button>
   </div>
+</div>
 
   <!-- Thank-you toast -->
   <div class="feedback-thanks-toast" id="feedbackThanks">
