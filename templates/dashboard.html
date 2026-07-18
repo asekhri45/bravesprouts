@@ -656,6 +656,20 @@
   src="{{ url_for('static', filename='js/dashboard.js') }}?v=13"
 ></script>
 
-<script src="{{ url_for('static', filename='js/dashboard_mobile_activity_gate.js') }}?v=1" defer></script>
+<script
+  src="{{ url_for('static', filename='js/dashboard_mobile_activity_gate.js') }}?v=1"
+  defer
+></script>
+
+{% if track_signup_conversion %}
+<!-- Google Ads: successful account creation -->
+<script>
+  gtag('event', 'conversion', {
+    'send_to': 'AW-18300860067/pFhkCP_JytIcEKPtw5ZE',
+    'value': 1.0,
+    'currency': 'USD'
+  });
+</script>
+{% endif %}
 
 {% endblock %}

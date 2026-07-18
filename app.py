@@ -759,12 +759,12 @@ def signup():
         session["child_name"] = ""
         session["profile_icon"] = "profileicon.png"
         session["parent_setup_complete"] = True
+        session["google_signup_conversion_pending"] = True
         session.permanent = True
 
-        return redirect(url_for("dashboard", signup=1))
+        return redirect(url_for("dashboard"))
 
     return render_template("signup.html", form_values={})
-
 
 @app.route("/parent-setup", methods=["GET", "POST"])
 @login_required
@@ -1540,7 +1540,7 @@ ACTIVITY_REQUIREMENTS = {
 @login_required
 def dashboard():
     ensure_feedback_tables()
-    
+
     if (
         session.get("needs_parent_pin_for_dashboard")
         and not session.get("parent_pin_dashboard_verified")
@@ -1559,24 +1559,25 @@ def dashboard():
         FROM progress
         WHERE user_id = ?
     """, (session["user_id"],))
+
     stats = cursor.fetchone()
 
     cursor.execute("""
-    SELECT
-        u.current_activity_id,
-        u.child_name,
-        u.parent_pin,
-        COALESCE(u.has_seen_tour, 0) AS has_seen_tour,
-        COALESCE(u.login_count, 0) AS login_count,
-        u.feedback_prompt_dismissed_at,
-        CASE
-            WHEN pf.feedback_id IS NULL THEN 0
-            ELSE 1
-        END AS has_submitted_feedback
-    FROM users u
-    LEFT JOIN parent_feedback pf
-        ON pf.user_id = u.user_id
-    WHERE u.user_id = ?
+        SELECT
+            u.current_activity_id,
+            u.child_name,
+            u.parent_pin,
+            COALESCE(u.has_seen_tour, 0) AS has_seen_tour,
+            COALESCE(u.login_count, 0) AS login_count,
+            u.feedback_prompt_dismissed_at,
+            CASE
+                WHEN pf.feedback_id IS NULL THEN 0
+                ELSE 1
+            END AS has_submitted_feedback
+        FROM users u
+        LEFT JOIN parent_feedback pf
+            ON pf.user_id = u.user_id
+        WHERE u.user_id = ?
     """, (session["user_id"],))
 
     user_row = cursor.fetchone()
@@ -1585,39 +1586,75 @@ def dashboard():
     parent_pin = user_row["parent_pin"] if user_row else None
 
     has_child_name = has_real_child_name(child_name)
-    has_parent_pin = bool(re.fullmatch(r"\d{4}", str(parent_pin or "").strip()))
+    has_parent_pin = bool(
+        re.fullmatch(r"\d{4}", str(parent_pin or "").strip())
+    )
 
-    current_activity_id = user_row["current_activity_id"] if user_row else None
-    has_seen_tour = user_row["has_seen_tour"] if user_row else 1
+    current_activity_id = (
+        user_row["current_activity_id"]
+        if user_row
+        else None
+    )
 
-    login_count = user_row["login_count"] if user_row else 0
-    has_submitted_feedback = bool(user_row["has_submitted_feedback"]) if user_row else True
-    feedback_prompt_dismissed = bool(user_row["feedback_prompt_dismissed_at"]) if user_row else False
+    has_seen_tour = (
+        user_row["has_seen_tour"]
+        if user_row
+        else 1
+    )
 
-    show_feedback_prompt = has_seen_tour and login_count >= 2 and not has_submitted_feedback
-    show_feedback_widget = has_seen_tour and not has_submitted_feedback
+    login_count = (
+        user_row["login_count"]
+        if user_row
+        else 0
+    )
+
+    has_submitted_feedback = (
+        bool(user_row["has_submitted_feedback"])
+        if user_row
+        else True
+    )
+
+    feedback_prompt_dismissed = (
+        bool(user_row["feedback_prompt_dismissed_at"])
+        if user_row
+        else False
+    )
+
+    show_feedback_prompt = (
+        has_seen_tour
+        and login_count >= 2
+        and not has_submitted_feedback
+    )
+
+    show_feedback_widget = (
+        has_seen_tour
+        and not has_submitted_feedback
+    )
 
     cursor.execute("""
-    SELECT
-        a.activity_id,
-        a.scene_id,
-        a.activity_name,
-        a.description,
-        a.activity_order,
-        a.level_of_realism,
-        a.total_levels_of_realism,
-        a.time_recommended,
-        a.character_active,
-        COALESCE(p.is_unlocked, 0) AS is_unlocked,
-        COALESCE(p.words_spoken, 0) AS words_spoken,
-        COALESCE(p.time_spent_on_activity, 0) AS time_spent_on_activity,
-        COALESCE(p.active_minutes, 0) AS active_minutes
-    FROM activity a
-    LEFT JOIN progress p
-        ON a.activity_id = p.activity_id
-        AND p.user_id = ?
-    WHERE a.is_active = 1
-    ORDER BY a.level_of_realism, a.activity_order
+        SELECT
+            a.activity_id,
+            a.scene_id,
+            a.activity_name,
+            a.description,
+            a.activity_order,
+            a.level_of_realism,
+            a.total_levels_of_realism,
+            a.time_recommended,
+            a.character_active,
+            COALESCE(p.is_unlocked, 0) AS is_unlocked,
+            COALESCE(p.words_spoken, 0) AS words_spoken,
+            COALESCE(
+                p.time_spent_on_activity,
+                0
+            ) AS time_spent_on_activity,
+            COALESCE(p.active_minutes, 0) AS active_minutes
+        FROM activity a
+        LEFT JOIN progress p
+            ON a.activity_id = p.activity_id
+            AND p.user_id = ?
+        WHERE a.is_active = 1
+        ORDER BY a.level_of_realism, a.activity_order
     """, (session["user_id"],))
 
     activity_rows = cursor.fetchall()
@@ -1663,16 +1700,17 @@ def dashboard():
     ]
 
     cursor.execute("""
-    SELECT
-        sl.session_id,
-        sl.completed_at,
-        a.activity_name,
-        a.character_active
-    FROM session_log sl
-    JOIN activity a ON sl.activity_id = a.activity_id
-    WHERE sl.user_id = ?
-    ORDER BY sl.completed_at DESC, sl.session_id DESC
-    LIMIT 8
+        SELECT
+            sl.session_id,
+            sl.completed_at,
+            a.activity_name,
+            a.character_active
+        FROM session_log sl
+        JOIN activity a
+            ON sl.activity_id = a.activity_id
+        WHERE sl.user_id = ?
+        ORDER BY sl.completed_at DESC, sl.session_id DESC
+        LIMIT 8
     """, (session["user_id"],))
 
     recent_sessions = cursor.fetchall()
@@ -1686,12 +1724,20 @@ def dashboard():
 
     conn.close()
 
+    track_signup_conversion = session.pop(
+        "google_signup_conversion_pending",
+        False
+    )
+
     return render_template(
         "dashboard.html",
         parent=session["parent_name"],
         child=child_name,
         active_page="dashboard",
-        profile_icon=session.get("profile_icon", "profileicon.png"),
+        profile_icon=session.get(
+            "profile_icon",
+            "profileicon.png"
+        ),
         total_words=stats["total_words"],
         total_minutes=stats["total_minutes"],
         total_active_minutes=stats["total_active_minutes"],
@@ -1708,6 +1754,7 @@ def dashboard():
         show_feedback_widget=show_feedback_widget,
         has_child_name=has_child_name,
         has_parent_pin=has_parent_pin,
+        track_signup_conversion=track_signup_conversion
     )
 
 @app.route("/dismiss-feedback-prompt", methods=["POST"])
