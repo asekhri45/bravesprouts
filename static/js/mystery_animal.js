@@ -627,7 +627,10 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     diagLog("prompt_requested", { eventType: eventType });
-    const requestedAt = Date.now();
+    // Must be the diagnostics session's own clock -- logTimed() below
+    // diffs against it, and mixing this with Date.now() previously
+    // produced nonsensical negative "durations."
+    const requestedAt = diagnostics ? diagnostics.now() : Date.now();
 
     try {
       const response = await fetch("/api/mystery-animal/message", {
@@ -650,7 +653,7 @@ document.addEventListener("DOMContentLoaded", function () {
       await finishThinkingFillerBeforeStar();
 
       if (isTurnStale(turnToken)) {
-        diagLog("stale_callback_rejected", { where: "requestStarMessage_response" });
+        diagLog("stale_callback_rejected", { where: "requestStarMessage_response", staleTurnToken: turnToken, currentTurnToken: currentTurnToken });
         return;
       }
 
@@ -670,7 +673,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
       await playStarResponseAudio(data, expectsResponse, function () {
         if (isTurnStale(turnToken)) {
-          diagLog("stale_callback_rejected", { where: "requestStarMessage_onEnded" });
+          diagLog("stale_callback_rejected", { where: "requestStarMessage_onEnded", staleTurnToken: turnToken, currentTurnToken: currentTurnToken });
           return;
         }
 
@@ -704,7 +707,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
           setTimeout(function () {
             if (isTurnStale(turnToken)) {
-              diagLog("stale_callback_rejected", { where: "nextEvent_timeout" });
+              diagLog("stale_callback_rejected", { where: "nextEvent_timeout", staleTurnToken: turnToken, currentTurnToken: currentTurnToken });
               return;
             }
             requestStarMessage(nextEvent);
@@ -1054,7 +1057,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     if (isTurnStale(turnToken) || sessionDone || !gameActive) {
       stream.getTracks().forEach(function (track) { track.stop(); });
-      diagLog("stale_callback_rejected", { where: "getUserMedia" });
+      diagLog("stale_callback_rejected", { where: "getUserMedia", staleTurnToken: turnToken, currentTurnToken: currentTurnToken });
       return false;
     }
 
@@ -1332,7 +1335,8 @@ document.addEventListener("DOMContentLoaded", function () {
     startThinkingFiller();
 
     const extension = recordingExtension || "webm";
-    const uploadStartedAt = Date.now();
+    // Same clock note as requestedAt in requestStarMessage above.
+    const uploadStartedAt = diagnostics ? diagnostics.now() : Date.now();
     diagLog("upload_started", { size: audioBlob.size, type: audioBlob.type });
 
     const controller = new AbortController();
@@ -1352,7 +1356,7 @@ document.addEventListener("DOMContentLoaded", function () {
       clearTimeout(timeoutHandle);
 
       if (isTurnStale(turnToken)) {
-        diagLog("stale_callback_rejected", { where: "transcribe_response" });
+        diagLog("stale_callback_rejected", { where: "transcribe_response", staleTurnToken: turnToken, currentTurnToken: currentTurnToken });
         return;
       }
 
@@ -1402,7 +1406,7 @@ document.addEventListener("DOMContentLoaded", function () {
       stopThinkingFiller();
 
       if (isTurnStale(turnToken)) {
-        diagLog("stale_callback_rejected", { where: "transcribe_catch" });
+        diagLog("stale_callback_rejected", { where: "transcribe_catch", staleTurnToken: turnToken, currentTurnToken: currentTurnToken });
         return;
       }
 
@@ -1585,14 +1589,14 @@ document.addEventListener("DOMContentLoaded", function () {
 
     for (let i = 0; i < parts.length; i++) {
       if (isTurnStale(turnToken)) {
-        diagLog("stale_callback_rejected", { where: "playStarAudioSequence" });
+        diagLog("stale_callback_rejected", { where: "playStarAudioSequence", staleTurnToken: turnToken, currentTurnToken: currentTurnToken });
         return;
       }
 
       const result = await playCurrentPrompt(parts[i]);
 
       if (isTurnStale(turnToken)) {
-        diagLog("stale_callback_rejected", { where: "playStarAudioSequence_after_play" });
+        diagLog("stale_callback_rejected", { where: "playStarAudioSequence_after_play", staleTurnToken: turnToken, currentTurnToken: currentTurnToken });
         return;
       }
 

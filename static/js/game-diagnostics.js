@@ -4,6 +4,14 @@
  * Never accepts raw audio, full transcripts, or other child speech content —
  * only lengths/booleans/categories. Purely additive: creating a session and
  * logging events has no effect on game behavior.
+ *
+ * Clock note: every entry's `tMs` and every logTimed() duration come from
+ * this module's own monotonic clock (session.now() / the internal nowMs()).
+ * Callers computing a "started at" timestamp for logTimed() MUST capture it
+ * via session.now(), never Date.now() or any other clock — mixing clocks
+ * silently produces nonsensical (often large-negative) durations. `wallTimeMs`
+ * on each entry is Date.now()-based and is for correlating with real-world
+ * time / server logs only, not for duration math.
  */
 (function (window) {
   "use strict";
@@ -69,13 +77,20 @@
 
     function record(eventName, details) {
       var entry = {
-        t: nowMs(),
-        wallTime: Date.now(),
+        // Monotonic clock (performance.now()-based), immune to system
+        // clock adjustments -- use this (via durationMs on logTimed
+        // entries, or by diffing tMs between two entries) for anything
+        // measuring elapsed time. Never diff this against wallTimeMs;
+        // they are different clocks with different epochs.
+        tMs: nowMs(),
+        // Epoch milliseconds (Date.now()) -- for correlating an entry
+        // with a real-world time or a server log line, not for duration
+        // math.
+        wallTimeMs: Date.now(),
         sessionId: sessionId,
         game: game,
         activityId: activityId,
         turnId: currentRoundId,
-        roundId: currentRoundId,
         event: eventName,
         details: details || {},
         state: safeGetState()
@@ -126,8 +141,20 @@
         return record(eventName, details);
       },
 
+      // The same monotonic clock every entry's `t` and every logTimed()
+      // duration is computed from. Callers MUST capture their "start"
+      // timestamp via this (not Date.now()) for logTimed() to produce a
+      // meaningful duration -- mixing performance.now() (elapsed since
+      // navigation start) with Date.now() (epoch milliseconds) produces
+      // nonsensical, typically large-negative "durations."
+      now: function () {
+        return nowMs();
+      },
+
       // Use for anything that touched the network, so a slow/duplicate
       // response can be traced back to exactly which call produced it.
+      // `startedAtMs` must come from this session's own .now(), not
+      // Date.now() or any other clock.
       logTimed: function (eventName, startedAtMs, details) {
         var merged = Object.assign({}, details || {}, {
           durationMs: Math.round(nowMs() - startedAtMs)
@@ -153,7 +180,7 @@
         if (window.console && console.table) {
           console.table(events.map(function (e) {
             return {
-              t_ms: Math.round(e.t),
+              t_ms: Math.round(e.tMs),
               turn: e.turnId,
               event: e.event,
               details: JSON.stringify(e.details),
