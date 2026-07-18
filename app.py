@@ -1,5 +1,8 @@
-from flask import Flask, render_template, request, redirect, session, url_for, abort, flash, Response
+from flask import Flask, render_template, request, redirect, session, url_for, abort, flash, Response, g
 import sqlite3
+import time
+import uuid
+import logging
 from werkzeug.security import generate_password_hash, check_password_hash
 
 import json
@@ -94,9 +97,56 @@ def handle_csrf_error(e):
 
     return render_template("csrf_error.html", error=friendly_message), 400
 
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-eleven_client = ElevenLabs(api_key=os.getenv("ELEVENLABS_API_KEY"))
+# Reliability audit (2026-07-18): explicit timeouts on external AI/speech
+# calls. Previously unset, so a slow provider response could hang the
+# request indefinitely. These values are generous relative to normal
+# response times observed for short child dialogue lines/recordings, so
+# they should not affect any currently-successful call.
+OPENAI_CALL_TIMEOUT_SECONDS = 15.0
+ELEVENLABS_CALL_TIMEOUT_SECONDS = 12.0
+
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"), timeout=OPENAI_CALL_TIMEOUT_SECONDS)
+eleven_client = ElevenLabs(api_key=os.getenv("ELEVENLABS_API_KEY"), timeout=ELEVENLABS_CALL_TIMEOUT_SECONDS)
 serializer = URLSafeTimedSerializer(app.config["SECRET_KEY"])
+
+# Reliability audit: per-request ID + timing, so a slow game round can be
+# diagnosed as "waiting" (queued behind another request) vs "executing
+# slowly" (the request itself took long) from server logs alone.
+request_diagnostics_logger = logging.getLogger("bravesprouts.requests")
+if not request_diagnostics_logger.handlers:
+    _diag_handler = logging.StreamHandler()
+    _diag_handler.setFormatter(logging.Formatter(
+        "%(asctime)s request_id=%(message)s"
+    ))
+    request_diagnostics_logger.addHandler(_diag_handler)
+    request_diagnostics_logger.setLevel(logging.INFO)
+    request_diagnostics_logger.propagate = False
+
+
+@app.before_request
+def _attach_request_diagnostics():
+    g.request_id = uuid.uuid4().hex[:12]
+    g.request_start_time = time.monotonic()
+
+
+@app.after_request
+def _log_request_diagnostics(response):
+    request_id = getattr(g, "request_id", None)
+    if request_id is None:
+        return response
+
+    response.headers["X-Request-ID"] = request_id
+
+    # Static assets are high-volume and not useful for diagnosing game
+    # reliability issues, so they're excluded to keep this log readable.
+    if not request.path.startswith("/static/"):
+        duration_ms = round((time.monotonic() - g.request_start_time) * 1000, 1)
+        request_diagnostics_logger.info(
+            "%s method=%s path=%s status=%s duration_ms=%s",
+            request_id, request.method, request.path, response.status_code, duration_ms
+        )
+
+    return response
 
 # Secure Flask Session Configuration
 
