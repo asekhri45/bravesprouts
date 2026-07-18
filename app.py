@@ -33,7 +33,7 @@ from flask_wtf.csrf import CSRFError
 
 from flask import jsonify
 from dotenv import load_dotenv
-from openai import OpenAI
+from openai import OpenAI, APITimeoutError as OpenAITimeoutError
 import base64
 
 from elevenlabs.client import ElevenLabs
@@ -224,6 +224,33 @@ def get_db_connection():
     conn = sqlite3.connect(DATABASE)
     conn.row_factory = sqlite3.Row
     return conn
+
+
+def transcription_upload_filename(uploaded_file):
+    """
+    Whisper/gpt-4o-mini-transcribe infers the audio container from the
+    filename's extension, not the actual bytes. Browsers legitimately
+    produce different formats (webm/opus on Chrome/Firefox, mp4/m4a on
+    Safari) depending on what MediaRecorder.isTypeSupported() picked
+    client-side -- trust what the browser actually reported (content_type,
+    then the filename it sent) instead of assuming webm.
+
+    Reliability audit note: this is applied to the Mystery Animal
+    transcribe endpoint first as the reference fix; the other games'
+    transcribe endpoints still hardcode "child-response.webm" until each
+    is migrated in its own change group.
+    """
+    content_type = (getattr(uploaded_file, "content_type", None) or "").lower()
+    original_name = (getattr(uploaded_file, "filename", None) or "").lower()
+
+    if "mp4" in content_type or original_name.endswith((".mp4", ".m4a")):
+        return "child-response.mp4"
+    if "ogg" in content_type or original_name.endswith(".ogg"):
+        return "child-response.ogg"
+    if "wav" in content_type or original_name.endswith(".wav"):
+        return "child-response.wav"
+
+    return "child-response.webm"
 
 MATCHING_GAME_TARGET_ROUNDS = 12
 
@@ -9393,7 +9420,8 @@ def mystery_animal_transcribe():
     if "audio" not in request.files:
         return jsonify({
             "success": False,
-            "error": "Missing audio"
+            "error": "Missing audio",
+            "error_category": "invalid_recording"
         }), 400
 
     audio_file = request.files["audio"]
@@ -9406,11 +9434,12 @@ def mystery_animal_transcribe():
         if not audio_bytes:
             return jsonify({
                 "success": False,
-                "error": "Empty audio file"
+                "error": "Empty audio file",
+                "error_category": "invalid_recording"
             }), 400
 
         file_obj = io.BytesIO(audio_bytes)
-        file_obj.name = "child-response.webm"
+        file_obj.name = transcription_upload_filename(audio_file)
 
         transcript = client.audio.transcriptions.create(
             model="gpt-4o-mini-transcribe",
@@ -9426,12 +9455,21 @@ def mystery_animal_transcribe():
             "text": text
         })
 
+    except OpenAITimeoutError as e:
+        app.logger.warning("Mystery Animal transcription timeout: %r", e)
+        return jsonify({
+            "success": False,
+            "error": "We couldn't hear that in time. Let's try again.",
+            "error_category": "transcription_timeout"
+        }), 504
+
     except Exception as e:
         print("Mystery Animal transcription error:", repr(e))
         return jsonify({
             "success": False,
-            "error": str(e)
-        }), 500
+            "error": "We couldn't hear that. Let's try again.",
+            "error_category": "upstream_service_error"
+        }), 502
     
 GUESSING_GAME_MAX_ROUNDS = 3
 GUESSING_GAME_PRESET_ANIMAL_ORDER = [
