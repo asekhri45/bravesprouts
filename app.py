@@ -21692,7 +21692,8 @@ def drawing_game_transcribe():
     if "audio" not in request.files:
         return jsonify({
             "success": False,
-            "error": "Missing audio"
+            "error": "Missing audio",
+            "error_category": "invalid_recording"
         }), 400
 
     audio_file = request.files["audio"]
@@ -21705,11 +21706,12 @@ def drawing_game_transcribe():
         if not audio_bytes:
             return jsonify({
                 "success": False,
-                "error": "Empty audio file"
+                "error": "Empty audio file",
+                "error_category": "invalid_recording"
             }), 400
 
         file_obj = io.BytesIO(audio_bytes)
-        file_obj.name = "drawing-response.webm"
+        file_obj.name = transcription_upload_filename(audio_file)
 
         transcript = client.audio.transcriptions.create(
             model="gpt-4o-mini-transcribe",
@@ -21724,12 +21726,21 @@ def drawing_game_transcribe():
             "text": text
         })
 
+    except OpenAITimeoutError as e:
+        app.logger.warning("Drawing Game transcription timeout: %r", e)
+        return jsonify({
+            "success": False,
+            "error": "We couldn't hear that in time. Let's try again.",
+            "error_category": "transcription_timeout"
+        }), 504
+
     except Exception as e:
         print("Drawing game transcription error:", repr(e))
         return jsonify({
             "success": False,
-            "error": str(e)
-        }), 500
+            "error": "We couldn't hear that. Let's try again.",
+            "error_category": "upstream_service_error"
+        }), 502
 
 
 @app.route("/api/drawing-game/state", methods=["GET"])

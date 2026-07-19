@@ -478,6 +478,27 @@ document.addEventListener("DOMContentLoaded", function () {
 
   let state = freshState();
 
+  const diagnostics = window.GameDiagnostics
+    ? window.GameDiagnostics.createSession({
+        game: "drawing_game",
+        activityId: activityId,
+        getState: function () {
+          return {
+            stageIndex: state.stageIndex,
+            isListening: state.isListening,
+            waitingForResponse: state.waitingForResponse,
+            isSpeaking: state.isSpeaking,
+            gameCompleted: state.gameCompleted,
+            passiveDoneEnabled: passiveDoneEnabled
+          };
+        }
+      })
+    : null;
+
+  const audioManager = window.GameAudioManager
+    ? window.GameAudioManager.create({ diagnostics: diagnostics })
+    : null;
+
   let currentTool = "pen";
   let currentColor = COLORS.purple;
   let isDrawing = false;
@@ -485,12 +506,7 @@ document.addEventListener("DOMContentLoaded", function () {
   let hasDrawnThisStage = false;
   let strokeCountThisStage = 0;
 
-  let activeAudio = null;
   let activeMouthActor = null;
-  let audioContext = null;
-  let analyser = null;
-  let sourceNode = null;
-  let mouthAnimationFrame = null;
 
   let mediaStream = null;
   let mediaRecorder = null;
@@ -910,8 +926,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       state.micDenied = true;
+      if (diagnostics) diagnostics.log("microphone_permission_denied", { reason: "unsupported" });
       return null;
     }
+
+    if (diagnostics) diagnostics.log("microphone_permission_requested", {});
 
     try {
       mediaStream = await navigator.mediaDevices.getUserMedia({
@@ -922,10 +941,12 @@ document.addEventListener("DOMContentLoaded", function () {
         }
       });
       state.micReady = true;
+      if (diagnostics) diagnostics.log("microphone_permission_granted", {});
       return mediaStream;
     } catch (error) {
       console.warn("Mic permission unavailable:", error);
       state.micDenied = true;
+      if (diagnostics) diagnostics.log("microphone_permission_denied", { message: String(error && error.message || error) });
       return null;
     }
   }
@@ -1012,119 +1033,60 @@ document.addEventListener("DOMContentLoaded", function () {
     setMouth(TEACHER_ACTOR, "closed", 1, 1);
   }
 
+  // Reconstructs the original 0-255 frequency-average scale from the shared
+  // AudioManager's 0..1 level so the existing mouth thresholds/scale factors
+  // (tuned by ear against real audio) don't need to change.
+  function applyMouthLevel(actor, level) {
+    const average = level * 255;
+    const normalized = Math.min(1, average / 80);
+    const scaleX = 1 + normalized * 0.10;
+    const scaleY = 1 + normalized * 0.18;
+
+    if (average < 14) {
+      setMouth(actor, "closed", 1, 1);
+    } else if (average < 34) {
+      setMouth(actor, "small", scaleX, scaleY);
+    } else if (average < 58) {
+      setMouth(actor, "medium", scaleX, scaleY);
+    } else {
+      setMouth(actor, "wide", scaleX, scaleY);
+    }
+  }
+
   function playCharacterAudio(actor, audioSrc) {
-    return new Promise(resolve => {
-      if (!audioSrc) {
-        resolve();
-        return;
-      }
+    if (!audioSrc) return Promise.resolve();
 
-      if (activeAudio) {
-        activeAudio.pause();
-        activeAudio.currentTime = 0;
-      }
-
-      activeAudio = new Audio(audioSrc);
-      activeMouthActor = actor;
-
-      activeAudio.addEventListener("play", function () {
-        startMouthAnimation(actor, activeAudio);
+    if (!audioManager) {
+      // Shared module failed to load -- fall back to the old direct-Audio
+      // behavior rather than silently skipping the line entirely.
+      return new Promise(function (resolve) {
+        const audio = new Audio(audioSrc);
+        audio.addEventListener("ended", resolve);
+        audio.addEventListener("error", resolve);
+        audio.play().catch(resolve);
       });
+    }
 
-      let resolvedAudio = false;
+    activeMouthActor = actor;
 
-      function resolveAudioPlayback() {
-        if (resolvedAudio) return;
-        resolvedAudio = true;
-        stopMouthAnimation();
-        resolve();
+    return audioManager.playAndWait(audioSrc, {
+      onMouthLevel: function (level) {
+        applyMouthLevel(actor, level);
       }
+    }).then(function (result) {
+      stopMouthAnimation();
 
-      activeAudio.addEventListener("ended", resolveAudioPlayback);
-      activeAudio.addEventListener("pause", function () {
-        if (activeAudio && activeAudio.currentTime > 0) {
-          resolveAudioPlayback();
-        }
-      });
-
-      activeAudio.addEventListener("error", resolveAudioPlayback);
-
-      activeAudio.play().catch(function () {
-        stopMouthAnimation();
-        resolve();
-      });
+      // Only a real "ended" event means the line was actually heard. A
+      // rejected play()/stall/timeout must not be treated the same as a
+      // completed line -- that was the root cause of prompts silently
+      // being skipped.
+      if (result.status !== "ended" && diagnostics) {
+        diagnostics.log("character_prompt_not_heard", { actor: actor, status: result.status });
+      }
     });
   }
 
-  function startMouthAnimation(actor, audioElement) {
-    stopMouthAnimation();
-    activeMouthActor = actor;
-
-    try {
-      audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      analyser = audioContext.createAnalyser();
-      analyser.fftSize = 256;
-
-      sourceNode = audioContext.createMediaElementSource(audioElement);
-      sourceNode.connect(analyser);
-      analyser.connect(audioContext.destination);
-
-      const dataArray = new Uint8Array(analyser.frequencyBinCount);
-
-      function animate() {
-        analyser.getByteFrequencyData(dataArray);
-
-        let sum = 0;
-
-        for (let i = 0; i < dataArray.length; i++) {
-          sum += dataArray[i];
-        }
-
-        const average = sum / dataArray.length;
-        const normalized = Math.min(1, average / 80);
-        const scaleX = 1 + normalized * 0.10;
-        const scaleY = 1 + normalized * 0.18;
-
-        if (average < 14) {
-          setMouth(actor, "closed", 1, 1);
-        } else if (average < 34) {
-          setMouth(actor, "small", scaleX, scaleY);
-        } else if (average < 58) {
-          setMouth(actor, "medium", scaleX, scaleY);
-        } else {
-          setMouth(actor, "wide", scaleX, scaleY);
-        }
-
-        mouthAnimationFrame = requestAnimationFrame(animate);
-      }
-
-      animate();
-    } catch (error) {
-      console.warn("Could not animate mouth:", error);
-    }
-  }
-
   function stopMouthAnimation() {
-    if (mouthAnimationFrame) {
-      cancelAnimationFrame(mouthAnimationFrame);
-      mouthAnimationFrame = null;
-    }
-
-    if (sourceNode) {
-      try { sourceNode.disconnect(); } catch (error) {}
-      sourceNode = null;
-    }
-
-    if (analyser) {
-      try { analyser.disconnect(); } catch (error) {}
-      analyser = null;
-    }
-
-    if (audioContext) {
-      audioContext.close().catch(function () {});
-      audioContext = null;
-    }
-
     activeMouthActor = null;
     closeAllMouths();
   }
@@ -1439,9 +1401,9 @@ document.addEventListener("DOMContentLoaded", function () {
     updateMicIndicator();
 
     return new Promise(resolve => {
-      try {
-        const mimeType = getSupportedMimeType();
+      const mimeType = getSupportedMimeType();
 
+      try {
         mediaRecorder = mimeType
           ? new MediaRecorder(stream, { mimeType })
           : new MediaRecorder(stream);
@@ -1456,13 +1418,16 @@ document.addEventListener("DOMContentLoaded", function () {
       });
 
       mediaRecorder.addEventListener("stop", function () {
+        if (diagnostics) diagnostics.log("recording_stopped", { chunkCount: recordingChunks.length });
         handleRecordingStop(question).then(resolve);
       });
 
       heardSpeechInWindow = false;
       lastSpeechTime = 0;
 
+      if (diagnostics) diagnostics.log("recording_requested", { mimeType: mediaRecorder.mimeType || mimeType || "browser_default" });
       mediaRecorder.start();
+      if (diagnostics) diagnostics.log("recording_started", { mimeType: mediaRecorder.mimeType || mimeType || "browser_default" });
 
       const maxWindowMs = seconds * 1000;
       startSpeechEndDetector(stream, maxWindowMs);
@@ -1601,15 +1566,22 @@ document.addEventListener("DOMContentLoaded", function () {
         return null;
       }
 
-      const blob = new Blob(recordingChunks, {
-        type: recordingChunks[0]?.type || "audio/webm"
-      });
+      const recordedMimeType = recordingChunks[0]?.type || "audio/webm";
+      const blob = new Blob(recordingChunks, { type: recordedMimeType });
+      const extension = window.GameMicManager
+        ? window.GameMicManager.extensionForMimeType(recordedMimeType)
+        : "webm";
 
       recordingChunks = [];
       dlog("transcribe request start", { size: blob.size, type: blob.type });
+      if (diagnostics) diagnostics.log("transcribe_request_start", { size: blob.size, mimeType: recordedMimeType });
 
       const formData = new FormData();
-      formData.append("audio", blob, "drawing-response.webm");
+      // Use the extension matching what MediaRecorder actually produced
+      // (webm on Chrome/Firefox, mp4 on Safari) -- Whisper infers the
+      // container from the filename, not the bytes, so a mismatched
+      // extension here can cause silent misdetection.
+      formData.append("audio", blob, `drawing-response.${extension}`);
 
       const controller = new AbortController();
       const timeoutId = setTimeout(function () {
@@ -1627,6 +1599,8 @@ document.addEventListener("DOMContentLoaded", function () {
       const data = await response.json();
 
       if (!data.success) {
+        if (diagnostics) diagnostics.log("transcribe_failed", { errorCategory: data.error_category || null });
+
         if (fallbackTranscript) {
           await handleSpeech(fallbackTranscript, question);
           return fallbackTranscript;
@@ -1635,6 +1609,8 @@ document.addEventListener("DOMContentLoaded", function () {
         await handleNoSpeech(question);
         return null;
       }
+
+      if (diagnostics) diagnostics.log("transcribe_success", {});
 
       const transcript = cleanTranscript(data.text || "") || fallbackTranscript;
 
@@ -1647,6 +1623,12 @@ document.addEventListener("DOMContentLoaded", function () {
       return transcript;
     } catch (error) {
       const fallbackTranscript = cleanTranscript(question?.browserTranscript || "");
+
+      if (diagnostics) {
+        diagnostics.log("transcribe_failed", {
+          errorCategory: error && error.name === "AbortError" ? "client_timeout" : "network_error"
+        });
+      }
 
       if (fallbackTranscript) {
         await handleSpeech(fallbackTranscript, question);
@@ -1696,11 +1678,8 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function interruptCurrentCharacterAudio() {
-    if (activeAudio) {
-      try {
-        activeAudio.pause();
-        activeAudio.currentTime = 0;
-      } catch (error) {}
+    if (audioManager) {
+      audioManager.cancelActive("interrupted_by_speech");
     }
 
     stopMouthAnimation();
@@ -2531,6 +2510,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   async function handleNoSpeech(question) {
     state.silentWindows += 1;
+    if (diagnostics) diagnostics.log("no_speech_detected", { intent: question?.intent || null });
 
     if (!question) return;
 
@@ -3852,35 +3832,64 @@ document.addEventListener("DOMContentLoaded", function () {
 
     const minutesPlayed = Math.max(0, (Date.now() - state.sessionStart) / 60000);
 
-    try {
+    const payload = {
+      activity_id: activityId,
+      words_spoken: state.spokenWords,
+      minutes_spoken: Math.max(0, state.spokenResponses * 0.08),
+      active_minutes: minutesPlayed,
+      time_spent_on_activity: minutesPlayed,
+      spoken_responses: state.spokenResponses,
+      silent_windows: state.silentWindows,
+      rounds_completed: TARGET_SOCIAL_ROUNDS,
+      stages_completed: state.stagesCompleted,
+      scenes_completed: state.scenesCompleted,
+      librarian_direct_responses: state.teacherDirectResponses
+    };
+
+    async function attemptComplete() {
       const response = await fetch("/api/drawing-game/complete", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({
-          activity_id: activityId,
-          words_spoken: state.spokenWords,
-          minutes_spoken: Math.max(0, state.spokenResponses * 0.08),
-          active_minutes: minutesPlayed,
-          time_spent_on_activity: minutesPlayed,
-          spoken_responses: state.spokenResponses,
-          silent_windows: state.silentWindows,
-          rounds_completed: TARGET_SOCIAL_ROUNDS,
-          stages_completed: state.stagesCompleted,
-          scenes_completed: state.scenesCompleted,
-          librarian_direct_responses: state.teacherDirectResponses
-        })
+        body: JSON.stringify(payload)
       });
 
-      const data = await response.json();
+      return response.json();
+    }
 
-      if (data.success && data.next_activity_id) {
+    let data = null;
+
+    try {
+      data = await attemptComplete();
+    } catch (error) {
+      console.error("Could not save drawing game completion:", error);
+    }
+
+    // A failed completion write silently sent the child to /dashboard
+    // exactly the same as a legitimate "no more games" completion, with no
+    // retry -- one retry attempt here catches transient failures instead of
+    // permanently losing the completion/unlock for the session.
+    if (!data || data.success !== true) {
+      if (diagnostics) diagnostics.log("completion_request_failed", { retrying: true });
+
+      try {
+        data = await attemptComplete();
+      } catch (error) {
+        console.error("Could not save drawing game completion (retry):", error);
+        data = null;
+      }
+    }
+
+    if (data && data.success === true) {
+      if (diagnostics) diagnostics.log("completion_saved", { hasNextActivity: Boolean(data.next_activity_id) });
+
+      if (data.next_activity_id) {
         window.location.href = `/activity/${data.next_activity_id}`;
         return;
       }
-    } catch (error) {
-      console.error("Could not save drawing game completion:", error);
+    } else if (diagnostics) {
+      diagnostics.log("completion_save_failed", {});
     }
 
     window.location.href = "/dashboard";
@@ -3924,6 +3933,8 @@ document.addEventListener("DOMContentLoaded", function () {
     acceptCall.disabled = true;
     declineCall.disabled = true;
 
+    if (audioManager) audioManager.unlock();
+
     stopRingtone();
     playCallAcceptedSound();
     ensureMicPermission();
@@ -3963,12 +3974,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
     stopResponseWindow();
     stopEarlyResponseSpeechRecognition();
-    stopMouthAnimation();
 
-    if (activeAudio) {
-      activeAudio.pause();
-      activeAudio.currentTime = 0;
+    if (audioManager) {
+      audioManager.cancelActive("game_exit");
     }
+
+    stopMouthAnimation();
 
     if (mediaStream) {
       mediaStream.getTracks().forEach(track => track.stop());
