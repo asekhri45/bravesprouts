@@ -3,7 +3,10 @@
 {% block head %}
 {{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/mystery_food_item.css') }}?v=704">
-<script src="{{ url_for('static', filename='js/mystery_food_item.js') }}?v=704" defer></script>
+<script src="{{ url_for('static', filename='js/game-diagnostics.js') }}?v=1" defer></script>
+<script src="{{ url_for('static', filename='js/game-audio-manager.js') }}?v=1" defer></script>
+<script src="{{ url_for('static', filename='js/game-mic-manager.js') }}?v=1" defer></script>
+<script src="{{ url_for('static', filename='js/mystery_food_item.js') }}?v=705" defer></script>
 {% endblock %}
 
 {% block title %}Mystery Food Item{% endblock %}

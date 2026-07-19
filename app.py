@@ -23577,6 +23577,13 @@ def reset_mystery_food_progress_for_user():
 
 
 def complete_mystery_food_and_unlock_next_for_user(rounds_completed=None):
+    """
+    Returns {"ok": bool, "next_activity_id": int|None}. "ok" is the only
+    field the caller should use to decide success/failure -- next_activity_id
+    being None is legitimate both when this is the last active activity AND
+    (previously, before this field existed) when the write itself failed,
+    which made those two cases indistinguishable to the caller.
+    """
     ensure_mystery_food_progress_columns()
 
     try:
@@ -23587,7 +23594,7 @@ def complete_mystery_food_and_unlock_next_for_user(rounds_completed=None):
 
         if not current_activity:
             conn.close()
-            return None
+            return {"ok": False, "next_activity_id": None}
 
         cursor.execute("""
             INSERT OR IGNORE INTO progress (
@@ -23664,11 +23671,11 @@ def complete_mystery_food_and_unlock_next_for_user(rounds_completed=None):
 
         conn.commit()
         conn.close()
-        return next_activity_id
+        return {"ok": True, "next_activity_id": next_activity_id}
 
     except Exception as e:
         print("Could not complete Mystery Food Item and unlock next activity:", repr(e))
-        return None
+        return {"ok": False, "next_activity_id": None}
 
 
 def should_mystery_food_ask_round_choice(rounds_completed):
@@ -24274,7 +24281,11 @@ def finish_mystery_food_session(message, game_state, history, unlock_next=False,
     next_url = None
 
     if unlock_next:
-        complete_mystery_food_and_unlock_next_for_user(game_state.get("rounds_completed", MYSTERY_FOOD_REQUIRED_ROUNDS))
+        result = complete_mystery_food_and_unlock_next_for_user(game_state.get("rounds_completed", MYSTERY_FOOD_REQUIRED_ROUNDS))
+
+        if not result["ok"]:
+            raise RuntimeError("Mystery Food Item completion write failed")
+
         next_url = url_for("dashboard")
     else:
         save_mystery_food_round_progress(game_state.get("rounds_completed", 0))
@@ -24533,14 +24544,21 @@ def mystery_food_item_message():
             return jsonify(start_new_mystery_food_round(rounds_completed, "Okay. Think of another food, but keep it secret.", event_label="continue_rounds"))
 
         if choice == "end":
-            return jsonify(finish_mystery_food_session(
-                "Okay, today was fun. I really liked playing this game with you. See you next time.",
-                game_state,
-                history,
-                unlock_next=(rounds_completed >= MYSTERY_FOOD_REQUIRED_ROUNDS),
-                event_label="ended_by_child",
-                redirect_to_dashboard=True
-            ))
+            try:
+                return jsonify(finish_mystery_food_session(
+                    "Okay, today was fun. I really liked playing this game with you. See you next time.",
+                    game_state,
+                    history,
+                    unlock_next=(rounds_completed >= MYSTERY_FOOD_REQUIRED_ROUNDS),
+                    event_label="ended_by_child",
+                    redirect_to_dashboard=True
+                ))
+            except Exception as e:
+                print("Mystery Food Item completion error:", repr(e))
+                return jsonify({
+                    "success": False,
+                    "error": "Could not finish Mystery Food Item"
+                }), 500
 
         return jsonify(make_mystery_food_payload(
             message="I didn’t quite get that, but that’s okay. Say another food to keep playing, or say end to stop here.",
@@ -24683,7 +24701,11 @@ def mystery_food_item_message():
 @limiter.limit("30 per minute")
 def mystery_food_item_transcribe():
     if "audio" not in request.files:
-        return jsonify({"success": False, "error": "Missing audio"}), 400
+        return jsonify({
+            "success": False,
+            "error": "Missing audio",
+            "error_category": "invalid_recording"
+        }), 400
 
     audio_file = request.files["audio"]
 
@@ -24692,10 +24714,14 @@ def mystery_food_item_transcribe():
 
         audio_bytes = audio_file.read()
         if not audio_bytes:
-            return jsonify({"success": False, "error": "Empty audio file"}), 400
+            return jsonify({
+                "success": False,
+                "error": "Empty audio file",
+                "error_category": "invalid_recording"
+            }), 400
 
         file_obj = io.BytesIO(audio_bytes)
-        file_obj.name = "mystery-food-response.webm"
+        file_obj.name = transcription_upload_filename(audio_file)
 
         transcript = client.audio.transcriptions.create(
             model="gpt-4o-mini-transcribe",
@@ -24706,9 +24732,21 @@ def mystery_food_item_transcribe():
         print("MYSTERY FOOD ITEM TRANSCRIPT:", text)
         return jsonify({"success": True, "text": text})
 
+    except OpenAITimeoutError as e:
+        app.logger.warning("Mystery Food Item transcription timeout: %r", e)
+        return jsonify({
+            "success": False,
+            "error": "We couldn't hear that in time. Let's try again.",
+            "error_category": "transcription_timeout"
+        }), 504
+
     except Exception as e:
         print("Mystery Food Item transcription error:", repr(e))
-        return jsonify({"success": False, "error": str(e)}), 500
+        return jsonify({
+            "success": False,
+            "error": "We couldn't hear that. Let's try again.",
+            "error_category": "upstream_service_error"
+        }), 502
 
 
 def generate_librarian_voice_elevenlabs(text):
