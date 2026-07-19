@@ -1,11 +1,26 @@
 """Coverage for the Library Guessing Game ("Classroom Guessing Game" in the
-UI) reliability migration: make_library_guessing_game_correct_round_response()
-previously let a goodbye TTS failure AFTER a successful round-save/unlock
-write propagate as a bare success:false 500 -- indistinguishable from the
-writes themselves failing, even though the child's progress and the next
-activity's unlock had already committed. Also covers the transcribe
-endpoint's format/timeout handling, matching the fix already applied to the
-other four migrated games.
+UI).
+
+Covers two fixes:
+
+1. The reliability migration's completion-path fix:
+   make_library_guessing_game_correct_round_response() previously let a
+   goodbye TTS failure AFTER a successful round-save/unlock write propagate
+   as a bare success:false 500 -- indistinguishable from the writes
+   themselves failing, even though the child's progress and the next
+   activity's unlock had already committed. Also covers the transcribe
+   endpoint's format/timeout handling, matching the fix already applied to
+   the other four migrated games.
+
+2. The round-3 secret-object resolution bug: get_library_guessing_game_profile()
+   used to normalize the stored secret_object through
+   normalize_library_guessing_text(), which turns underscores into spaces --
+   so the round-3 preset object "glue_stick" never matched its own
+   snake_case dict key and silently fell back to "pencil" on every request,
+   making round 3 unplayable as intended. resolve_library_guessing_object_key()
+   fixes this by normalizing to the canonical snake_case key first (handling
+   spaces/hyphens/underscores/case), falling back to alias matching only for
+   values that still don't resolve.
 """
 import io
 from unittest.mock import patch
@@ -63,14 +78,7 @@ def _client_at_final_round(app_client, make_user):
     game_state = app_module.get_library_guessing_game_default_state(
         rounds_completed=app_module.LIBRARY_GUESSING_GAME_MAX_ROUNDS - 1
     )
-    # The round-3 preset object is "glue_stick" -- get_library_guessing_game_profile()
-    # normalizes secret_object through a filter that strips underscores, so
-    # it never matches the "glue_stick" dict key and silently resets to
-    # "pencil" on every request. That's a pre-existing, unrelated game-logic
-    # bug (not part of this reliability migration); using "backpack" here
-    # sidesteps it so this test exercises the round-index/completion
-    # transition this migration actually touches, not that separate bug.
-    game_state["secret_object"] = "backpack"
+    assert game_state["secret_object"] == "glue_stick"
 
     with app_client.session_transaction() as sess:
         sess["library_guessing_game_history"] = []
@@ -84,7 +92,7 @@ def _post_correct_direct_guess(client):
         "/api/library-guessing-game/message",
         json={
             "event_type": "child_answer",
-            "child_response": "is it a backpack",
+            "child_response": "is it a glue stick",
             "response_mode": "open_hint",
         },
     )
@@ -219,3 +227,58 @@ def test_transcribe_timeout_is_categorized(app_client, make_user):
     body = resp.get_json()
     assert body["success"] is False
     assert body["error_category"] == "transcription_timeout"
+
+
+def test_glue_stick_underscore_resolves_correctly():
+    game_state = {"secret_object": "glue_stick"}
+
+    profile = app_module.get_library_guessing_game_profile(game_state)
+
+    assert game_state["secret_object"] == "glue_stick"
+    assert profile is app_module.LIBRARY_GUESSING_GAME_OBJECT_PROFILES["glue_stick"]
+
+
+def test_glue_stick_with_space_resolves_correctly():
+    game_state = {"secret_object": "glue stick"}
+
+    profile = app_module.get_library_guessing_game_profile(game_state)
+
+    assert game_state["secret_object"] == "glue_stick"
+    assert profile is app_module.LIBRARY_GUESSING_GAME_OBJECT_PROFILES["glue_stick"]
+
+
+def test_glue_stick_with_hyphen_and_mixed_case_resolves_correctly():
+    game_state = {"secret_object": "Glue-Stick"}
+
+    profile = app_module.get_library_guessing_game_profile(game_state)
+
+    assert game_state["secret_object"] == "glue_stick"
+    assert profile is app_module.LIBRARY_GUESSING_GAME_OBJECT_PROFILES["glue_stick"]
+
+
+def test_pencil_and_backpack_still_resolve_correctly():
+    pencil_state = {"secret_object": "pencil"}
+    backpack_state = {"secret_object": "backpack"}
+
+    pencil_profile = app_module.get_library_guessing_game_profile(pencil_state)
+    backpack_profile = app_module.get_library_guessing_game_profile(backpack_state)
+
+    assert pencil_state["secret_object"] == "pencil"
+    assert pencil_profile is app_module.LIBRARY_GUESSING_GAME_OBJECT_PROFILES["pencil"]
+
+    assert backpack_state["secret_object"] == "backpack"
+    assert backpack_profile is app_module.LIBRARY_GUESSING_GAME_OBJECT_PROFILES["backpack"]
+
+
+def test_invalid_object_falls_back_to_pencil():
+    game_state = {"secret_object": "not_a_real_classroom_object"}
+
+    profile = app_module.get_library_guessing_game_profile(game_state)
+
+    assert game_state["secret_object"] == "pencil"
+    assert profile is app_module.LIBRARY_GUESSING_GAME_OBJECT_PROFILES["pencil"]
+
+
+def test_resolve_library_guessing_object_key_handles_missing_value():
+    assert app_module.resolve_library_guessing_object_key(None) is None
+    assert app_module.resolve_library_guessing_object_key("") is None

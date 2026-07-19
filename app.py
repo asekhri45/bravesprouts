@@ -18337,13 +18337,39 @@ def get_library_guessing_game_default_state(rounds_completed=0, used_objects=Non
         "last_response_mode": "none"
     }
 
+def resolve_library_guessing_object_key(raw_value):
+    """
+    Resolves a stored/typed object reference to its canonical
+    LIBRARY_GUESSING_GAME_OBJECT_PROFILES key. Dict keys are canonical
+    snake_case identifiers (e.g. "glue_stick"), but normalize_library_guessing_text()
+    is built for matching *child speech* against alias phrases and turns
+    underscores into spaces -- run a stored key like "glue_stick" through it
+    and "glue stick" (space) is never a dict key, so the lookup always
+    missed and silently fell back to "pencil". This resolves the raw value
+    to a snake_case key first (handling spaces/hyphens/underscores/case),
+    and only falls back to alias matching for anything that still doesn't
+    match a real key outright.
+    """
+    if not raw_value:
+        return None
+
+    lowered = str(raw_value).strip().lower()
+    canonical = re.sub(r"[\s_-]+", "_", lowered)
+    canonical = re.sub(r"[^a-z0-9_]", "", canonical).strip("_")
+
+    if canonical in LIBRARY_GUESSING_GAME_OBJECT_PROFILES:
+        return canonical
+
+    return get_library_guessing_named_object(raw_value)
+
+
 def get_library_guessing_game_profile(game_state):
-    secret_object = normalize_library_guessing_text(game_state.get("secret_object", "pencil"))
+    secret_object = resolve_library_guessing_object_key(game_state.get("secret_object"))
 
-    if secret_object not in LIBRARY_GUESSING_GAME_OBJECT_PROFILES:
+    if not secret_object or secret_object not in LIBRARY_GUESSING_GAME_OBJECT_PROFILES:
         secret_object = "pencil"
-        game_state["secret_object"] = secret_object
 
+    game_state["secret_object"] = secret_object
     return LIBRARY_GUESSING_GAME_OBJECT_PROFILES[secret_object]
 
 
