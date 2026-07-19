@@ -15609,6 +15609,9 @@ def start_new_classroom_object_round(rounds_completed, message, event_label="rep
 def end_classroom_object_call(message, game_state, history, event_label, unlock_next=False, redirect_to_dashboard=False):
     rounds_completed = int(game_state.get("rounds_completed", 0) or 0)
 
+    # Resolved and checked BEFORE attempting the goodbye TTS below -- a
+    # failure here is a genuine completion/unlock failure and must still
+    # raise (the caller's own except-block reports it as an error).
     next_url = None
     if unlock_next:
         next_activity_id = complete_classroom_object_and_unlock_next_for_user(rounds_completed)
@@ -15620,20 +15623,50 @@ def end_classroom_object_call(message, game_state, history, event_label, unlock_
         if redirect_to_dashboard:
             next_url = url_for("dashboard")
 
-    return make_book_guessing_game_audio_response(
-        message=message,
-        stage="session_done",
-        response_mode="none",
-        expects_response=False,
-        game_complete=unlock_next,
-        game_state=game_state,
-        history=history,
-        event_type=event_label,
-        child_response="",
-        next_url=next_url,
-        redirect_after_ms=1700 if next_url else None,
-        session_done=True
-    )
+    try:
+        return make_book_guessing_game_audio_response(
+            message=message,
+            stage="session_done",
+            response_mode="none",
+            expects_response=False,
+            game_complete=unlock_next,
+            game_state=game_state,
+            history=history,
+            event_type=event_label,
+            child_response="",
+            next_url=next_url,
+            redirect_after_ms=1700 if next_url else None,
+            session_done=True
+        )
+    except Exception as e:
+        # The completion/unlock write above already committed -- only the
+        # goodbye line's audio failed to generate. The child never hearing
+        # that one line does not undo the completion that already genuinely
+        # happened, so return a recoverable, audio-less completion instead
+        # of reporting failure on top of a write that actually succeeded.
+        app.logger.warning(
+            "Mystery Classroom Object goodbye TTS failed after completion committed "
+            "(event_label=%s, unlock_next=%s): %r",
+            event_label, unlock_next, e
+        )
+
+        game_state["stage"] = "session_done"
+        game_state["last_response_mode"] = "none"
+        game_state["game_complete"] = unlock_next
+
+        session["mystery_classroom_object_history"] = history[-20:]
+        session["mystery_classroom_object_state"] = game_state
+        session["book_guessing_game_history"] = history[-20:]
+        session["book_guessing_game_state"] = game_state
+        session.modified = True
+
+        return jsonify(recoverable_completion_payload(
+            next_url=next_url,
+            game_state=game_state,
+            game_complete=unlock_next,
+            redirect_after_ms=1700 if next_url else 400,
+            extra_fields={"response_mode": "none"}
+        ))
 
 
 def finish_classroom_object_round(base_message, game_state, history, event_label, child_name=""):
@@ -17941,7 +17974,11 @@ def book_guessing_game_message():
 @limiter.limit("30 per minute")
 def book_guessing_game_transcribe():
     if "audio" not in request.files:
-        return jsonify({"success": False, "error": "Missing audio"}), 400
+        return jsonify({
+            "success": False,
+            "error": "Missing audio",
+            "error_category": "invalid_recording"
+        }), 400
 
     audio_file = request.files["audio"]
 
@@ -17950,10 +17987,14 @@ def book_guessing_game_transcribe():
         audio_bytes = audio_file.read()
 
         if not audio_bytes:
-            return jsonify({"success": False, "error": "Empty audio file"}), 400
+            return jsonify({
+                "success": False,
+                "error": "Empty audio file",
+                "error_category": "invalid_recording"
+            }), 400
 
         file_obj = io.BytesIO(audio_bytes)
-        file_obj.name = "mystery-classroom-object-response.webm"
+        file_obj.name = transcription_upload_filename(audio_file)
 
         transcript = client.audio.transcriptions.create(
             model="gpt-4o-mini-transcribe",
@@ -17965,9 +18006,21 @@ def book_guessing_game_transcribe():
 
         return jsonify({"success": True, "text": text})
 
+    except OpenAITimeoutError as e:
+        app.logger.warning("Mystery Classroom Object transcription timeout: %r", e)
+        return jsonify({
+            "success": False,
+            "error": "We couldn't hear that in time. Let's try again.",
+            "error_category": "transcription_timeout"
+        }), 504
+
     except Exception as e:
         print("Mystery Classroom Object transcription error:", repr(e))
-        return jsonify({"success": False, "error": str(e)}), 500
+        return jsonify({
+            "success": False,
+            "error": "We couldn't hear that. Let's try again.",
+            "error_category": "upstream_service_error"
+        }), 502
 
 
 # =========================
