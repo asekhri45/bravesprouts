@@ -100,10 +100,13 @@ def test_matching_game_transcribe_success(app_client, make_user):
     assert mock_create.call_args.kwargs["model"] == "gpt-4o-mini-transcribe"
 
 
-def test_matching_game_transcribe_upstream_failure_returns_500_not_a_crash(app_client, make_user):
+def test_matching_game_transcribe_upstream_failure_returns_502_not_a_crash(app_client, make_user):
     """If OpenAI's API errors out, the route must fail gracefully with JSON,
     not a raw 500 traceback -- this is what lets the client show a retry
-    state instead of freezing.
+    state instead of freezing. 502 (not a bare 500) and error_category
+    "upstream_service_error" let the frontend tell this apart from a
+    timeout or an invalid-recording failure -- part of the reliability
+    migration's error-category requirement.
     """
     client = _logged_in_client(app_client, make_user)
 
@@ -118,9 +121,10 @@ def test_matching_game_transcribe_upstream_failure_returns_500_not_a_crash(app_c
             content_type="multipart/form-data",
         )
 
-    assert resp.status_code == 500
+    assert resp.status_code == 502
     body = resp.get_json()
     assert body["success"] is False
+    assert body["error_category"] == "upstream_service_error"
     assert "error" in body
 
 

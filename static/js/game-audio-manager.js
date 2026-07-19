@@ -166,6 +166,13 @@
       var myToken = activeOperationToken;
 
       var audioEl = new Audio(url);
+      // Lets a game apply its own volume/playbackRate/etc. -- kept generic
+      // here rather than adding per-game options, since different games
+      // use different values for legitimate pacing/mixing reasons that
+      // aren't this module's concern.
+      if (typeof config.configureAudio === "function") {
+        try { config.configureAudio(audioEl); } catch (e) { /* ignore */ }
+      }
       activeAudio = audioEl;
 
       log("prompt_play_requested", { url: url });

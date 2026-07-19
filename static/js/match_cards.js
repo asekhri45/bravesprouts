@@ -64,15 +64,7 @@ document.addEventListener("DOMContentLoaded", function () {
   let roundInProgress = false;
   let nextRoundStarting = false;
 
-  let starAudio = null;
-  let audioContext = null;
-  let analyser = null;
-  let sourceNode = null;
-  let mouthAnimationFrame = null;
-
   let mediaStream = null;
-  let mediaRecorder = null;
-  let recordingChunks = [];
   let recordingTimeout = null;
 
   let responseAudioContext = null;
@@ -83,6 +75,41 @@ document.addEventListener("DOMContentLoaded", function () {
   let lastSpeechTime = 0;
 
   let starState = freshStarState();
+
+  const diagnostics = window.GameDiagnostics
+    ? window.GameDiagnostics.createSession({
+        game: "match_cards",
+        activityId: activityId,
+        getState: function () {
+          return {
+            roundNumber: starState.roundNumber,
+            currentTurn: currentTurn,
+            roundInProgress: roundInProgress,
+            isListening: starState.isListening,
+            isStarSpeaking: starState.isStarSpeaking,
+            waitingForResponse: starState.waitingForResponse,
+            micReady: starState.micReady,
+            micDenied: starState.micDenied
+          };
+        }
+      })
+    : null;
+
+  const audioManager = window.GameAudioManager
+    ? window.GameAudioManager.create({ diagnostics: diagnostics })
+    : null;
+
+  const micManager = window.GameMicManager
+    ? window.GameMicManager.create({ diagnostics: diagnostics })
+    : null;
+
+  const turnGuard = window.GameTurnGuard
+    ? window.GameTurnGuard.create({ diagnostics: diagnostics })
+    : null;
+
+  function diagLog(eventName, details) {
+    if (diagnostics) diagnostics.log(eventName, details);
+  }
 
   const ringtone = new Audio("/static/images/ringtone.mp3");
   ringtone.loop = true;
@@ -834,6 +861,12 @@ document.addEventListener("DOMContentLoaded", function () {
     const askType = options.askType || "none";
     const intent = options.intent || null;
 
+    // A new turn begins whenever Star is about to say something new --
+    // this invalidates any recording/listening still in flight from
+    // whatever the previous turn was doing, and gives every async step
+    // below a token to check itself against.
+    const turnToken = turnGuard ? turnGuard.beginNewTurn() : null;
+
     const calmText = String(text || "")
       .replace(/\booo\b/gi, "")
       .replace(/\boh my\b/gi, "")
@@ -842,6 +875,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
     updateStarMessage("Star", calmText);
     rememberStarMessage(calmText);
+    diagLog("prompt_requested", { askType: askType, expectsResponse: expectsResponse });
+
+    let playbackResult = { status: "ended" };
 
     try {
       starState.isStarSpeaking = true;
@@ -856,27 +892,71 @@ document.addEventListener("DOMContentLoaded", function () {
 
       const data = await response.json();
 
+      if (turnGuard && turnGuard.rejectIfStale(turnToken, "speakStarLine_tts_response")) {
+        return;
+      }
+
+      diagLog("backend_response_received", { ok: response.ok, success: !!data.success });
+
       if (data.success && Array.isArray(data.audio_parts) && data.audio_parts.length) {
-        await playStarAudioSequence(data.audio_parts, {
+        playbackResult = await playStarAudioSequence(data.audio_parts, {
           volume: options.volume || 0.86
         });
       } else if (data.success && data.audio_url) {
-        await playStarAudio(data.audio_url, {
+        playbackResult = await playStarAudio(data.audio_url, {
           volume: options.volume || 0.86
         });
       } else if (data.success && data.audio) {
-        await playStarAudio(data.audio, {
+        playbackResult = await playStarAudio(data.audio, {
           volume: options.volume || 0.86
         });
       } else {
+        playbackResult = { status: "error" };
         await sleep(700);
+      }
+
+      // One safe automatic retry for a genuinely failed (not cancelled)
+      // prompt -- mirrors the Mystery Animal reference behavior. Match
+      // Cards has no on-screen replay button, so a prompt that still
+      // fails after the retry is simply skipped (see below) rather than
+      // ever being treated as successfully spoken.
+      if (
+        playbackResult.status !== "ended" &&
+        playbackResult.status !== "cancelled" &&
+        !(turnGuard && turnGuard.isStale(turnToken))
+      ) {
+        diagLog("recovery_started", { action: "auto_retry", status: playbackResult.status });
+
+        if (Array.isArray(data.audio_parts) && data.audio_parts.length) {
+          playbackResult = await playStarAudioSequence(data.audio_parts, { volume: options.volume || 0.86 });
+        } else if (data.audio_url || data.audio) {
+          playbackResult = await playStarAudio(data.audio_url || data.audio, { volume: options.volume || 0.86 });
+        }
       }
     } catch (error) {
       console.error("Star TTS error:", error);
+      diagLog("error", { where: "speakStarLine", message: String(error && error.message || error) });
+      playbackResult = { status: "error" };
       await sleep(700);
     } finally {
       starState.isStarSpeaking = false;
     }
+
+    if (turnGuard && turnGuard.rejectIfStale(turnToken, "speakStarLine_after_playback")) {
+      return;
+    }
+
+    if (playbackResult.status !== "ended" && playbackResult.status !== "cancelled") {
+      // The line genuinely never played. Never enter a listening window
+      // the child was never actually asked to respond to -- skip this
+      // one prompt gracefully (gameplay/cards continue normally; only
+      // this one flavor line/question is missed) rather than faking a
+      // question that was never heard.
+      diagLog("prompt_failed", { askType: askType, status: playbackResult.status });
+      return;
+    }
+
+    diagLog("prompt_ended", { askType: askType });
 
     if (expectsResponse && isVerbalAsk(askType)) {
       starState.waitingForResponse = true;
@@ -910,7 +990,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
       }
 
-      await startResponseWindow(starState.currentQuestion, options.responseSeconds || null);
+      await startResponseWindow(starState.currentQuestion, options.responseSeconds || null, turnToken);
     }
   }
 
@@ -958,7 +1038,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const parts = (audioParts || []).filter(Boolean);
 
     if (!parts.length) {
-      return;
+      return { status: "ended" };
     }
 
     // Warm the browser cache for all parts before Star starts talking.
@@ -966,12 +1046,18 @@ document.addEventListener("DOMContentLoaded", function () {
     await Promise.all(parts.map(preloadStarAudio));
 
     for (let i = 0; i < parts.length; i++) {
-      await playStarAudio(parts[i], options);
+      const result = await playStarAudio(parts[i], options);
+
+      if (result.status !== "ended") {
+        return result;
+      }
 
       if (i < parts.length - 1) {
         await sleep(60);
       }
     }
+
+    return { status: "ended" };
   }
 
   async function speakForPairEvent(eventType, context = {}) {
@@ -1069,139 +1155,85 @@ document.addEventListener("DOMContentLoaded", function () {
     return document.getElementById("starMouth");
   }
 
-  function playStarAudio(audioSrc, options = {}) {
-    return new Promise(resolve => {
-      if (!audioSrc) {
-        resolve();
-        return;
-      }
+  // Drives the mouth PNG from the shared AudioManager's real-time analyser
+  // callback. getActiveMouth() is re-resolved on every call (not cached)
+  // to preserve the existing behavior of switching from the intro mouth
+  // to the main game mouth mid-line if that transition happens while
+  // audio is still playing.
+  let currentMouthState = "closed";
 
-      if (starAudio) {
-        starAudio.pause();
-        starAudio.currentTime = 0;
-      }
-
-      starAudio = new Audio(audioSrc);
-      starAudio.volume = options.volume || 0.86;
-      starAudio.playbackRate = 0.94;
-
-      let resolved = false;
-      let fallbackTimer = null;
-
-      function finish() {
-        if (resolved) return;
-        resolved = true;
-
-        if (fallbackTimer) {
-          clearTimeout(fallbackTimer);
-          fallbackTimer = null;
-        }
-
-        stopMouthAnimation();
-        resolve();
-      }
-
-      starAudio.addEventListener("play", startMouthAnimation);
-      starAudio.addEventListener("ended", finish);
-      starAudio.addEventListener("error", finish);
-
-      fallbackTimer = setTimeout(finish, 20000);
-
-      starAudio.play().catch(function () {
-        finish();
-      });
-    });
-  }
-
-  function startMouthAnimation() {
+  function updateMouthFromLevel(level) {
     const mouth = getActiveMouth();
+    if (!mouth) return;
 
-    if (!mouth || !starAudio) return;
+    const average = level * 255;
+    const normalized = Math.min(Math.max((average - 10) / 70, 0), 1);
+    const scaleX = 1 + normalized * 0.12;
+    const scaleY = 1 + normalized * 0.20;
 
-    stopMouthAnimation();
-
-    audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    analyser = audioContext.createAnalyser();
-    analyser.fftSize = 256;
-
-    sourceNode = audioContext.createMediaElementSource(starAudio);
-    sourceNode.connect(analyser);
-    analyser.connect(audioContext.destination);
-
-    const dataArray = new Uint8Array(analyser.frequencyBinCount);
-    let currentMouth = "closed";
-
-    function setMouth(state, scaleX, scaleY) {
-      if (currentMouth !== state) {
+    function setMouth(state, sx, sy) {
+      if (currentMouthState !== state) {
         mouth.src = `/static/images/mouth-${state}.png`;
-        currentMouth = state;
+        currentMouthState = state;
       }
-
-      mouth.style.transform = `translateX(-50%) scale(${scaleX}, ${scaleY})`;
+      mouth.style.transform = `translateX(-50%) scale(${sx}, ${sy})`;
     }
 
-    function animateMouth() {
-      analyser.getByteFrequencyData(dataArray);
-
-      let sum = 0;
-
-      for (let i = 0; i < dataArray.length; i++) {
-        sum += dataArray[i];
-      }
-
-      const average = sum / dataArray.length;
-      const normalized = Math.min(Math.max((average - 10) / 70, 0), 1);
-
-      const scaleX = 1 + normalized * 0.12;
-      const scaleY = 1 + normalized * 0.20;
-
-      if (average < 14) {
-        setMouth("closed", 1, 1);
-      } else if (average < 34) {
-        setMouth("small", scaleX, scaleY);
-      } else if (average < 58) {
-        setMouth("medium", scaleX, scaleY);
-      } else {
-        setMouth("wide", scaleX, scaleY);
-      }
-
-      mouthAnimationFrame = requestAnimationFrame(animateMouth);
+    if (average < 14) {
+      setMouth("closed", 1, 1);
+    } else if (average < 34) {
+      setMouth("small", scaleX, scaleY);
+    } else if (average < 58) {
+      setMouth("medium", scaleX, scaleY);
+    } else {
+      setMouth("wide", scaleX, scaleY);
     }
-
-    animateMouth();
   }
 
+  // Cancels whatever Star audio is currently playing (if any) and resets
+  // the mouth to closed. Kept as a small named function since it's called
+  // from several restart/transition sites below -- actual audio
+  // cancellation and mouth-sync teardown is delegated to the shared
+  // AudioManager, which already stops mouth animation on cancel.
   function stopMouthAnimation() {
+    if (audioManager) audioManager.cancelActive("stop_mouth_animation");
+
     const mouth = getActiveMouth();
-
-    if (mouthAnimationFrame) {
-      cancelAnimationFrame(mouthAnimationFrame);
-      mouthAnimationFrame = null;
-    }
-
-    if (sourceNode) {
-      try {
-        sourceNode.disconnect();
-      } catch (e) {}
-      sourceNode = null;
-    }
-
-    if (analyser) {
-      try {
-        analyser.disconnect();
-      } catch (e) {}
-      analyser = null;
-    }
-
-    if (audioContext) {
-      audioContext.close();
-      audioContext = null;
-    }
-
     if (mouth) {
       mouth.src = "/static/images/mouth-closed.png";
       mouth.style.transform = "translateX(-50%) scale(1)";
+      currentMouthState = "closed";
     }
+  }
+
+  // Plays exactly one clip as THE authoritative Star audio and returns the
+  // AudioManager's honest status ({status:"ended"} is the only one that
+  // means the line was actually heard). Preserves the existing volume
+  // (default 0.86) and the game's deliberate 0.94 playbackRate.
+  function playStarAudio(audioSrc, options = {}) {
+    if (!audioSrc) return Promise.resolve({ status: "ended" });
+
+    if (!audioManager) {
+      // No AudioManager available (very old/unsupported browser) -- fall
+      // back to a plain play() so the game still runs.
+      return new Promise(resolve => {
+        const audio = new Audio(audioSrc);
+        audio.volume = options.volume || 0.86;
+        audio.playbackRate = 0.94;
+        audio.addEventListener("ended", function () { resolve({ status: "ended" }); }, { once: true });
+        audio.addEventListener("error", function () { resolve({ status: "error" }); }, { once: true });
+        const p = audio.play();
+        if (p && p.catch) p.catch(function (err) { resolve({ status: "play_rejected", error: err }); });
+      });
+    }
+
+    return audioManager.playAndWait(audioSrc, {
+      onMouthLevel: updateMouthFromLevel,
+      configureAudio: function (audioEl) {
+        audioEl.volume = options.volume || 0.86;
+        audioEl.playbackRate = 0.94;
+      }
+    });
   }
 
   async function ensureMicPermission() {
@@ -1326,22 +1358,6 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 }
 
-  function getSupportedMimeType() {
-    const options = [
-      "audio/webm;codecs=opus",
-      "audio/webm",
-      "audio/mp4"
-    ];
-
-    for (const option of options) {
-      if (window.MediaRecorder && MediaRecorder.isTypeSupported(option)) {
-        return option;
-      }
-    }
-
-    return "";
-  }
-
   function getResponseWindowMs(question, overrideSeconds) {
     if (overrideSeconds) return overrideSeconds * 1000;
 
@@ -1372,7 +1388,7 @@ document.addEventListener("DOMContentLoaded", function () {
       const startedAt = Date.now();
 
       function monitorSpeech() {
-        if (!responseAnalyser || !mediaRecorder || mediaRecorder.state === "inactive") {
+        if (!responseAnalyser || !micManager || !micManager.isRecording()) {
           stopSpeechEndDetector();
           return;
         }
@@ -1434,60 +1450,69 @@ document.addEventListener("DOMContentLoaded", function () {
     responseAnalyser = null;
   }
 
-  async function startResponseWindow(question, overrideSeconds) {
+  async function startResponseWindow(question, overrideSeconds, turnToken) {
     if (!starState.waitingForResponse || starState.isListening) return null;
+    if (turnGuard && turnGuard.isStale(turnToken)) return null;
 
     const stream = await ensureMicPermission();
 
-    if (!microphoneStream) {
-  console.warn(
-    "Match Cards was unable to connect to your microphone."
-  );
-}
-
-    recordingChunks = [];
-    starState.isListening = true;
-
-    if (starVideoTile) {
-      starVideoTile.classList.add("soft-listening");
+    if (turnGuard && turnGuard.rejectIfStale(turnToken, "startResponseWindow_after_permission")) {
+      return null;
     }
 
-    if (micControl) {
-      micControl.classList.add("quiet-listening");
+    if (!stream) {
+      diagLog("microphone_track_not_ready", { reason: "ensureMicPermission_failed" });
+      starState.waitingForResponse = false;
+      return null;
+    }
+
+    if (!micManager) {
+      console.warn("Match Cards: shared mic manager unavailable.");
+      starState.waitingForResponse = false;
+      return null;
     }
 
     return new Promise(resolve => {
-      try {
-        const mimeType = getSupportedMimeType();
-        mediaRecorder = mimeType
-          ? new MediaRecorder(stream, { mimeType })
-          : new MediaRecorder(stream);
-      } catch (error) {
-        console.warn("MediaRecorder fallback:", error);
-        mediaRecorder = new MediaRecorder(stream);
-      }
+      const maxWindowMs = getResponseWindowMs(question, overrideSeconds);
 
-      mediaRecorder.addEventListener("dataavailable", function (event) {
-        if (event.data && event.data.size > 0) {
-          recordingChunks.push(event.data);
+      micManager.startRecording(stream, {
+        onStart: function () {
+          if (turnGuard && turnGuard.rejectIfStale(turnToken, "startResponseWindow_onStart")) {
+            micManager.stopActive("stale_turn_after_start");
+            resolve(null);
+            return;
+          }
+
+          // "Listening" UI is shown only now -- once the browser has
+          // confirmed the recorder actually started -- never before.
+          starState.isListening = true;
+
+          if (starVideoTile) starVideoTile.classList.add("soft-listening");
+          if (micControl) micControl.classList.add("quiet-listening");
+
+          heardSpeechInWindow = false;
+          lastSpeechTime = 0;
+
+          startSpeechEndDetector(stream, maxWindowMs);
+
+          recordingTimeout = setTimeout(function () {
+            stopResponseWindow();
+          }, maxWindowMs);
+        },
+        onStop: function (blob, mimeType, extension, wasActive) {
+          if (!wasActive) {
+            // Superseded by a newer recording before it stopped on its
+            // own -- that newer recording's own onStop owns resolve().
+            return;
+          }
+          handleRecordingStop(question, turnToken, blob, extension).then(resolve);
+        },
+        onError: function (error) {
+          diagLog("error", { where: "startResponseWindow_recorder", message: String(error && error.message || error) });
+          starState.isListening = false;
+          resolve(null);
         }
       });
-
-      mediaRecorder.addEventListener("stop", function () {
-        handleRecordingStop(question).then(resolve);
-      });
-
-      heardSpeechInWindow = false;
-      lastSpeechTime = 0;
-
-      mediaRecorder.start();
-
-      const maxWindowMs = getResponseWindowMs(question, overrideSeconds);
-      startSpeechEndDetector(stream, maxWindowMs);
-
-      recordingTimeout = setTimeout(function () {
-        stopResponseWindow();
-      }, maxWindowMs);
     });
   }
 
@@ -1499,15 +1524,21 @@ document.addEventListener("DOMContentLoaded", function () {
       recordingTimeout = null;
     }
 
-    if (mediaRecorder && mediaRecorder.state !== "inactive") {
-      mediaRecorder.stop();
-    }
+    if (micManager) micManager.stopActive("response_window_ended");
   }
 
-  async function handleRecordingStop(question) {
+  // Guards against the live-transcript path and the backup recording path
+  // both submitting the same child response -- match_cards only has the
+  // backup recorder path today (no live SpeechRecognition wired in), but
+  // this flag keeps handleRecordingStop itself safe to call more than
+  // once for the same window (e.g. a stray duplicate `stop` event).
+  let responseSubmittedForCurrentWindow = false;
+
+  async function handleRecordingStop(question, turnToken, blob, extension) {
     starState.isListening = false;
     starState.waitingForResponse = false;
     starState.currentQuestion = null;
+    responseSubmittedForCurrentWindow = false;
 
     if (starVideoTile) {
       starVideoTile.classList.remove("soft-listening");
@@ -1517,23 +1548,25 @@ document.addEventListener("DOMContentLoaded", function () {
       micControl.classList.remove("quiet-listening");
     }
 
-    dlog("recording stopped", { round: starState.roundNumber, chunks: recordingChunks.length });
+    diagLog("recording_stopped", { size: blob ? blob.size : 0 });
+    dlog("recording stopped", { round: starState.roundNumber, size: blob ? blob.size : 0 });
 
-    if (!recordingChunks.length) {
-      await handleNoSpeechHeard(question);
+    if (turnGuard && turnGuard.rejectIfStale(turnToken, "handleRecordingStop")) {
       return null;
     }
 
-    const blob = new Blob(recordingChunks, {
-      type: recordingChunks[0]?.type || "audio/webm"
-    });
+    if (!blob || !blob.size) {
+      await handleNoSpeechHeard(question, turnToken);
+      return null;
+    }
 
-    recordingChunks = [];
+    diagLog("audio_blob_created", { size: blob.size, type: blob.type });
 
     try {
       const formData = new FormData();
-      formData.append("audio", blob, "match-response.webm");
+      formData.append("audio", blob, `match-response.${extension || "webm"}`);
 
+      diagLog("upload_started", { size: blob.size, type: blob.type });
       dlog("transcribe request start", { round: starState.roundNumber, size: blob.size, type: blob.type });
 
       const response = await fetch("/api/matching-game/transcribe", {
@@ -1541,27 +1574,47 @@ document.addEventListener("DOMContentLoaded", function () {
         body: formData
       });
 
+      if (turnGuard && turnGuard.rejectIfStale(turnToken, "handleRecordingStop_transcribe_response")) {
+        return null;
+      }
+
       const data = await response.json();
+      diagLog("upload_completed", { ok: response.ok, success: !!data.success });
       dlog("transcribe response", { status: response.status, success: data.success, hasText: !!data.text });
 
       if (!data.success) {
-        await handleNoSpeechHeard(question);
+        await handleNoSpeechHeard(question, turnToken);
         return null;
       }
 
       const transcript = cleanTranscript(data.text || "");
+      diagLog("transcription_completed", { hasTranscript: !!transcript, length: transcript.length });
 
       if (!transcript) {
-        await handleNoSpeechHeard(question);
+        await handleNoSpeechHeard(question, turnToken);
         return null;
       }
 
-      await handleSpeechHeard(transcript, question);
+      if (turnGuard && turnGuard.rejectIfStale(turnToken, "handleRecordingStop_before_submit")) {
+        return null;
+      }
+
+      if (responseSubmittedForCurrentWindow) {
+        diagLog("duplicate_submission_rejected", { where: "handleRecordingStop" });
+        return null;
+      }
+      responseSubmittedForCurrentWindow = true;
+
+      diagLog("response_submission_started", {});
+      await handleSpeechHeard(transcript, question, turnToken);
       return transcript;
     } catch (error) {
       console.error("Transcription error:", error);
+      diagLog("error", { where: "handleRecordingStop", message: String(error && error.message || error) });
       dlog("transcribe request failed", error.message || error);
-      await handleNoSpeechHeard(question);
+      if (!(turnGuard && turnGuard.isStale(turnToken))) {
+        await handleNoSpeechHeard(question, turnToken);
+      }
       return null;
     }
   }
@@ -1629,7 +1682,12 @@ document.addEventListener("DOMContentLoaded", function () {
     return null;
   }
 
-  async function handleNoSpeechHeard(question = null) {
+  async function handleNoSpeechHeard(question = null, turnToken = null) {
+    if (turnGuard && turnGuard.rejectIfStale(turnToken, "handleNoSpeechHeard")) {
+      return;
+    }
+
+    diagLog("speech_not_detected", { askType: question?.askType || null });
     starState.silentWindows += 1;
 
     const isPlayAgainQuestion =
@@ -1688,7 +1746,13 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
-  async function handleSpeechHeard(transcript, question) {
+  async function handleSpeechHeard(transcript, question, turnToken = null) {
+    if (turnGuard && turnGuard.rejectIfStale(turnToken, "handleSpeechHeard")) {
+      return;
+    }
+
+    diagLog("live_transcript_received", { length: transcript.length });
+
     const words = countWords(transcript);
 
     starState.spokenResponses += 1;
@@ -2026,44 +2090,76 @@ document.addEventListener("DOMContentLoaded", function () {
       starState.roundsCompleted > 0 &&
       starState.lastSavedRoundsCompleted === starState.roundsCompleted
     ) {
-      return;
+      return true;
     }
 
     const minutesPlayed = getMinutesPlayed();
 
-    try {
-      await fetch("/api/matching-game/complete", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          activity_id: activityId,
-          words_spoken: starState.spokenWords,
-          minutes_spoken: Math.max(0, starState.spokenResponses * 0.08),
-          active_minutes: minutesPlayed,
-          time_spent_on_activity: minutesPlayed,
-          spoken_responses: starState.spokenResponses,
-          questions_asked: starState.starQuestionsAsked,
-          silent_windows: starState.silentWindows,
-          child_matches: starState.childMatches,
-          parent_matches: starState.parentMatches,
-          final_stage: starState.currentStage,
-          rounds_completed: starState.roundsCompleted,
-          wonder_prompts_asked: starState.wonderPromptsAsked,
-          help_prompts_asked: starState.helpPromptsAsked,
-          clear_prompts_asked: starState.clearPromptsAsked,
-          child_choice_responses: starState.childChoiceResponses,
-          child_opinion_responses: starState.childOpinionResponses,
-          child_clear_responses: starState.clearChildResponses,
-          direct_child_question_silences: starState.directChildQuestionSilences
-        })
-      });
+    const payload = {
+      activity_id: activityId,
+      words_spoken: starState.spokenWords,
+      minutes_spoken: Math.max(0, starState.spokenResponses * 0.08),
+      active_minutes: minutesPlayed,
+      time_spent_on_activity: minutesPlayed,
+      spoken_responses: starState.spokenResponses,
+      questions_asked: starState.starQuestionsAsked,
+      silent_windows: starState.silentWindows,
+      child_matches: starState.childMatches,
+      parent_matches: starState.parentMatches,
+      final_stage: starState.currentStage,
+      rounds_completed: starState.roundsCompleted,
+      wonder_prompts_asked: starState.wonderPromptsAsked,
+      help_prompts_asked: starState.helpPromptsAsked,
+      clear_prompts_asked: starState.clearPromptsAsked,
+      child_choice_responses: starState.childChoiceResponses,
+      child_opinion_responses: starState.childOpinionResponses,
+      child_clear_responses: starState.clearChildResponses,
+      direct_child_question_silences: starState.directChildQuestionSilences
+    };
 
-      starState.lastSavedRoundsCompleted = starState.roundsCompleted;
-    } catch (error) {
-      console.error("Could not save matching game completion:", error);
+    diagLog("completion_save_started", { roundsCompleted: starState.roundsCompleted });
+
+    // The endpoint is safe to call twice with the same rounds_completed
+    // (MAX()-based columns server-side, and it only appends a session_log
+    // row when the saved count actually increases), so one retry here
+    // cannot double-count progress.
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const response = await fetch("/api/matching-game/complete", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await response.json().catch(function () { return null; });
+
+        if (response.ok && data && data.success) {
+          starState.lastSavedRoundsCompleted = starState.roundsCompleted;
+          diagLog("completion_saved", { roundsCompleted: starState.roundsCompleted });
+          return true;
+        }
+
+        diagLog("recoverable_error", { where: "saveCompletion", attempt: attempt, status: response.status });
+      } catch (error) {
+        diagLog("recoverable_error", { where: "saveCompletion_network", attempt: attempt, message: String(error && error.message || error) });
+        console.error("Could not save matching game completion:", error);
+      }
+
+      if (attempt === 0) await sleep(500);
     }
+
+    // Previously this function silently believed the save had succeeded
+    // regardless of the response, so a real failure here would
+    // permanently and silently lose that round's progress (the next
+    // completeRound() would see lastSavedRoundsCompleted already "match"
+    // and skip saving again). Now it's surfaced in diagnostics instead --
+    // the game itself still continues normally, since match_cards has no
+    // single combined completion+redirect step this needs to block.
+    diagLog("fatal_error", { where: "saveCompletion", roundsCompleted: starState.roundsCompleted });
+    console.error("Match Cards: completion save failed after retry; this round's progress may not be recorded.");
+    return false;
   }
 
   function fadeOutToDashboard() {
@@ -2097,6 +2193,9 @@ document.addEventListener("DOMContentLoaded", function () {
     starState.isEnding = true;
     roundInProgress = false;
     lockBoard = true;
+
+    if (turnGuard) turnGuard.beginNewTurn();
+    diagLog("replay_requested", { where: "endGameWithGoodbye" });
 
     stopResponseWindow();
 
@@ -2167,14 +2266,15 @@ document.addEventListener("DOMContentLoaded", function () {
 
     dlog("round transition", { fromRound: starState.roundNumber, stage: getStarStage() });
 
+    // Invalidate whatever the previous round's turn was doing BEFORE
+    // anything else runs, so a late audio/recording callback from it
+    // can't mutate the round we're about to start.
+    if (turnGuard) turnGuard.beginNewTurn();
+    if (micManager) micManager.stopActive("start_next_round");
+
     nextRoundStarting = true;
 
     hideCompleteModalCompletely();
-
-    if (starAudio) {
-      starAudio.pause();
-      starAudio.currentTime = 0;
-    }
 
     stopResponseWindow();
     stopMouthAnimation();
@@ -2272,16 +2372,25 @@ document.addEventListener("DOMContentLoaded", function () {
     acceptCall.disabled = true;
     declineCall.disabled = true;
 
+    // Must happen synchronously inside this real click handler: resuming
+    // or creating the shared AudioContext here, inside a genuine user
+    // gesture, is what lets later programmatic audio.play() calls (from
+    // async continuations further down) succeed under browsers'
+    // autoplay policies.
+    if (audioManager) audioManager.unlock();
+    diagLog("accept_call_clicked", {});
+
     stopRingtone();
     playCallAcceptedSound();
 
     const microphoneStream = await ensureMicPermission();
 
-if (!microphoneStream) {
-  console.warn(
-    "Match Cards started without microphone access."
-  );
-}
+    if (!microphoneStream) {
+      diagLog("microphone_track_not_ready", { reason: "startGameAfterCall_ensureMicPermission_failed" });
+      console.warn(
+        "Match Cards started without microphone access."
+      );
+    }
 
     await loadSavedMatchingProgress();
 
@@ -2325,13 +2434,11 @@ function resetStagePromptState() {
 async function jumpToMatchingRound(targetRound) {
   if (starState.isEnding || nextRoundStarting) return;
 
+  if (turnGuard) turnGuard.beginNewTurn();
+  if (micManager) micManager.stopActive("jump_to_round");
+
   stopResponseWindow();
   stopMouthAnimation();
-
-  if (starAudio) {
-    starAudio.pause();
-    starAudio.currentTime = 0;
-  }
 
   hideCompleteModalCompletely();
 
@@ -2435,11 +2542,22 @@ if (developerThingy) {
 
   setTimeout(startRingtone, 400);
 
+  // The ringtone's first autoplay attempt (above) has no user gesture
+  // behind it and can be silently blocked. If that happens, retry once
+  // on the very first real interaction with the page.
+  window.addEventListener("pointerdown", function retryRingtoneOnFirstInteraction() {
+    if (!ringtoneStarted) startRingtone();
+  }, { once: true });
+
   acceptCall.addEventListener("click", startGameAfterCall);
 
   declineCall.addEventListener("click", function () {
     acceptCall.disabled = true;
     declineCall.disabled = true;
+
+    if (turnGuard) turnGuard.beginNewTurn();
+    if (audioManager) audioManager.cancelActive("decline_call");
+    diagLog("game_exited", { where: "decline_call" });
 
     stopRingtone();
     playCallAcceptedSound();
@@ -2452,9 +2570,14 @@ if (developerThingy) {
 
   if (restartBtn) {
     restartBtn.addEventListener("click", function () {
+      diagLog("retry_requested", { where: "restartBtn" });
       startNextRound({ skipIntroLine: false });
     });
   }
 
-  window.addEventListener("beforeunload", cleanupMedia);
+  window.addEventListener("beforeunload", function () {
+    if (turnGuard) turnGuard.beginNewTurn();
+    if (audioManager) audioManager.cancelActive("beforeunload");
+    cleanupMedia();
+  });
 });

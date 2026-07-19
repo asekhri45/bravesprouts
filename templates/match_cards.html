@@ -3,7 +3,11 @@
 {% block head %}
 {{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/match_cards.css') }}?v=8">
-<script src="{{ url_for('static', filename='js/match_cards.js') }}?v=8" defer></script>
+<script src="{{ url_for('static', filename='js/game-diagnostics.js') }}?v=1" defer></script>
+<script src="{{ url_for('static', filename='js/game-audio-manager.js') }}?v=1" defer></script>
+<script src="{{ url_for('static', filename='js/game-mic-manager.js') }}?v=1" defer></script>
+<script src="{{ url_for('static', filename='js/game-turn-guard.js') }}?v=1" defer></script>
+<script src="{{ url_for('static', filename='js/match_cards.js') }}?v=9" defer></script>
 {% endblock %}
 
 {% block title %}Match Cards{% endblock %}

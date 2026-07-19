@@ -62,7 +62,6 @@
     var diagnostics = options.diagnostics || null;
 
     var activeRecorder = null;
-    var activeStream = null;
 
     function log(eventName, details) {
       if (diagnostics) diagnostics.log(eventName, details);
@@ -96,10 +95,17 @@
     }
 
     /**
-     * Stops and cleans up whatever recorder/stream is currently active, if
-     * any. Safe to call even when nothing is active. Call this before
-     * starting a new recording (startRecording does this itself) and on
-     * restart/exit.
+     * Stops whatever recorder is currently active, if any. Safe to call
+     * even when nothing is active. Call this before starting a new
+     * recording (startRecording does this itself) and on restart/exit.
+     *
+     * Deliberately does NOT touch the underlying stream -- some games
+     * (Mystery Animal) request a fresh stream per turn and expect it
+     * released with the recorder; others (Match Cards) intentionally
+     * reuse one persistent stream across many recordings to avoid
+     * repeated permission prompts. Stream lifecycle is the caller's call;
+     * use stopStreamTracks(stream) explicitly when a game actually wants
+     * to release its stream (e.g. on page exit).
      */
     function stopActive(reason) {
       if (activeRecorder && activeRecorder.state !== "inactive") {
@@ -108,11 +114,6 @@
         } catch (e) { /* ignore */ }
       }
       activeRecorder = null;
-
-      if (activeStream) {
-        stopStreamTracks(activeStream);
-        activeStream = null;
-      }
 
       log("recording_cleanup", { reason: reason || "stop_active" });
     }
@@ -134,7 +135,6 @@
       var extension = extensionForMimeType(mimeType);
 
       stopActive("superseded_by_new_recording");
-      activeStream = stream;
 
       var chunks = [];
       var recorder;
