@@ -19207,28 +19207,52 @@ def make_library_guessing_game_correct_round_response(
     game_state["game_complete"] = True
 
     if rounds_completed >= LIBRARY_GUESSING_GAME_MAX_ROUNDS:
-        unlock_library_guessing_game_next_activity_for_user()
+        unlock_ok = unlock_library_guessing_game_next_activity_for_user()
+        if not unlock_ok:
+            app.logger.warning(
+                "Library Guessing Game: failed to unlock next activity after final round (user_id=%s)",
+                session.get("user_id")
+            )
 
         message = (
             f"{base_message} "
             "That was our last one for today. "
             "This was a fun call. I'll see you next time. Bye."
         )
+        next_url = url_for("dashboard")
 
-        return make_library_guessing_game_audio_response(
-            message=message,
-            stage="session_done",
-            response_mode="none",
-            expects_response=False,
-            game_complete=True,
-            game_state=game_state,
-            history=history,
-            event_type=event_type,
-            child_response=child_response,
-            next_url=url_for("dashboard"),
-            redirect_after_ms=1800,
-            session_done=True
-        )
+        try:
+            return make_library_guessing_game_audio_response(
+                message=message,
+                stage="session_done",
+                response_mode="none",
+                expects_response=False,
+                game_complete=True,
+                game_state=game_state,
+                history=history,
+                event_type=event_type,
+                child_response=child_response,
+                next_url=next_url,
+                redirect_after_ms=1800,
+                session_done=True
+            )
+        except Exception as e:
+            # The round-progress and unlock writes above already committed --
+            # make_library_guessing_game_audio_response() also already
+            # updated session history/state before its TTS call raised, so
+            # only the goodbye line's audio is missing. That must not be
+            # reported as a failure on top of a completion that already
+            # genuinely happened.
+            app.logger.warning(
+                "Library Guessing Game goodbye TTS failed after completion committed: %r", e
+            )
+
+            return jsonify(recoverable_completion_payload(
+                next_url=next_url,
+                game_state=game_state,
+                redirect_after_ms=1800,
+                extra_fields={"response_mode": "none", "offer_next_game": False}
+            ))
 
     if rounds_completed == LIBRARY_GUESSING_GAME_MAX_ROUNDS - 1:
         message = f"{base_message} Would you like to play the last round, or be done with the game for now?"
@@ -19902,7 +19926,8 @@ def library_guessing_game_transcribe():
     if "audio" not in request.files:
         return jsonify({
             "success": False,
-            "error": "Missing audio"
+            "error": "Missing audio",
+            "error_category": "invalid_recording"
         }), 400
 
     audio_file = request.files["audio"]
@@ -19915,11 +19940,12 @@ def library_guessing_game_transcribe():
         if not audio_bytes:
             return jsonify({
                 "success": False,
-                "error": "Empty audio file"
+                "error": "Empty audio file",
+                "error_category": "invalid_recording"
             }), 400
 
         file_obj = io.BytesIO(audio_bytes)
-        file_obj.name = "library-guessing-response.webm"
+        file_obj.name = transcription_upload_filename(audio_file)
 
         transcript = client.audio.transcriptions.create(
             model="gpt-4o-mini-transcribe",
@@ -19935,12 +19961,21 @@ def library_guessing_game_transcribe():
             "text": text
         })
 
+    except OpenAITimeoutError as e:
+        app.logger.warning("Library Guessing Game transcription timeout: %r", e)
+        return jsonify({
+            "success": False,
+            "error": "We couldn't hear that in time. Let's try again.",
+            "error_category": "transcription_timeout"
+        }), 504
+
     except Exception as e:
         print("Library Guessing Game transcription error:", repr(e))
         return jsonify({
             "success": False,
-            "error": str(e)
-        }), 500
+            "error": "We couldn't hear that. Let's try again.",
+            "error_category": "upstream_service_error"
+        }), 502
 
 
 @app.route("/parent-resources")
