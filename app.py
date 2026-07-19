@@ -277,6 +277,47 @@ def transcription_upload_filename(uploaded_file):
 
     return "child-response.webm"
 
+
+def recoverable_completion_payload(
+    next_url,
+    game_state=None,
+    stage="session_done",
+    game_complete=True,
+    session_done=True,
+    redirect_after_ms=400,
+    extra_fields=None
+):
+    """
+    Standard shape for "the database write already committed, but the
+    final goodbye/completion TTS failed" -- established for Mystery
+    Animal's end_mystery_call(). A game's completion path should call
+    this ONLY after confirming its own progress/unlock write actually
+    succeeded; it must never be used to paper over a genuine database
+    failure (that must still raise/return an error response).
+
+    `extra_fields` lets a game merge in whatever additional keys its own
+    payload shape normally includes (e.g. response_mode, expects_response)
+    without this helper needing to know every game's exact contract.
+    """
+    payload = {
+        "success": True,
+        "stage": stage,
+        "expects_response": False,
+        "game_complete": game_complete,
+        "session_done": session_done,
+        "game_state": game_state if game_state is not None else {},
+        "audio_parts": [],
+        "audio_available": False,
+        "error_category": "tts_unavailable",
+        "next_url": next_url,
+        "redirect_after_ms": redirect_after_ms
+    }
+
+    if extra_fields:
+        payload.update(extra_fields)
+
+    return payload
+
 MATCHING_GAME_TARGET_ROUNDS = 12
 
 
@@ -8611,20 +8652,12 @@ def mystery_animal_message():
             session["mystery_animal_state"] = game_state
             session.modified = True
 
-            return jsonify({
-                "success": True,
-                "stage": "session_done",
-                "expects_response": False,
-                "response_mode": "none",
-                "game_complete": unlock_next,
-                "session_done": True,
-                "game_state": game_state,
-                "audio_parts": [],
-                "audio_available": False,
-                "error_category": "tts_unavailable",
-                "next_url": next_url,
-                "redirect_after_ms": 400
-            })
+            return jsonify(recoverable_completion_payload(
+                next_url=next_url,
+                game_state=game_state,
+                game_complete=unlock_next,
+                extra_fields={"response_mode": "none"}
+            ))
 
     def finish_mystery_round(base_message, game_state, history, event_label):
         rounds_completed = int(game_state.get("rounds_completed", 0))
