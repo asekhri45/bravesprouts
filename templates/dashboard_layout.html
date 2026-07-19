@@ -240,53 +240,6 @@
     </div>
   </div>
 
-  <!-- Bottom-right widget -->
-  <div
-  class="feedback-widget {% if show_feedback_widget %}active{% endif %}"
-  id="feedbackFloatingBtn"
-  role="button"
-  tabindex="0"
-  aria-label="Open feedback survey"
->
-  <button
-    type="button"
-    class="feedback-widget-close"
-    id="feedbackWidgetCloseBtn"
-    aria-label="Close feedback prompt"
-  >
-    ×
-  </button>
-
-  <img
-    src="{{ url_for('static', filename='images/feedback_star_widget.png') }}"
-    alt="Star"
-    class="feedback-widget-star"
-  >
-
-  <div class="feedback-widget-card">
-    <div class="feedback-widget-copy">
-      <strong>Got 30 secs?</strong>
-      <span>Help make MyBraveSprout better!</span>
-      <small>Your feedback helps other children with selective mutism.</small>
-    </div>
-
-    <button
-      type="button"
-      class="feedback-widget-button"
-      id="feedbackWidgetSurveyBtn"
-    >
-      Take Survey
-      <span aria-hidden="true">↗</span>
-    </button>
-  </div>
-</div>
-
-  <!-- Thank-you toast -->
-  <div class="feedback-thanks-toast" id="feedbackThanks">
-    💜 Thank you! Your feedback will help us improve MyBraveSprout.
-  </div>
-</div>
-
 {% block page_js %}{% endblock %}
 
 {% endblock %}
