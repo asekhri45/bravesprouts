@@ -11,20 +11,18 @@ document.addEventListener("DOMContentLoaded", function () {
   const guessResponsePanel = document.getElementById("guessResponsePanel");
   const guessRoundNumber = document.getElementById("guessRoundNumber");
 
-  let starAudio = null;
-  let audioContext = null;
-  let analyser = null;
-  let sourceNode = null;
-  let mouthAnimationFrame = null;
-
-  let mediaRecorder = null;
-  let audioChunks = [];
   let isListening = false;
   let maxRecordTimer = null;
 
   let currentResponseMode = "none";
   let currentStage = "intro";
   let offerNextGame = false;
+
+  // Declared early because the diagnostics session's getState() callback
+  // (and logTimed()) reference these -- see the temporal-dead-zone note
+  // in the Mystery Animal reference implementation.
+  let currentTurnToken = 0;
+  let lastKnownMimeType = null;
 
   let activeStream = null;
   let micAudioContext = null;
@@ -74,6 +72,50 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function dlog(...args) {
     if (window.APP_DEBUG) console.log(`[guessing_game:${activityId}]`, ...args);
+  }
+
+  const diagnostics = window.GameDiagnostics
+    ? window.GameDiagnostics.createSession({
+        game: "guessing_game",
+        activityId: activityId,
+        getState: function () {
+          return {
+            stage: currentStage,
+            responseMode: currentResponseMode,
+            gameActive: gameActive,
+            sessionDone: sessionDone,
+            isListening: isListening,
+            waitingForStarResponse: waitingForStarResponse,
+            turnToken: currentTurnToken,
+            recorderMimeType: lastKnownMimeType
+          };
+        }
+      })
+    : null;
+
+  const audioManager = window.GameAudioManager
+    ? window.GameAudioManager.create({ diagnostics: diagnostics })
+    : null;
+
+  const micManager = window.GameMicManager
+    ? window.GameMicManager.create({ diagnostics: diagnostics })
+    : null;
+
+  const turnGuard = window.GameTurnGuard
+    ? window.GameTurnGuard.create({ diagnostics: diagnostics })
+    : null;
+
+  function diagLog(eventName, details) {
+    if (diagnostics) diagnostics.log(eventName, details);
+  }
+
+  function beginNewTurn() {
+    currentTurnToken = turnGuard ? turnGuard.beginNewTurn() : currentTurnToken + 1;
+    return currentTurnToken;
+  }
+
+  function isTurnStale(token) {
+    return turnGuard ? turnGuard.isStale(token) : false;
   }
 
   const ringtone = new Audio("/static/images/ringtone.mp3");
@@ -361,9 +403,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
     if (SpeechRecognition) return;
 
+    const tokenAtCall = currentTurnToken;
+
     setTimeout(function () {
+      if (isTurnStale(tokenAtCall)) return;
       if (!isListening && !waitingForStarResponse && gameActive && !sessionDone) {
-        startListeningForChild();
+        startListeningForChild(tokenAtCall);
       }
     }, 250);
   }
@@ -435,6 +480,7 @@ document.addEventListener("DOMContentLoaded", function () {
       silentRetryCount = 0;
     }
 
+    const turnToken = beginNewTurn();
     waitingForStarResponse = true;
     hideResponseButtons();
     setListeningUI(false);
@@ -447,6 +493,9 @@ document.addEventListener("DOMContentLoaded", function () {
     } else {
       setStatus("Star is getting ready.");
     }
+
+    diagLog("prompt_requested", { eventType: eventType });
+    const requestedAt = diagnostics ? diagnostics.now() : Date.now();
 
     try {
       const response = await fetch("/api/guessing-game/message", {
@@ -463,9 +512,15 @@ document.addEventListener("DOMContentLoaded", function () {
       });
 
       const data = await response.json();
+      if (diagnostics) diagnostics.logTimed("backend_response_received", requestedAt, { eventType: eventType, ok: response.ok });
       console.log("⭐ Guessing Game Star response:", data);
 
       stopThinkingFiller();
+
+      if (isTurnStale(turnToken)) {
+        diagLog("stale_callback_rejected", { where: "requestStarMessage_response", staleTurnToken: turnToken, currentTurnToken: currentTurnToken });
+        return;
+      }
 
       if (!response.ok || !data.success) {
         throw new Error(data.error || "Star response failed");
@@ -482,64 +537,95 @@ document.addEventListener("DOMContentLoaded", function () {
       const nextUrl = data.next_url || null;
       const redirectAfterMs = Number(data.redirect_after_ms || 0);
 
-      playStarAudio(data.audio, expectsResponse, function () {
-        if (nextUrl) {
-          sessionDone = true;
-          gameActive = false;
-          setStatus("Calling you right back.", true);
-          playCallAcceptedSound();
+      const playbackResult = await playCurrentPrompt(data.audio, turnToken);
 
-          if (guessPage) {
-            guessPage.classList.add("call-ending-transition");
+      if (isTurnStale(turnToken)) {
+        diagLog("stale_callback_rejected", { where: "requestStarMessage_after_playback", staleTurnToken: turnToken, currentTurnToken: currentTurnToken });
+        return;
+      }
+
+      if (playbackResult.status !== "ended" && playbackResult.status !== "cancelled" && playbackResult.status !== "skipped_no_audio") {
+        // A required prompt genuinely failed to play (not merely
+        // cancelled/superseded). Never enter listening for a question the
+        // child was never actually asked -- pause here instead.
+        diagLog("prompt_failed", { eventType: eventType, status: playbackResult.status });
+        setStatus("Tap to hear that again.", true);
+        showReplayButton(function () {
+          requestStarMessage(eventType, childResponse);
+        });
+        return;
+      }
+
+      diagLog("prompt_ended", { eventType: eventType });
+
+      if (nextUrl) {
+        sessionDone = true;
+        gameActive = false;
+        setStatus("Calling you right back.", true);
+        playCallAcceptedSound();
+
+        if (guessPage) {
+          guessPage.classList.add("call-ending-transition");
+        }
+
+        diagLog("redirect_initiated", { nextUrl: nextUrl });
+
+        setTimeout(function () {
+          window.location.href = nextUrl;
+        }, redirectAfterMs || 1500);
+
+        return;
+      }
+
+      if (data.session_done) {
+        sessionDone = true;
+        gameActive = false;
+        setStatus("Game finished.", true);
+        return;
+      }
+
+      if (nextEvent) {
+        setStatus("Take a second.", true);
+
+        setTimeout(function () {
+          if (isTurnStale(turnToken)) {
+            diagLog("stale_callback_rejected", { where: "nextEvent_timeout", staleTurnToken: turnToken, currentTurnToken: currentTurnToken });
+            return;
           }
+          requestStarMessage(nextEvent);
+        }, pauseBeforeNext);
 
-          setTimeout(function () {
-            window.location.href = nextUrl;
-          }, redirectAfterMs || 1500);
+        return;
+      }
 
-          return;
-        }
-
-        if (data.session_done) {
-          sessionDone = true;
-          gameActive = false;
-          setStatus("Game finished.", true);
-          return;
-        }
-
-        if (nextEvent) {
-          setStatus("Take a second.", true);
-
-          setTimeout(function () {
-            requestStarMessage(nextEvent);
-          }, pauseBeforeNext);
-
-          return;
-        }
-
-        if (expectsResponse && gameActive && !sessionDone) {
-          setTimeout(function () {
-            startListeningForChild();
-          }, 150);
-        }
-      });
+      if (expectsResponse && gameActive && !sessionDone) {
+        diagLog("round_advanced", { stage: currentStage });
+        setTimeout(function () {
+          if (isTurnStale(turnToken)) return;
+          startListeningForChild(turnToken);
+        }, 150);
+      }
     } catch (error) {
       stopThinkingFiller();
       console.error("Guessing Game request error:", error);
-      setStatus("Something got quiet. You can try again.");
+      diagLog("error", { where: "requestStarMessage", message: String(error && error.message || error) });
+      if (!isTurnStale(turnToken)) {
+        setStatus("Something got quiet. You can try again.");
+      }
     } finally {
       waitingForStarResponse = false;
     }
   }
 
-  async function startListeningForChild() {
+  async function startListeningForChild(turnToken) {
     if (isListening || waitingForStarResponse || sessionDone || !gameActive) return;
+    if (isTurnStale(turnToken)) return;
 
     roundResolved = false;
 
     hideResponseButtons();
-    setListeningUI(true);
-    showResponseButtons(currentResponseMode);
+    // "Listening" is intentionally NOT shown here -- only once
+    // MediaRecorder's real `start` event fires (see startAudioRecorderFallback).
 
     // MediaRecorder always captures the full response window from this
     // point forward, regardless of whether SpeechRecognition is available
@@ -549,9 +635,18 @@ document.addEventListener("DOMContentLoaded", function () {
     // fires a usable result, the recorder (already running since t=0) still
     // has the child's full response and gets sent to the server -- no
     // audio spoken before a recognition error/timeout is lost.
-    await startAudioRecorderFallback();
+    const recorderStarted = await startAudioRecorderFallback(turnToken);
 
-    if (roundResolved || sessionDone || !gameActive) return;
+    if (roundResolved || sessionDone || !gameActive || isTurnStale(turnToken)) return;
+
+    if (!recorderStarted) {
+      diagLog("recovery_started", { action: "mic_unavailable_offer_retry" });
+      setStatus("I can't hear you right now.", true);
+      showReplayButton(function () {
+        startListeningForChild(turnToken);
+      });
+      return;
+    }
 
     if (SpeechRecognition) {
       startLiveSpeechRecognition();
@@ -719,13 +814,9 @@ document.addEventListener("DOMContentLoaded", function () {
     clearMaxRecordTimer();
     cleanupMicAnalysis();
 
-    if (mediaRecorder && mediaRecorder.state !== "inactive") {
+    if (micManager && micManager.isRecording()) {
       ignoreNextRecording = true;
-      try {
-        mediaRecorder.stop();
-      } catch (error) {
-        console.error("Could not cancel concurrent recorder:", error);
-      }
+      micManager.stopActive("live_transcript_won_race");
     } else {
       stopActiveStream();
     }
@@ -772,90 +863,124 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
-  async function startAudioRecorderFallback() {
-    if (sessionDone || !gameActive) return;
+  async function startAudioRecorderFallback(turnToken) {
+    if (sessionDone || !gameActive) return false;
 
     dlog("recorder fallback: requesting mic");
+    diagLog("microphone_permission_requested", {});
 
+    let stream;
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch (error) {
+      diagLog("microphone_permission_denied", { message: String(error && error.message || error) });
+      console.error("Microphone error:", error);
+      dlog("mic permission error", error.name || error);
+      return false;
+    }
 
-      activeStream = stream;
-      audioChunks = [];
-      speechDetected = false;
-      firstSpeechAt = 0;
-      ignoreNextRecording = false;
+    if (isTurnStale(turnToken) || sessionDone || !gameActive) {
+      stream.getTracks().forEach(function (track) { track.stop(); });
+      diagLog("stale_callback_rejected", { where: "getUserMedia", staleTurnToken: turnToken, currentTurnToken: currentTurnToken });
+      return false;
+    }
 
-      mediaRecorder = new MediaRecorder(stream);
-      isListening = true;
-      recordStartedAt = Date.now();
-      lastSpeechAt = recordStartedAt;
+    diagLog("microphone_permission_granted", {});
 
-      setListeningUI(true);
-      showResponseButtons(currentResponseMode);
+    if (!micManager) {
+      console.warn("Guessing Game: shared mic manager unavailable.");
+      stream.getTracks().forEach(function (track) { track.stop(); });
+      return false;
+    }
 
-      mediaRecorder.addEventListener("dataavailable", function (event) {
-        if (event.data && event.data.size > 0) audioChunks.push(event.data);
-      });
+    activeStream = stream;
+    speechDetected = false;
+    firstSpeechAt = 0;
+    ignoreNextRecording = false;
 
-      mediaRecorder.addEventListener("stop", async function () {
-        const shouldIgnore = ignoreNextRecording;
-
-        isListening = false;
-        setListeningUI(false);
-        hideResponseButtons();
-        clearMaxRecordTimer();
-        cleanupMicAnalysis();
-        stopActiveStream();
-
-        if (shouldIgnore || roundResolved) {
-          ignoreNextRecording = false;
-          return;
-        }
-
-        // The recorder is the authoritative end of the response window now
-        // (SpeechRecognition, if it was running, is only useful if it wins
-        // the race before this fires) -- stop it so a late onresult/onerror
-        // can't also try to resolve this same round.
-        roundResolved = true;
-        if (recognitionActive || recognition) stopLiveSpeechRecognition(true);
-
-        const audioBlob = new Blob(audioChunks, { type: "audio/webm" });
-        dlog("recording stopped", { size: audioBlob.size, type: audioBlob.type, speechDetected });
-
-        if (!audioBlob.size || !speechDetected) {
-          if (silentRetryCount < 1 && currentResponseMode !== "round_choice_voice" && currentResponseMode !== "round_choice") {
-            silentRetryCount += 1;
-            setStatus("I’m listening.");
-            setTimeout(function () {
-              startListeningForChild();
-            }, 250);
+    return new Promise(resolve => {
+      micManager.startRecording(stream, {
+        onStart: function (info) {
+          if (isTurnStale(turnToken)) {
+            micManager.stopActive("stale_turn_after_start");
+            resolve(false);
             return;
           }
 
-          resetThinkingState();
-          silentRetryCount = 0;
-          await requestStarMessage("no_response", "");
-          return;
+          lastKnownMimeType = info ? info.mimeType : null;
+          isListening = true;
+          recordStartedAt = Date.now();
+          lastSpeechAt = recordStartedAt;
+          setListeningUI(true);
+          showResponseButtons(currentResponseMode);
+
+          setupMicSilenceDetection(stream);
+
+          maxRecordTimer = setTimeout(function () {
+            stopListeningForChild();
+          }, getBackupListeningDuration());
+
+          resolve(true);
+        },
+        onStop: async function (blob, mimeType, extension, wasActive) {
+          if (!wasActive) return;
+
+          const shouldIgnore = ignoreNextRecording;
+
+          isListening = false;
+          setListeningUI(false);
+          hideResponseButtons();
+          clearMaxRecordTimer();
+          cleanupMicAnalysis();
+          stopActiveStream();
+
+          diagLog("recording_stopped", { size: blob.size, speechDetected: speechDetected });
+
+          if (shouldIgnore || roundResolved) {
+            ignoreNextRecording = false;
+            return;
+          }
+
+          // The recorder is the authoritative end of the response window now
+          // (SpeechRecognition, if it was running, is only useful if it wins
+          // the race before this fires) -- stop it so a late onresult/onerror
+          // can't also try to resolve this same round.
+          roundResolved = true;
+          if (recognitionActive || recognition) stopLiveSpeechRecognition(true);
+
+          dlog("recording stopped", { size: blob.size, type: blob.type, speechDetected });
+
+          if (!blob.size || !speechDetected) {
+            if (silentRetryCount < 1 && currentResponseMode !== "round_choice_voice" && currentResponseMode !== "round_choice") {
+              silentRetryCount += 1;
+              setStatus("I’m listening.");
+              setTimeout(function () {
+                if (isTurnStale(turnToken)) return;
+                startListeningForChild(turnToken);
+              }, 250);
+              return;
+            }
+
+            resetThinkingState();
+            silentRetryCount = 0;
+            await requestStarMessage("no_response", "");
+            return;
+          }
+
+          diagLog("audio_blob_created", { size: blob.size, type: blob.type });
+          await sendAudioToTranscribe(blob, turnToken, extension);
+        },
+        onError: function (error) {
+          diagLog("error", { where: "startAudioRecorderFallback", message: String(error && error.message || error) });
+          console.error("Microphone error:", error);
+          isListening = false;
+          setListeningUI(false);
+          showResponseButtons(currentResponseMode);
+          setStatus("Microphone unavailable. Check your permission and try again.");
+          resolve(false);
         }
-
-        await sendAudioToTranscribe(audioBlob);
       });
-
-      mediaRecorder.start();
-      setupMicSilenceDetection(stream);
-
-      maxRecordTimer = setTimeout(function () {
-        stopListeningForChild();
-      }, getBackupListeningDuration());
-    } catch (error) {
-      console.error("Microphone error:", error);
-      dlog("mic permission error", error.name || error);
-      isListening = false;
-      setListeningUI(false);
-      showResponseButtons(currentResponseMode);
-      setStatus("Microphone unavailable. Check your permission and try again.");
-    }
+    });
   }
 
   function stopListeningForChild() {
@@ -867,17 +992,13 @@ document.addEventListener("DOMContentLoaded", function () {
       stopLiveSpeechRecognition(true);
     }
 
-    if (!mediaRecorder || mediaRecorder.state === "inactive") {
+    if (!micManager || !micManager.isRecording()) {
       setListeningUI(false);
       hideResponseButtons();
       return;
     }
 
-    try {
-      mediaRecorder.stop();
-    } catch (error) {
-      console.error("Could not stop recorder:", error);
-    }
+    micManager.stopActive("response_window_ended");
   }
 
   function cancelListening() {
@@ -886,18 +1007,16 @@ document.addEventListener("DOMContentLoaded", function () {
 
     if (recognitionActive || recognition) stopLiveSpeechRecognition(true);
 
-    if (!isListening && !mediaRecorder) return;
+    const wasRecording = micManager && micManager.isRecording();
+
+    if (!isListening && !wasRecording) return;
 
     ignoreNextRecording = true;
     clearMaxRecordTimer();
     cleanupMicAnalysis();
 
-    if (mediaRecorder && mediaRecorder.state !== "inactive") {
-      try {
-        mediaRecorder.stop();
-      } catch (error) {
-        console.error("Could not cancel recorder:", error);
-      }
+    if (wasRecording) {
+      micManager.stopActive("cancel_listening");
     } else {
       stopActiveStream();
       setListeningUI(false);
@@ -1009,26 +1128,42 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
-  async function sendAudioToTranscribe(audioBlob) {
+  const TRANSCRIBE_TIMEOUT_MS = 30000;
+
+  async function sendAudioToTranscribe(audioBlob, turnToken, extension) {
     setStatus("Star is thinking.");
     stopThinkingFiller();
     dlog("transcribe request start", { size: audioBlob.size, type: audioBlob.type });
+    diagLog("upload_started", { size: audioBlob.size, type: audioBlob.type });
+
+    const controller = new AbortController();
+    const timeoutHandle = setTimeout(function () { controller.abort(); }, TRANSCRIBE_TIMEOUT_MS);
 
     try {
       const formData = new FormData();
-      formData.append("audio", audioBlob, "child-response.webm");
+      formData.append("audio", audioBlob, `child-response.${extension || "webm"}`);
 
       const response = await fetch("/api/guessing-game/transcribe", {
         method: "POST",
         credentials: "same-origin",
-        body: formData
+        body: formData,
+        signal: controller.signal
       });
+
+      clearTimeout(timeoutHandle);
+
+      if (isTurnStale(turnToken)) {
+        diagLog("stale_callback_rejected", { where: "sendAudioToTranscribe_response", staleTurnToken: turnToken, currentTurnToken: currentTurnToken });
+        return;
+      }
 
       const data = await response.json();
       stopThinkingFiller();
+      diagLog("upload_completed", { ok: response.ok, success: !!data.success });
       dlog("transcribe response", { status: response.status, success: data.success, hasText: !!data.text });
 
       if (!response.ok || !data.success) {
+        diagLog("error", { where: "transcribe", category: data.error_category || "unknown" });
         resetThinkingState();
         silentRetryCount = 0;
         setStatus("We couldn't hear that. Try again.");
@@ -1037,6 +1172,7 @@ document.addEventListener("DOMContentLoaded", function () {
       }
 
       const transcript = (data.text || "").trim();
+      diagLog("transcription_completed", { hasTranscript: !!transcript, length: transcript.length });
 
       if (!transcript) {
         resetThinkingState();
@@ -1061,7 +1197,16 @@ document.addEventListener("DOMContentLoaded", function () {
       resetThinkingState();
       await requestStarMessage("child_answer", cleanedTranscript);
     } catch (error) {
+      clearTimeout(timeoutHandle);
       stopThinkingFiller();
+
+      if (isTurnStale(turnToken)) {
+        diagLog("stale_callback_rejected", { where: "sendAudioToTranscribe_catch", staleTurnToken: turnToken, currentTurnToken: currentTurnToken });
+        return;
+      }
+
+      const category = error && error.name === "AbortError" ? "transcription_timeout" : "network_failure";
+      diagLog("error", { where: "transcribe", category: category, message: String(error && error.message || error) });
       console.error("Transcription request error:", error);
       dlog("transcribe request failed", error.message || error);
       resetThinkingState();
@@ -1070,175 +1215,128 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
-  function playStarAudio(audioSrc, expectsResponse = true, onEnded = null) {
+  let currentMouthState = "closed";
+
+  function updateMouthFromLevel(level) {
+    const mouth = document.getElementById("starMouth");
+    if (!mouth) return;
+
+    const average = level * 255;
+    const normalized = Math.min(Math.max((average - 10) / 70, 0), 1);
+    const scaleX = 1 + normalized * 0.18;
+    const scaleY = 1 + normalized * 0.32;
+
+    function setMouth(state, sx, sy) {
+      if (currentMouthState !== state) {
+        mouth.src = `/static/images/mouth-${state}.png`;
+        currentMouthState = state;
+      }
+      mouth.style.transform = `translateX(-50%) scale(${sx}, ${sy})`;
+    }
+
+    if (average < 14) setMouth("closed", 1, 1);
+    else if (average < 34) setMouth("small", scaleX, scaleY);
+    else if (average < 58) setMouth("medium", scaleX, scaleY);
+    else setMouth("wide", scaleX, scaleY);
+  }
+
+  function stopMouthAnimation() {
+    if (audioManager) audioManager.cancelActive("stop_mouth_animation");
+
+    const mouth = document.getElementById("starMouth");
+    if (mouth) {
+      mouth.src = "/static/images/mouth-closed.png";
+      mouth.style.transform = "translateX(-50%) scale(1)";
+      currentMouthState = "closed";
+    }
+  }
+
+  function showReplayButton(onClick) {
+    if (!guessResponsePanel) {
+      onClick();
+      return;
+    }
+
+    guessResponsePanel.innerHTML = "";
+
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "guess-response-btn";
+    btn.textContent = "Tap to continue";
+
+    btn.addEventListener("click", function () {
+      guessResponsePanel.classList.add("hide");
+      guessResponsePanel.innerHTML = "";
+      if (audioManager) audioManager.unlock();
+      onClick();
+    }, { once: true });
+
+    guessResponsePanel.appendChild(btn);
+    guessResponsePanel.classList.remove("hide");
+  }
+
+  // Plays exactly one clip as THE authoritative Star audio and resolves
+  // with audioManager's honest status. Unlike Mystery Animal/Match Cards,
+  // this game's backend sends a single `data.audio` clip per turn (no
+  // multi-part sequence), so there is no per-part loop here.
+  async function playCurrentPrompt(audioSrc, turnToken) {
     if (!audioSrc) {
       stopMouthAnimation();
-      if (onEnded) onEnded();
-      return;
+      return { status: "skipped_no_audio" };
     }
 
     stopThinkingFiller();
 
     if (isListening || recognitionActive) cancelListening();
 
-    if (starAudio) {
-      starAudio.pause();
-      starAudio.currentTime = 0;
-    }
-
-    stopMouthAnimation();
     hideResponseButtons();
     setStatus("", false);
 
-    starAudio = new Audio(audioSrc);
-    starAudio.volume = 1.0;
-    starAudio.playbackRate = 0.94;
-    starAudio.preservesPitch = false;
-    starAudio.mozPreservesPitch = false;
-    starAudio.webkitPreservesPitch = false;
+    if (!audioManager) {
+      return new Promise(resolve => {
+        const audio = new Audio(audioSrc);
+        audio.volume = 1.0;
+        audio.playbackRate = 0.94;
+        audio.addEventListener("ended", function () { resolve({ status: "ended" }); }, { once: true });
+        audio.addEventListener("error", function () { resolve({ status: "error" }); }, { once: true });
+        const p = audio.play();
+        if (p && p.catch) p.catch(function (err) { resolve({ status: "play_rejected", error: err }); });
+      });
+    }
 
-    starAudio.addEventListener("play", function () {
-      startMouthAnimation();
-    });
-
-    starAudio.addEventListener("ended", function () {
-      stopMouthAnimation();
-
-      if (onEnded) {
-        onEnded();
-        return;
-      }
-
-      if (expectsResponse && gameActive && !sessionDone) {
-        setTimeout(function () {
-          startListeningForChild();
-        }, 150);
+    let result = await audioManager.playAndWait(audioSrc, {
+      onMouthLevel: updateMouthFromLevel,
+      configureAudio: function (audioEl) {
+        audioEl.volume = 1.0;
+        audioEl.playbackRate = 0.94;
+        audioEl.preservesPitch = false;
+        audioEl.mozPreservesPitch = false;
+        audioEl.webkitPreservesPitch = false;
       }
     });
 
-    starAudio.addEventListener("error", function () {
-      console.error("Star audio error");
-      stopMouthAnimation();
-
-      if (onEnded) {
-        onEnded();
-        return;
-      }
-
-      if (expectsResponse && gameActive && !sessionDone) {
-        setTimeout(startListeningForChild, 150);
-      }
-    });
-
-    starAudio.play().catch(function (error) {
-      console.error("Audio playback error:", error);
-      stopMouthAnimation();
-
-      if (onEnded) {
-        onEnded();
-        return;
-      }
-
-      if (expectsResponse && gameActive && !sessionDone) {
-        setTimeout(startListeningForChild, 150);
-      }
-    });
-  }
-
-  function startMouthAnimation() {
-    const mouth = document.getElementById("starMouth");
-    if (!mouth || !starAudio) return;
-
-    stopMouthAnimation();
-
-    try {
-      audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      analyser = audioContext.createAnalyser();
-      analyser.fftSize = 256;
-
-      sourceNode = audioContext.createMediaElementSource(starAudio);
-      sourceNode.connect(analyser);
-      analyser.connect(audioContext.destination);
-    } catch (error) {
-      console.warn("Mouth animation could not start:", error);
-      return;
+    // One safe automatic retry for a genuinely failed (not cancelled)
+    // prompt, mirroring the Mystery Animal reference behavior.
+    if (result.status !== "ended" && result.status !== "cancelled" && !isTurnStale(turnToken)) {
+      diagLog("recovery_started", { action: "auto_retry", status: result.status });
+      result = await audioManager.playAndWait(audioSrc, {
+        onMouthLevel: updateMouthFromLevel,
+        configureAudio: function (audioEl) {
+          audioEl.volume = 1.0;
+          audioEl.playbackRate = 0.94;
+        }
+      });
     }
 
-    const dataArray = new Uint8Array(analyser.frequencyBinCount);
-    let currentMouth = "closed";
-
-    function setMouth(state, scaleX, scaleY) {
-      if (currentMouth !== state) {
-        mouth.src = `/static/images/mouth-${state}.png`;
-        currentMouth = state;
-      }
-
-      mouth.style.transform = `translateX(-50%) scale(${scaleX}, ${scaleY})`;
-    }
-
-    function animateMouth() {
-      if (!analyser) return;
-
-      analyser.getByteFrequencyData(dataArray);
-
-      let sum = 0;
-      for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
-
-      const average = sum / dataArray.length;
-      const normalized = Math.min(Math.max((average - 10) / 70, 0), 1);
-
-      const scaleX = 1 + normalized * 0.18;
-      const scaleY = 1 + normalized * 0.32;
-
-      if (average < 14) setMouth("closed", 1, 1);
-      else if (average < 34) setMouth("small", scaleX, scaleY);
-      else if (average < 58) setMouth("medium", scaleX, scaleY);
-      else setMouth("wide", scaleX, scaleY);
-
-      mouthAnimationFrame = requestAnimationFrame(animateMouth);
-    }
-
-    animateMouth();
-  }
-
-  function stopMouthAnimation() {
-    const mouth = document.getElementById("starMouth");
-
-    if (mouthAnimationFrame) {
-      cancelAnimationFrame(mouthAnimationFrame);
-      mouthAnimationFrame = null;
-    }
-
-    if (sourceNode) {
-      try { sourceNode.disconnect(); } catch (e) {}
-      sourceNode = null;
-    }
-
-    if (analyser) {
-      try { analyser.disconnect(); } catch (e) {}
-      analyser = null;
-    }
-
-    if (audioContext) {
-      try { audioContext.close(); } catch (e) {}
-      audioContext = null;
-    }
-
-    if (mouth) {
-      mouth.src = "/static/images/mouth-closed.png";
-      mouth.style.transform = "translateX(-50%) scale(1)";
-    }
+    return result;
   }
 
   function restartGame() {
-    if (starAudio) {
-      starAudio.pause();
-      starAudio.currentTime = 0;
-    }
+    beginNewTurn();
+    if (audioManager) audioManager.cancelActive("restart");
 
     cancelListening();
     stopThinkingFiller();
-    stopMouthAnimation();
     resetThinkingState();
 
     currentResponseMode = "none";
@@ -1248,6 +1346,8 @@ document.addEventListener("DOMContentLoaded", function () {
     gameActive = true;
     updateRoundDisplay({ rounds_completed: 0 });
 
+    diagLog("game_restarted", {});
+
     setTimeout(function () {
       requestStarMessage("restart");
     }, 350);
@@ -1256,6 +1356,11 @@ document.addEventListener("DOMContentLoaded", function () {
   function startGameAfterCall() {
     if (acceptCall) acceptCall.disabled = true;
     if (declineCall) declineCall.disabled = true;
+
+    // Must happen synchronously inside this real click handler -- see the
+    // Mystery Animal reference implementation for why.
+    if (audioManager) audioManager.unlock();
+    diagLog("accept_call_clicked", {});
 
     stopRingtone();
     playCallAcceptedSound();
@@ -1281,20 +1386,19 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function endCall() {
+    beginNewTurn();
     gameActive = false;
     sessionDone = true;
 
     stopRingtone();
     stopThinkingFiller();
 
-    if (starAudio) {
-      starAudio.pause();
-      starAudio.currentTime = 0;
-    }
+    if (audioManager) audioManager.cancelActive("exit");
 
     cancelListening();
-    stopMouthAnimation();
     resetThinkingState();
+
+    diagLog("game_exited", {});
 
     window.location.href = "/dashboard";
   }
@@ -1319,6 +1423,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
   setTimeout(startRingtone, 400);
 
+  window.addEventListener("pointerdown", function retryRingtoneOnFirstInteraction() {
+    if (!ringtoneStarted) startRingtone();
+  }, { once: true });
+
   const params = new URLSearchParams(window.location.search);
 
   if (params.get("skip_call") === "1") {
@@ -1328,4 +1436,5 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   window.restartGuessingGame = restartGame;
+  window.guessingGameDiagnostics = diagnostics;
 });

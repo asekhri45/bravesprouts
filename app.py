@@ -10944,7 +10944,21 @@ def make_guessing_game_correct_round_response(
     praise_message = get_guessing_game_correct_praise(event_type) or base_message
 
     if rounds_completed >= GUESSING_GAME_MAX_ROUNDS:
-        unlock_guessing_game_next_activity_for_user()
+        # save_guessing_game_progress_for_user() above has no internal
+        # try/except -- if it had failed, its exception would already have
+        # propagated out of this function before reaching this point, so
+        # control reaching here already proves the progress write
+        # committed. unlock_guessing_game_next_activity_for_user() is best
+        # -effort on top of that (it targets a single fixed next activity,
+        # not "no next activity" as a legitimate outcome, so a False here
+        # is always worth logging even though it isn't reason to withhold
+        # the response the child already earned).
+        unlocked = unlock_guessing_game_next_activity_for_user()
+        if not unlocked:
+            app.logger.warning(
+                "Guessing Game: could not unlock next activity (id=%s) for user_id=%s",
+                GUESSING_GAME_NEXT_ACTIVITY_ID, session.get("user_id")
+            )
 
         message = (
             f"{praise_message} "
@@ -10952,20 +10966,56 @@ def make_guessing_game_correct_round_response(
             "This was a fun call. I'll see you next time. Bye."
         )
 
-        return make_guessing_game_audio_response(
-            message=message,
-            stage="session_done",
-            response_mode="none",
-            expects_response=False,
-            game_complete=True,
-            game_state=game_state,
-            history=history,
-            event_type=event_type,
-            child_response=child_response,
-            next_url=url_for("dashboard"),
-            redirect_after_ms=1800,
-            session_done=True
-        )
+        next_url = url_for("dashboard")
+
+        try:
+            return make_guessing_game_audio_response(
+                message=message,
+                stage="session_done",
+                response_mode="none",
+                expects_response=False,
+                game_complete=True,
+                game_state=game_state,
+                history=history,
+                event_type=event_type,
+                child_response=child_response,
+                next_url=next_url,
+                redirect_after_ms=1800,
+                session_done=True
+            )
+        except Exception as e:
+            # Progress is already saved (see comment above) -- only the
+            # goodbye line's TTS failed. Return a recoverable, audio-less
+            # completion instead of a dead-end error for a child who
+            # genuinely finished the game.
+            app.logger.warning(
+                "Guessing Game goodbye TTS failed after completion saved: %r", e
+            )
+
+            game_state["stage"] = "session_done"
+            game_state["last_response_mode"] = "none"
+            game_state["game_complete"] = True
+
+            history.append({
+                "event_type": event_type,
+                "child_response": child_response,
+                "star": message,
+                "stage": "session_done",
+                "response_mode": "none",
+                "game_complete": True,
+                "session_done": True
+            })
+
+            session["guessing_game_history"] = history[-20:]
+            session["guessing_game_state"] = game_state
+            session.modified = True
+
+            return jsonify(recoverable_completion_payload(
+                next_url=next_url,
+                game_state=game_state,
+                game_complete=True,
+                extra_fields={"response_mode": "none", "offer_next_game": False}
+            ))
 
     used_animals = list(game_state.get("used_animals", []))
     current_animal = game_state.get("secret_animal")
@@ -11889,7 +11939,8 @@ def guessing_game_transcribe():
     if "audio" not in request.files:
         return jsonify({
             "success": False,
-            "error": "Missing audio"
+            "error": "Missing audio",
+            "error_category": "invalid_recording"
         }), 400
 
     audio_file = request.files["audio"]
@@ -11902,11 +11953,12 @@ def guessing_game_transcribe():
         if not audio_bytes:
             return jsonify({
                 "success": False,
-                "error": "Empty audio file"
+                "error": "Empty audio file",
+                "error_category": "invalid_recording"
             }), 400
 
         file_obj = io.BytesIO(audio_bytes)
-        file_obj.name = "child-response.webm"
+        file_obj.name = transcription_upload_filename(audio_file)
 
         transcript = client.audio.transcriptions.create(
             model="gpt-4o-mini-transcribe",
@@ -11922,12 +11974,21 @@ def guessing_game_transcribe():
             "text": text
         })
 
+    except OpenAITimeoutError as e:
+        app.logger.warning("Guessing Game transcription timeout: %r", e)
+        return jsonify({
+            "success": False,
+            "error": "We couldn't hear that in time. Let's try again.",
+            "error_category": "transcription_timeout"
+        }), 504
+
     except Exception as e:
         print("Guessing Game transcription error:", repr(e))
         return jsonify({
             "success": False,
-            "error": str(e)
-        }), 500
+            "error": "We couldn't hear that. Let's try again.",
+            "error_category": "upstream_service_error"
+        }), 502
 
 
 # =========================

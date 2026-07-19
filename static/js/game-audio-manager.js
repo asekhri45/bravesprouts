@@ -28,6 +28,22 @@
       if (diagnostics) diagnostics.log(eventName, details);
     }
 
+    // Most games serve dialogue audio as a short cached-file URL, safe to
+    // log in full. At least one (Guessing Game) embeds the audio directly
+    // as a `data:audio/...;base64,...` URI in the response, which can run
+    // to hundreds of kilobytes of encoded speech per line -- logging that
+    // in full would both bloat the diagnostics timeline uselessly and log
+    // actual audio content, which the diagnostics design explicitly rules
+    // out. Anything that isn't a short, safe-to-display URL is reduced to
+    // its scheme + length instead.
+    function safeUrlForLog(url) {
+      if (typeof url !== "string") return String(url);
+      if (url.length <= 200 && url.indexOf("base64,") === -1) return url;
+
+      var scheme = url.split(",")[0].split(":")[1] || "data";
+      return "[" + scheme + ", " + url.length + " chars, omitted from log]";
+    }
+
     /**
      * Must be called synchronously from inside a user-gesture event handler
      * (click/pointerdown/keydown). Safe to call more than once.
@@ -175,7 +191,7 @@
       }
       activeAudio = audioEl;
 
-      log("prompt_play_requested", { url: url });
+      log("prompt_play_requested", { url: safeUrlForLog(url) });
 
       return new Promise(function (resolve) {
         var settled = false;
@@ -205,7 +221,7 @@
         }
 
         function onPlaying() {
-          log("prompt_playing", { url: url });
+          log("prompt_playing", { url: safeUrlForLog(url) });
           if (onMouthLevel && audioContext) {
             mouthSync = attachMouthSync(audioEl, onMouthLevel);
             mouthSync.start();
@@ -221,7 +237,7 @@
         }
 
         function onStalled() {
-          log("prompt_play_stalled_event", { url: url });
+          log("prompt_play_stalled_event", { url: safeUrlForLog(url) });
         }
 
         audioEl.addEventListener("playing", onPlaying);
