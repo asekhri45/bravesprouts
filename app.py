@@ -24941,108 +24941,115 @@ def restaurant_game_complete():
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
-        INSERT OR IGNORE INTO progress (
-            user_id,
-            activity_id,
-            is_unlocked,
-            is_completed,
+    try:
+        cursor.execute("""
+            INSERT OR IGNORE INTO progress (
+                user_id,
+                activity_id,
+                is_unlocked,
+                is_completed,
+                words_spoken,
+                minutes_spoken,
+                active_minutes,
+                time_spent_on_activity
+            )
+            VALUES (?, ?, 1, 0, 0, 0, 0, 0)
+        """, (session["user_id"], activity_id))
+
+        cursor.execute("""
+            SELECT activity_id, scene_id, activity_order
+            FROM activity
+            WHERE activity_id = ?
+        """, (activity_id,))
+        current_activity = cursor.fetchone()
+
+        cursor.execute("""
+            UPDATE progress
+            SET
+                is_completed = 1,
+                words_spoken = MAX(COALESCE(words_spoken, 0), ?),
+                minutes_spoken = MAX(COALESCE(minutes_spoken, 0), ?),
+                active_minutes = MAX(COALESCE(active_minutes, 0), ?),
+                time_spent_on_activity = MAX(COALESCE(time_spent_on_activity, 0), ?),
+                restaurant_order_index = 0,
+                restaurant_step_index = 0,
+                restaurant_orders_completed = MAX(COALESCE(restaurant_orders_completed, 0), ?),
+                restaurant_steps_completed = MAX(COALESCE(restaurant_steps_completed, 0), ?),
+                restaurant_spoken_responses = MAX(COALESCE(restaurant_spoken_responses, 0), ?),
+                restaurant_silent_windows = MAX(COALESCE(restaurant_silent_windows, 0), ?),
+                restaurant_worker_direct_responses = MAX(COALESCE(restaurant_worker_direct_responses, 0), ?),
+                restaurant_teacher_redirects = MAX(COALESCE(restaurant_teacher_redirects, 0), ?),
+                restaurant_total_choices = MAX(COALESCE(restaurant_total_choices, 0), ?),
+                restaurant_last_played_at = CURRENT_TIMESTAMP
+            WHERE user_id = ? AND activity_id = ?
+        """, (
             words_spoken,
             minutes_spoken,
             active_minutes,
-            time_spent_on_activity
-        )
-        VALUES (?, ?, 1, 0, 0, 0, 0, 0)
-    """, (session["user_id"], activity_id))
-
-    cursor.execute("""
-        SELECT scene_id, activity_order
-        FROM activity
-        WHERE activity_id = ?
-    """, (activity_id,))
-    current_activity = cursor.fetchone()
-
-    cursor.execute("""
-        UPDATE progress
-        SET
-            is_completed = 1,
-            words_spoken = MAX(COALESCE(words_spoken, 0), ?),
-            minutes_spoken = MAX(COALESCE(minutes_spoken, 0), ?),
-            active_minutes = MAX(COALESCE(active_minutes, 0), ?),
-            time_spent_on_activity = MAX(COALESCE(time_spent_on_activity, 0), ?),
-            restaurant_order_index = 0,
-            restaurant_step_index = 0,
-            restaurant_orders_completed = MAX(COALESCE(restaurant_orders_completed, 0), ?),
-            restaurant_steps_completed = MAX(COALESCE(restaurant_steps_completed, 0), ?),
-            restaurant_spoken_responses = MAX(COALESCE(restaurant_spoken_responses, 0), ?),
-            restaurant_silent_windows = MAX(COALESCE(restaurant_silent_windows, 0), ?),
-            restaurant_worker_direct_responses = MAX(COALESCE(restaurant_worker_direct_responses, 0), ?),
-            restaurant_teacher_redirects = MAX(COALESCE(restaurant_teacher_redirects, 0), ?),
-            restaurant_total_choices = MAX(COALESCE(restaurant_total_choices, 0), ?),
-            restaurant_last_played_at = CURRENT_TIMESTAMP
-        WHERE user_id = ? AND activity_id = ?
-    """, (
-        words_spoken,
-        minutes_spoken,
-        active_minutes,
-        time_spent,
-        orders_completed,
-        steps_completed,
-        safe_restaurant_int(data.get("spoken_responses"), 0, 9999),
-        safe_restaurant_int(data.get("silent_windows"), 0, 9999),
-        safe_restaurant_int(data.get("worker_direct_responses"), 0, 9999),
-        safe_restaurant_int(data.get("teacher_redirects"), 0, 9999),
-        safe_restaurant_int(data.get("total_choices"), 0, 9999),
-        session["user_id"],
-        activity_id
-    ))
-
-    next_activity_id = None
-    if current_activity:
-        cursor.execute("""
-            SELECT activity_id
-            FROM activity
-            WHERE is_active = 1
-            AND activity_id > ?
-            ORDER BY activity_id ASC
-            LIMIT 1
-        """, (
-            current_activity["activity_id"],
+            time_spent,
+            orders_completed,
+            steps_completed,
+            safe_restaurant_int(data.get("spoken_responses"), 0, 9999),
+            safe_restaurant_int(data.get("silent_windows"), 0, 9999),
+            safe_restaurant_int(data.get("worker_direct_responses"), 0, 9999),
+            safe_restaurant_int(data.get("teacher_redirects"), 0, 9999),
+            safe_restaurant_int(data.get("total_choices"), 0, 9999),
+            session["user_id"],
+            activity_id
         ))
-        next_activity = cursor.fetchone()
 
-        if next_activity:
-            next_activity_id = next_activity["activity_id"]
+        next_activity_id = None
+        if current_activity:
             cursor.execute("""
-                INSERT OR IGNORE INTO progress (
-                    user_id,
-                    activity_id,
-                    is_unlocked,
-                    is_completed,
-                    words_spoken,
-                    minutes_spoken,
-                    active_minutes,
-                    time_spent_on_activity
-                )
-                VALUES (?, ?, 1, 0, 0, 0, 0, 0)
-            """, (session["user_id"], next_activity_id))
+                SELECT activity_id
+                FROM activity
+                WHERE is_active = 1
+                AND activity_id > ?
+                ORDER BY activity_id ASC
+                LIMIT 1
+            """, (
+                current_activity["activity_id"],
+            ))
+            next_activity = cursor.fetchone()
 
-            cursor.execute("""
-                UPDATE progress
-                SET is_unlocked = 1
-                WHERE user_id = ? AND activity_id = ?
-            """, (session["user_id"], next_activity_id))
+            if next_activity:
+                next_activity_id = next_activity["activity_id"]
+                cursor.execute("""
+                    INSERT OR IGNORE INTO progress (
+                        user_id,
+                        activity_id,
+                        is_unlocked,
+                        is_completed,
+                        words_spoken,
+                        minutes_spoken,
+                        active_minutes,
+                        time_spent_on_activity
+                    )
+                    VALUES (?, ?, 1, 0, 0, 0, 0, 0)
+                """, (session["user_id"], next_activity_id))
 
-            cursor.execute("""
-                UPDATE users
-                SET current_activity_id = ?
-                WHERE user_id = ?
-            """, (next_activity_id, session["user_id"]))
+                cursor.execute("""
+                    UPDATE progress
+                    SET is_unlocked = 1
+                    WHERE user_id = ? AND activity_id = ?
+                """, (session["user_id"], next_activity_id))
 
-    conn.commit()
-    conn.close()
+                cursor.execute("""
+                    UPDATE users
+                    SET current_activity_id = ?
+                    WHERE user_id = ?
+                """, (next_activity_id, session["user_id"]))
 
-    return jsonify({"success": True, "next_activity_id": next_activity_id})
+        conn.commit()
+        conn.close()
+
+        return jsonify({"success": True, "next_activity_id": next_activity_id})
+
+    except Exception as e:
+        conn.rollback()
+        conn.close()
+        print("Restaurant Worker Game completion error:", repr(e))
+        return jsonify({"success": False, "error": "Could not save restaurant game completion"}), 500
 
 
 @app.route("/api/restaurant-game/transcribe", methods=["POST"])
@@ -25051,7 +25058,11 @@ def restaurant_game_complete():
 @limiter.limit("30 per minute")
 def restaurant_game_transcribe():
     if "audio" not in request.files:
-        return jsonify({"success": False, "error": "Missing audio"}), 400
+        return jsonify({
+            "success": False,
+            "error": "Missing audio",
+            "error_category": "invalid_recording"
+        }), 400
 
     audio_file = request.files["audio"]
 
@@ -25060,10 +25071,14 @@ def restaurant_game_transcribe():
 
         audio_bytes = audio_file.read()
         if not audio_bytes:
-            return jsonify({"success": False, "error": "Empty audio file"}), 400
+            return jsonify({
+                "success": False,
+                "error": "Empty audio file",
+                "error_category": "invalid_recording"
+            }), 400
 
         file_obj = io.BytesIO(audio_bytes)
-        file_obj.name = "restaurant-response.webm"
+        file_obj.name = transcription_upload_filename(audio_file)
 
         transcript = client.audio.transcriptions.create(
             model="gpt-4o-mini-transcribe",
@@ -25074,9 +25089,21 @@ def restaurant_game_transcribe():
         print("RESTAURANT GAME TRANSCRIPT:", text)
         return jsonify({"success": True, "text": text})
 
+    except OpenAITimeoutError as e:
+        app.logger.warning("Restaurant Worker Game transcription timeout: %r", e)
+        return jsonify({
+            "success": False,
+            "error": "We couldn't hear that in time. Let's try again.",
+            "error_category": "transcription_timeout"
+        }), 504
+
     except Exception as e:
         print("Restaurant game transcription error:", repr(e))
-        return jsonify({"success": False, "error": str(e)}), 500
+        return jsonify({
+            "success": False,
+            "error": "We couldn't hear that. Let's try again.",
+            "error_category": "upstream_service_error"
+        }), 502
 
 @app.route("/forgot-parent-pin", methods=["GET", "POST"])
 @limiter.limit("10 per minute")

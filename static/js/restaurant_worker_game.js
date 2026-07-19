@@ -342,8 +342,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
   let state = freshState();
   let speechQueue = Promise.resolve();
-  let activeAudio = null;
-  let audioContext = null;
   let analyser = null;
   let sourceNode = null;
   let mouthAnimationFrame = null;
@@ -351,6 +349,27 @@ document.addEventListener("DOMContentLoaded", function () {
   let workerFlapUntil = 0;
   let workerNextFlapAt = 0;
   let workerLastFrame = "closed";
+
+  const diagnostics = window.GameDiagnostics
+    ? window.GameDiagnostics.createSession({
+        game: "restaurant_worker_game",
+        activityId: activityId,
+        getState: function () {
+          return {
+            orderIndex: state.orderIndex,
+            stepIndex: state.stepIndex,
+            isListening: state.isListening,
+            waitingForResponse: state.waitingForResponse,
+            isSpeaking: state.isSpeaking,
+            gameCompleted: state.gameCompleted
+          };
+        }
+      })
+    : null;
+
+  const audioManager = window.GameAudioManager
+    ? window.GameAudioManager.create({ diagnostics: diagnostics })
+    : null;
 
   let mediaStream = null;
   let responseRecorder = null;
@@ -2933,27 +2952,39 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function playCharacterAudio(actor, audioSrc) {
-    return new Promise(resolve => {
-      if (activeAudio) {
-        try { activeAudio.pause(); } catch (error) {}
-        activeAudio = null;
-      }
-      activeAudio = new Audio(audioSrc);
-      activeMouthActor = actor;
-      let resolved = false;
-      const done = () => {
-        if (resolved) return;
-        resolved = true;
-        stopMouthAnimation();
-        resolve();
-      };
-      activeAudio.addEventListener("play", () => startMouthAnimation(actor, activeAudio));
-      activeAudio.addEventListener("ended", done);
-      activeAudio.addEventListener("error", done);
-      activeAudio.addEventListener("pause", () => {
-        if (activeAudio && activeAudio.currentTime > 0) done();
+    if (!audioSrc) return Promise.resolve();
+
+    if (!audioManager) {
+      // Shared module failed to load -- fall back to the old direct-Audio
+      // behavior rather than silently skipping the line entirely.
+      return new Promise(resolve => {
+        const audio = new Audio(audioSrc);
+        audio.addEventListener("ended", resolve);
+        audio.addEventListener("error", resolve);
+        audio.play().catch(resolve);
       });
-      activeAudio.play().catch(done);
+    }
+
+    activeMouthActor = actor;
+
+    return audioManager.playAndWait(audioSrc, {
+      // The worker/teacher mouth animation is tuned per-actor (distinct
+      // native smoothingTimeConstant, plus Leo's "flapping" micro-motion) --
+      // rather than force this custom visual into the generic onMouthLevel
+      // callback, attach our own analyser here, on the shared AudioManager
+      // context instead of a fresh one created per line.
+      configureAudio: function (audioEl) {
+        startMouthAnimation(actor, audioEl);
+      }
+    }).then(function (result) {
+      stopMouthAnimation();
+
+      // Only a real "ended" event means the line was actually heard. A
+      // rejected play()/stall/timeout must not be treated the same as a
+      // completed line.
+      if (result.status !== "ended" && diagnostics) {
+        diagnostics.log("character_prompt_not_heard", { actor: actor, status: result.status });
+      }
     });
   }
 
@@ -2963,14 +2994,16 @@ document.addEventListener("DOMContentLoaded", function () {
     workerFlapUntil = 0;
     workerNextFlapAt = performance.now() + rand(240, 440);
 
+    const ctx = audioManager ? audioManager.getContext() : null;
+    if (!ctx) return;
+
     try {
-      audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      analyser = audioContext.createAnalyser();
+      analyser = ctx.createAnalyser();
       analyser.fftSize = 256;
       analyser.smoothingTimeConstant = actor === WORKER ? 0.68 : 0.56;
-      sourceNode = audioContext.createMediaElementSource(audioElement);
+      sourceNode = ctx.createMediaElementSource(audioElement);
       sourceNode.connect(analyser);
-      analyser.connect(audioContext.destination);
+      analyser.connect(ctx.destination);
       const data = new Uint8Array(analyser.frequencyBinCount);
       let smoothed = 0;
       let displayedFrame = "closed";
@@ -3048,10 +3081,8 @@ function stopMouthAnimation() {
     mouthAnimationFrame = null;
     if (sourceNode) { try { sourceNode.disconnect(); } catch (error) {} }
     if (analyser) { try { analyser.disconnect(); } catch (error) {} }
-    if (audioContext) { try { audioContext.close(); } catch (error) {} }
     sourceNode = null;
     analyser = null;
-    audioContext = null;
     activeMouthActor = null;
   }
 
@@ -3061,18 +3092,22 @@ function stopMouthAnimation() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       state.micDenied = true;
       updateMicStatus("Use the done button", "idle");
+      if (diagnostics) diagnostics.log("microphone_permission_denied", { reason: "unsupported" });
       return null;
     }
+    if (diagnostics) diagnostics.log("microphone_permission_requested", {});
     try {
       mediaStream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
       });
       state.micReady = true;
       updateMicStatus("Listening for done", "listening");
+      if (diagnostics) diagnostics.log("microphone_permission_granted", {});
       return mediaStream;
     } catch (error) {
       state.micDenied = true;
       updateMicStatus("Use the done button", "idle");
+      if (diagnostics) diagnostics.log("microphone_permission_denied", { message: String(error && error.message || error) });
       return null;
     }
   }
@@ -3190,11 +3225,13 @@ function stopMouthAnimation() {
         responseRecorder = new MediaRecorder(stream, getRecorderOptions());
         responseRecorder.ondataavailable = event => { if (event.data && event.data.size) responseChunks.push(event.data); };
         responseRecorder.onstop = async () => {
+          if (diagnostics) diagnostics.log("recording_stopped", { chunkCount: responseChunks.length });
           if (browserTranscript) return;
           const text = await transcribeChunks(responseChunks);
           stopResolve(cleanTranscript(text));
         };
         responseRecorder.start();
+        if (diagnostics) diagnostics.log("recording_started", { mimeType: responseRecorder.mimeType || "browser_default" });
       } catch (error) { responseRecorder = null; }
     }
 
@@ -3241,15 +3278,28 @@ function stopMouthAnimation() {
 
   async function transcribeChunks(chunks) {
     if (!chunks || !chunks.length) return "";
+    const mimeType = chunks[0]?.type || "audio/webm";
+    const extension = window.GameMicManager ? window.GameMicManager.extensionForMimeType(mimeType) : "webm";
+
+    if (diagnostics) diagnostics.log("transcribe_request_start", { mimeType: mimeType });
+
     try {
-      const blob = new Blob(chunks, { type: chunks[0]?.type || "audio/webm" });
+      const blob = new Blob(chunks, { type: mimeType });
       const form = new FormData();
-      form.append("audio", blob, "restaurant-response.webm");
+      form.append("audio", blob, `restaurant-response.${extension}`);
       const response = await fetch("/api/restaurant-game/transcribe", { method: "POST", body: form });
       const data = await response.json();
+
+      if (!data.success && diagnostics) {
+        diagnostics.log("transcribe_failed", { errorCategory: data.error_category || null });
+      } else if (diagnostics) {
+        diagnostics.log("transcribe_success", {});
+      }
+
       return data.success ? data.text || "" : "";
     } catch (error) {
       console.warn("Restaurant transcription error:", error);
+      if (diagnostics) diagnostics.log("transcribe_failed", { errorCategory: "network_error" });
       return "";
     }
   }
@@ -4278,34 +4328,63 @@ function stopMouthAnimation() {
 
     const minutesPlayed = Math.max(0, (Date.now() - state.sessionStart) / 60000);
 
-    try {
+    const payload = {
+      activity_id: activityId,
+      words_spoken: state.spokenWords,
+      minutes_spoken: Math.max(0, state.spokenResponses * 0.08),
+      active_minutes: minutesPlayed,
+      time_spent_on_activity: minutesPlayed,
+      spoken_responses: state.spokenResponses,
+      silent_windows: state.silentWindows,
+      worker_direct_responses: state.workerDirectResponses,
+      teacher_redirects: state.teacherRedirects,
+      total_choices: state.totalChoices,
+      orders_completed: TARGET_ORDERS,
+      steps_completed: state.stepsCompleted
+    };
+
+    async function attemptComplete() {
       const response = await fetch("/api/restaurant-game/complete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          activity_id: activityId,
-          words_spoken: state.spokenWords,
-          minutes_spoken: Math.max(0, state.spokenResponses * 0.08),
-          active_minutes: minutesPlayed,
-          time_spent_on_activity: minutesPlayed,
-          spoken_responses: state.spokenResponses,
-          silent_windows: state.silentWindows,
-          worker_direct_responses: state.workerDirectResponses,
-          teacher_redirects: state.teacherRedirects,
-          total_choices: state.totalChoices,
-          orders_completed: TARGET_ORDERS,
-          steps_completed: state.stepsCompleted
-        })
+        body: JSON.stringify(payload)
       });
 
-      const data = await response.json();
+      return response.json();
+    }
 
-      if (data.success && data.next_activity_id) {
+    let data = null;
+
+    try {
+      data = await attemptComplete();
+    } catch (error) {
+      console.warn("Could not complete restaurant activity:", error);
+    }
+
+    // A failed completion write silently sent the child to /dashboard
+    // exactly the same as a legitimate "no more games" completion, with no
+    // retry -- one retry attempt here catches transient failures instead of
+    // permanently losing the completion/unlock for the session.
+    if (!data || data.success !== true) {
+      if (diagnostics) diagnostics.log("completion_request_failed", { retrying: true });
+
+      try {
+        data = await attemptComplete();
+      } catch (error) {
+        console.warn("Could not complete restaurant activity (retry):", error);
+        data = null;
+      }
+    }
+
+    if (data && data.success === true) {
+      if (diagnostics) diagnostics.log("completion_saved", { hasNextActivity: Boolean(data.next_activity_id) });
+
+      if (data.next_activity_id) {
         window.location.href = `/activity/${data.next_activity_id}`;
         return;
       }
-    } catch (error) {
-      console.warn("Could not complete restaurant activity:", error);
+    } else if (diagnostics) {
+      diagnostics.log("completion_save_failed", {});
     }
 
     window.location.href = "/dashboard";
@@ -4314,6 +4393,7 @@ function stopMouthAnimation() {
 
   async function startGame() {
     if (startBtn) startBtn.disabled = true;
+    if (audioManager) audioManager.unlock();
     if (invite) invite.classList.add("hide");
     if (stage) stage.classList.remove("is-hidden");
     await ensureMicPermission();
@@ -4329,5 +4409,8 @@ function stopMouthAnimation() {
   if (startBtn) startBtn.addEventListener("click", () => { void startGame(); });
   if (doneStepBtn) doneStepBtn.addEventListener("click", () => { void handleDoneStep("button"); });
 
-  window.addEventListener("beforeunload", () => { void saveProgress(); });
+  window.addEventListener("beforeunload", () => {
+    if (audioManager) audioManager.cancelActive("page_exit");
+    void saveProgress();
+  });
 });

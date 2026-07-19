@@ -3,7 +3,10 @@
 {% block head %}
 {{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/restaurant_worker_game.css') }}?v=214">
-<script src="{{ url_for('static', filename='js/restaurant_worker_game.js') }}?v=214" defer></script>
+<script src="{{ url_for('static', filename='js/game-diagnostics.js') }}?v=1" defer></script>
+<script src="{{ url_for('static', filename='js/game-audio-manager.js') }}?v=1" defer></script>
+<script src="{{ url_for('static', filename='js/game-mic-manager.js') }}?v=1" defer></script>
+<script src="{{ url_for('static', filename='js/restaurant_worker_game.js') }}?v=215" defer></script>
 {% endblock %}
 
 {% block title %}Help Leo in the Restaurant{% endblock %}
