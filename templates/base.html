@@ -8,13 +8,61 @@
 
     {% block head %}{% endblock %}
 
-    <link
+    <!-- Browser tabs and Google Search favicon -->
+<link
     rel="icon"
     type="image/png"
-    sizes="32x32"
-    href="{{ url_for('static', filename='images/favicon-32x32.png') }}"
+    sizes="96x96"
+    href="https://www.mybravesprout.com/static/images/favicon-96x96.png"
 >
-    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
+
+<link
+    rel="shortcut icon"
+    type="image/x-icon"
+    href="https://www.mybravesprout.com/static/images/favicon.ico"
+>
+
+<link
+    rel="apple-touch-icon"
+    sizes="180x180"
+    href="https://www.mybravesprout.com/static/images/logo-512x512.png"
+>
+
+<!-- Link previews for social media and messaging platforms -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="MyBraveSprout">
+<meta
+    property="og:title"
+    content="MyBraveSprout | Free Selective Mutism Games for Kids"
+>
+<meta
+    property="og:description"
+    content="Free, parent-guided conversation games that help children with selective mutism build confidence one small step at a time."
+>
+<meta
+    property="og:image"
+    content="https://www.mybravesprout.com/static/images/social_preview.png"
+>
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta
+    property="og:image:alt"
+    content="MyBraveSprout, free selective mutism conversation games for kids"
+>
+
+<meta name="twitter:card" content="summary_large_image">
+<meta
+    name="twitter:title"
+    content="MyBraveSprout | Free Selective Mutism Games for Kids"
+>
+<meta
+    name="twitter:description"
+    content="Free, parent-guided conversation games for children with selective mutism."
+>
+<meta
+    name="twitter:image"
+    content="https://www.mybravesprout.com/static/images/social_preview.png"
+>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -24,7 +72,15 @@
         rel="stylesheet"
     >
 
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=2">
+
+    <!--
+      Owns the visual masking of the four-digit parent PIN. Loaded here because
+      PIN fields appear on several pages (the gate, setup, reset, and the
+      dashboard setup modal) and masking must never depend on a page happening
+      to include it. Deferred so it runs after the DOM is parsed.
+    -->
+    <script defer src="{{ url_for('static', filename='js/pin-mask.js') }}?v=3"></script>
 
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=AW-18300860067">

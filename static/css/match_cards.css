@@ -1585,9 +1585,15 @@ body {
   box-sizing: border-box;
 }
 
+/*
+ * Active-listening mic. Uses the same purple as every other mic game
+ * (Mystery Animal / Guessing Game / Book / Toy all use
+ * `rgba(139, 92, 246, 0.95)`, which is this file's own --purple token at
+ * 95% alpha) instead of the pale --purple-soft fill this previously had.
+ */
 #micControl.quiet-listening {
-  background: #efe7ff;
-  border-color: #7f51f2;
-  color: #7f51f2;
-  box-shadow: 0 0 0 4px rgba(127, 81, 242, 0.12);
+  background: rgba(139, 92, 246, 0.95);
+  border-color: var(--purple);
+  color: #ffffff;
+  box-shadow: 0 0 0 8px rgba(139, 92, 246, 0.18);
 }

@@ -30,9 +30,16 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     pinInput.addEventListener("input", function () {
-        // Numeric-only, matches the server's exact 4-digit rule (leading
-        // zeros are valid and must be preserved as typed).
-        pinInput.value = pinInput.value.replace(/\D/g, "").slice(0, 4);
+        // When pin-mask.js owns this field it already enforces numeric-only
+        // and the 4-digit cap on its own state. Rewriting `value` here as well
+        // fights the mask mid-edit and can drop digits from a pasted string,
+        // so only run the local filter when the field is unmasked.
+        if (!pinInput.hasAttribute("data-pin-mask")) {
+            // Numeric-only, matches the server's exact 4-digit rule (leading
+            // zeros are valid and must be preserved as typed).
+            pinInput.value = pinInput.value.replace(/\D/g, "").slice(0, 4);
+        }
+
         pinError.textContent = "";
     });
 

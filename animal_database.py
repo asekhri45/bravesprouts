@@ -72,3 +72,39 @@ ANIMALS = {
 }
 
 COMMON_GUESSES = tuple(ANIMALS.keys())
+
+# The sound an animal makes, for the cases where every other observable trait
+# is identical. A dog and a cat share habitat, size band, covering, legs,
+# setting and tail in this database, so no amount of the questions above can
+# separate them -- "does it bark or meow?" is the only child-friendly
+# distinction that does, and it is what stops Star guessing cat when the child
+# is thinking of a dog. Only animals with a sound a five-year-old would name
+# are listed; the rest stay unknown and are never claimed to have one.
+SOUNDS = {
+    "dog": "bark",
+    "cat": "meow",
+    "cow": "moo",
+    "pig": "oink",
+    "sheep": "baa",
+    "goat": "baa",
+    "horse": "neigh",
+    "duck": "quack",
+    "chicken": "cluck",
+    "rooster": "crow",
+    "bird": "tweet",
+    "owl": "hoot",
+    "lion": "roar",
+    "tiger": "roar",
+    "bear": "growl",
+    "wolf": "howl",
+    "monkey": "chatter",
+    "frog": "ribbit",
+    "snake": "hiss",
+    "mouse": "squeak",
+    "elephant": "trumpet",
+    "bee": "buzz",
+}
+
+for _animal, _sound in SOUNDS.items():
+    if _animal in ANIMALS:
+        ANIMALS[_animal]["sound"] = _sound

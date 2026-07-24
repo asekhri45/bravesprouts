@@ -128,12 +128,26 @@ document.addEventListener("DOMContentLoaded", function () {
   // gives the device's audio output a tiny buffer so the final phoneme
   // isn't clipped by the transition. This is not used to guess whether
   // playback finished; playAndWait already guarantees that.
-  const SETTLE_BUFFER_MS = 300;
+  /*
+    Gap between Star's prompt actually ending and the microphone opening.
+    This runs only after audioManager.playAndWait has confirmed the real
+    `ended` event, so Star has genuinely stopped speaking by this point and a
+    long wait is just dead air the child sits through. It is not zero purely
+    as a guard against the speaker's decay tail reaching the mic on devices
+    without effective echo cancellation -- one short beat, not a pause.
+  */
+  const SETTLE_BUFFER_MS = 80;
   // Set above the backend's own worst-case single-attempt budget for this
   // call (connect 5s + read 20s = 25s, see OPENAI_TIMEOUT in app.py) so
   // this client-side abort is a genuine "the whole thing is stuck" signal,
   // not a race against the server's own legitimate timeout.
   const TRANSCRIBE_TIMEOUT_MS = 30000;
+  // Minimum recorded-blob size worth sending to transcription. A recording at
+  // or above this is treated as "the child may have said something" (even if
+  // soft) and is transcribed; below it the recording is effectively an empty
+  // container (header only, no captured audio) and becomes a no_response. This
+  // is deliberately small so soft speech is never discarded by a volume gate.
+  const MIN_TRANSCRIBABLE_BLOB_BYTES = 1200;
   let recordingExtension = "webm";
   let promptRetryCount = 0;
   let currentMouthState = "closed";
@@ -554,12 +568,31 @@ document.addEventListener("DOMContentLoaded", function () {
     thinkingRestartCount += 1;
     setStatus("Take your time.", true);
 
-    if (SpeechRecognition) {
+    // If live SpeechRecognition is still actively running, it stays continuous
+    // and will pick up the child's real answer after the thinking sound -- no
+    // restart needed.
+    if (SpeechRecognition && recognitionActive && !roundResolved) {
       return;
     }
 
+    // Otherwise the previous listening window has already ended -- most often
+    // because a thinking-only sound arrived via the MediaRecorder's
+    // transcription path, which stops recognition and marks the round
+    // resolved. Clear that resolved/listening state so a fresh window can
+    // actually accept the child's next words, even on browsers where
+    // SpeechRecognition exists.
+    roundResolved = false;
+    isListening = false;
+
     setTimeout(function () {
-      if (!isListening && !waitingForStarResponse && gameActive && !sessionDone) {
+      if (
+        !isListening &&
+        !waitingForStarResponse &&
+        !starSpeaking &&
+        gameActive &&
+        !sessionDone &&
+        !roundResolved
+      ) {
         startListeningForChild();
       }
     }, 250);
@@ -992,7 +1025,14 @@ document.addEventListener("DOMContentLoaded", function () {
     recognitionActive = false;
 
     if (markStoppedByUs) {
-      isListening = false;
+      // Only drop the global "listening" flag if the authoritative recorder
+      // isn't still capturing. Recognition is just a fast-path layered on top
+      // of the MediaRecorder; a recognition error/stop must never cut the
+      // recorder's silence detection short or make the UI stop listening while
+      // the recorder still holds the child's audio for this response window.
+      if (!mediaRecorder || mediaRecorder.state === "inactive") {
+        isListening = false;
+      }
     }
   }
 
@@ -1145,14 +1185,21 @@ document.addEventListener("DOMContentLoaded", function () {
       diagLog("audio_blob_created", { size: audioBlob.size, type: audioBlob.type });
       dlog("recording stopped", { size: audioBlob.size, type: audioBlob.type, speechDetected });
 
-      if (!audioBlob.size || !speechDetected) {
-        console.warn("No clear speech captured.");
-        resetThinkingState();
-        await requestStarMessage("no_response", "");
+      // Do NOT treat the local RMS volume threshold (speechDetected) as proof
+      // that the child said nothing. A softly spoken child can activate the UI
+      // and produce a perfectly valid recording without ever crossing the RMS
+      // threshold consistently. If a nonempty recording exists, send it for
+      // transcription and let the transcription result decide whether it was
+      // truly silence -- only a genuinely empty/invalid recording (essentially
+      // no captured audio) becomes an immediate no_response here.
+      if (audioBlob.size >= MIN_TRANSCRIBABLE_BLOB_BYTES) {
+        await sendAudioToTranscribe(audioBlob, turnToken);
         return;
       }
 
-      await sendAudioToTranscribe(audioBlob, turnToken);
+      console.warn("No usable audio captured (empty recording).");
+      resetThinkingState();
+      await requestStarMessage("no_response", "");
     });
 
     mediaRecorder.start();

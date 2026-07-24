@@ -14,6 +14,26 @@ document.addEventListener("DOMContentLoaded", function () {
     var togglePasswordBtn = document.getElementById("togglePassword");
     var togglePasswordIcon = document.getElementById("togglePasswordIcon");
 
+    var submitBtnLabel = submitBtn ? submitBtn.querySelector(".btn-label") : null;
+    var submitBtnDefaultText = submitBtnLabel ? submitBtnLabel.textContent : "";
+
+    // Toggling loading state is purely text/attribute changes (no new
+    // markup, no CSS) -- aria-busy + aria-label give screen readers the
+    // same "please wait" signal sighted users get from the label swap.
+    function setSubmitLoading(isLoading) {
+        if (!submitBtn) return;
+        submitBtn.disabled = isLoading;
+        submitBtn.setAttribute("aria-busy", isLoading ? "true" : "false");
+        if (isLoading) {
+            submitBtn.setAttribute("aria-label", "Creating your account, please wait");
+        } else {
+            submitBtn.removeAttribute("aria-label");
+        }
+        if (submitBtnLabel) {
+            submitBtnLabel.textContent = isLoading ? "Creating account…" : submitBtnDefaultText;
+        }
+    }
+
     var EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
     function checkPasswordRules(value) {
@@ -105,6 +125,20 @@ document.addEventListener("DOMContentLoaded", function () {
     var submitting = false;
 
     form.addEventListener("submit", function (e) {
+        // A real submission is already in flight -- leave its loading state
+        // untouched and just swallow this extra submit event (see the
+        // double-submit guard below for how `submitting` gets set).
+        if (submitting) {
+            e.preventDefault();
+            return;
+        }
+
+        // Every fresh submit attempt starts from a clean, non-loading button
+        // state so a validation failure always leaves (or restores) the
+        // button exactly as it was before this attempt -- never stuck
+        // disabled from some earlier interaction.
+        setSubmitLoading(false);
+
         var emailOk = validateEmail() && emailInput.value.trim();
         var passwordOk = checkPasswordRules(passwordInput.value);
         var termsOk = termsCheck.checked;
@@ -140,15 +174,12 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
 
-        // Prevent double-submit (double form POST from a repeated tap/click)
-        // without blocking the actual submission -- disabling a submit
-        // button on the same event that submits it still lets that click's
-        // submission through in every evergreen browser.
-        if (submitting) {
-            e.preventDefault();
-            return;
-        }
+        // Enter the loading state -- disabling the submit button on the
+        // same event that submits it still lets this click's own
+        // submission through in every evergreen browser, while the
+        // `submitting` flag (checked at the top of this handler) blocks
+        // any further submit events until the page navigates away.
         submitting = true;
-        submitBtn.disabled = true;
+        setSubmitLoading(true);
     });
 });

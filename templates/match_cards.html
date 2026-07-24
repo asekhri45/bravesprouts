@@ -7,7 +7,8 @@
 <script src="{{ url_for('static', filename='js/game-audio-manager.js') }}?v=1" defer></script>
 <script src="{{ url_for('static', filename='js/game-mic-manager.js') }}?v=1" defer></script>
 <script src="{{ url_for('static', filename='js/game-turn-guard.js') }}?v=1" defer></script>
-<script src="{{ url_for('static', filename='js/match_cards.js') }}?v=9" defer></script>
+<script src="{{ url_for('static', filename='js/game-intent.js') }}?v=1" defer></script>
+<script src="{{ url_for('static', filename='js/match_cards.js') }}?v=11" defer></script>
 {% endblock %}
 
 {% block title %}Match Cards{% endblock %}
@@ -176,7 +177,19 @@
     <div class="controls-center">
       <div class="control-button mic-control" id="micControl" title="Microphone">🎙️</div>
       <div class="control-button">🎥</div>
-      <div class="hangup-button">☎</div>
+      {#
+        Kept as a <div> so the existing .hangup-button styling (which has no
+        border reset) renders exactly as before; role/tabindex give it the
+        keyboard behaviour a <button> would have. The click handler is wired in
+        match_cards.js through the same dashboard-exit path as Back to Dashboard.
+      #}
+      <div
+        class="hangup-button"
+        id="hangupButton"
+        role="button"
+        tabindex="0"
+        aria-label="Leave the game and go back to the dashboard"
+      >☎</div>
       <div class="control-button">💬</div>
       <div class="control-button">⋯</div>
     </div>

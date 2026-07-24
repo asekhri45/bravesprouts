@@ -9,9 +9,20 @@
 
 {% block content %}
 <div class="page">
+  {#
+    The logo itself is the way home, matching signup.html. The separate
+    "← Back to Home" link has been removed; the topbar now holds only the
+    logo-link, exactly as signup does, so no empty gap is left behind.
+    An <a> gives keyboard focus and Enter activation for free.
+  #}
   <header class="topbar">
-    <img src="{{ url_for('static', filename='images/logo_v4.png') }}" class="logo">
-    <a href="/" class="back-home">← Back to Home</a>
+    <a href="{{ url_for('home') }}" class="logo-link" aria-label="MyBraveSprout home">
+      <img
+        src="{{ url_for('static', filename='images/logo_v4.png') }}"
+        class="logo"
+        alt="MyBraveSprout"
+      >
+    </a>
   </header>
 
   <main class="login-layout">

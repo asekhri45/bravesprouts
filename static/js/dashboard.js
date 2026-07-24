@@ -2286,16 +2286,29 @@ document.addEventListener("keydown", function (event) {
 
     if (!pathContainer || !svg || nodes.length < 2) return;
 
+    /*
+      Read every geometry value up front, then write the SVG in one pass.
+
+      This loop used to interleave getBoundingClientRect() with appendChild()
+      into the same SVG, so each append invalidated layout and the next read
+      forced a synchronous reflow -- one per segment. With the journey list
+      that meant a burst of layout work right as the dashboard was trying to
+      paint, which is a large part of why the connecting lines arrived visibly
+      after the circles. Same geometry, same output, no forced reflows.
+    */
     const containerRect = pathContainer.getBoundingClientRect();
+    const nodeRects = nodes.map((node) => node.getBoundingClientRect());
+    const containerWidth = pathContainer.offsetWidth;
+    const containerHeight = pathContainer.offsetHeight;
 
-    svg.setAttribute(
-      "viewBox",
-      `0 0 ${pathContainer.offsetWidth} ${pathContainer.offsetHeight}`
-    );
+    svg.setAttribute("viewBox", `0 0 ${containerWidth} ${containerHeight}`);
 
-    svg.innerHTML = `<defs id="journeyGradientDefs"></defs>`;
-
-    const defs = svg.querySelector("#journeyGradientDefs");
+    // Built detached, then swapped in once, so the browser lays out the
+    // finished connector a single time.
+    const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+    defs.setAttribute("id", "journeyGradientDefs");
+    const fragment = document.createDocumentFragment();
+    fragment.appendChild(defs);
 
     for (let i = 0; i < nodes.length - 1; i++) {
       const currentItem = items[i];
@@ -2304,8 +2317,8 @@ document.addEventListener("keydown", function (event) {
       const currentNode = nodes[i];
       const nextNode = nodes[i + 1];
 
-      const currentRect = currentNode.getBoundingClientRect();
-      const nextRect = nextNode.getBoundingClientRect();
+      const currentRect = nodeRects[i];
+      const nextRect = nodeRects[i + 1];
 
       const startX = currentRect.left + currentRect.width / 2 - containerRect.left;
       const startY = currentRect.bottom - containerRect.top;
@@ -2351,12 +2364,41 @@ document.addEventListener("keydown", function (event) {
       path.setAttribute("stroke-linecap", "round");
       path.setAttribute("stroke-linejoin", "round");
 
-      svg.appendChild(path);
+      fragment.appendChild(path);
     }
+
+    svg.replaceChildren(fragment);
   }
 
   drawJourneyConnector();
-  window.addEventListener("resize", drawJourneyConnector);
+
+  /*
+    The journey images now declare their dimensions, so the layout the lines
+    were measured against is already final and the first draw is correct. This
+    is a one-shot safety net for anything that still changes height after load
+    (a late web font, an image whose natural size differs); it redraws once and
+    then removes itself, rather than leaving a listener behind.
+  */
+  if (document.readyState !== "complete") {
+    window.addEventListener("load", function onceLoaded() {
+      window.removeEventListener("load", onceLoaded);
+      requestAnimationFrame(drawJourneyConnector);
+    });
+  }
+
+  /*
+    Resize used to redraw synchronously on every event. Coalescing to one
+    animation frame keeps dragging a window smooth while still ending in the
+    correct final geometry.
+  */
+  let journeyResizeFrame = null;
+  window.addEventListener("resize", function () {
+    if (journeyResizeFrame) return;
+    journeyResizeFrame = requestAnimationFrame(function () {
+      journeyResizeFrame = null;
+      drawJourneyConnector();
+    });
+  });
 // ---------------------
 // FEEDBACK SURVEY
 // ---------------------

@@ -7,6 +7,11 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 import json
 
+# Shared conversational-intent normalization (done / continue / repeat /
+# redirect) used by the mic games. Imported under an alias so the module name
+# does not shadow the many local variables named `intent` in this file.
+import intent as intent_module
+
 import hashlib
 
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
@@ -22,6 +27,7 @@ from zoneinfo import ZoneInfo
 from flask_talisman import Talisman
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from flask_compress import Compress
 
 import secrets
 from functools import wraps
@@ -63,6 +69,7 @@ load_dotenv()
 
 debug_mode = os.environ.get("FLASK_DEBUG") == "1"
 app.config["DEBUG"] = debug_mode
+app.config["CANONICAL_SITE_ORIGIN"] = "https://www.mybravesprout.com"
 
 is_production = os.environ.get("FLASK_ENV") == "production"
 
@@ -246,6 +253,22 @@ limiter = Limiter(
     get_remote_address,
     app=app,
 )
+
+# Response compression for compressible text responses only -- explicitly
+# scoped to text/markup/script/font-metadata types so already-compressed
+# media (GIF/PNG/JPEG/WebP/MP3/MP4) is never re-compressed.
+app.config["COMPRESS_MIMETYPES"] = [
+    "text/html",
+    "text/css",
+    "text/plain",
+    "text/xml",
+    "text/javascript",
+    "application/javascript",
+    "application/json",
+    "application/xml",
+    "image/svg+xml",
+]
+Compress(app)
 
 def get_db_connection():
     conn = sqlite3.connect(DATABASE)
@@ -581,13 +604,50 @@ def get_homepage_activities():
 
 
 # ROUTES
-@app.route("/")
+def canonical_url_for(endpoint, **values):
+    """Build an absolute URL on MyBraveSprout's canonical HTTPS origin."""
+    path = url_for(endpoint, _external=False, **values)
+    return f"{app.config['CANONICAL_SITE_ORIGIN']}{path}"
+
+
+def canonical_organization_entity():
+    """The single shared Organization identity used by public JSON-LD."""
+    return {
+        "@type": "Organization",
+        "name": "MyBraveSprout",
+        "url": canonical_url_for("home"),
+        "logo": {
+            "@type": "ImageObject",
+            "url": canonical_url_for(
+                "static",
+                filename="images/favicon1/android-chrome-512x512.png",
+            ),
+            "width": 512,
+            "height": 512,
+        },
+    }
+
+
 @app.route("/home")
+@app.route("/")
 def home():
+    canonical_home_url = canonical_url_for("home")
+
     return render_template(
         "home.html",
         homepage_activities=get_homepage_activities(),
         active_page="home",
+        canonical_home_url=canonical_home_url,
+        organization_jsonld={
+            "@context": "https://schema.org",
+            **canonical_organization_entity(),
+        },
+        website_jsonld={
+            "@context": "https://schema.org",
+            "@type": "WebSite",
+            "name": "MyBraveSprout",
+            "url": canonical_home_url,
+        },
     )
 
 
@@ -2515,6 +2575,20 @@ def unlock_activity():
 
 @app.after_request
 def add_no_chache_headers(response):
+    # Static assets (served under /static/ and /favicon.ico) are safe to
+    # cache -- they're either content-versioned via a `?v=N` query string
+    # already baked into the template links, or unversioned but rarely
+    # changed art. Forcing no-store on them meant every page view/reload
+    # re-downloaded the full asset payload from scratch. Dynamic/HTML
+    # responses (dashboard, settings, etc.) keep the original strict
+    # no-store behavior so authenticated pages are never cached (e.g. by
+    # the back/forward cache after logout).
+    if (request.path.startswith("/static/") or request.path == "/favicon.ico") and response.status_code < 400:
+        response.headers["Cache-Control"] = "public, max-age=31536000"
+        response.headers.pop("Pragma", None)
+        response.headers.pop("Expires", None)
+        return response
+
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age-0"
     response.headers["Pragma"] = "no-cache"
     response.headers["Expires"] = "0"
@@ -4822,6 +4896,73 @@ def matching_game_tts():
             "error": "Could not generate audio"
         }), 500
 
+MATCHING_INTENT_DECISIONS = ("play_again", "stop", "redirect", "unclear")
+
+
+@app.route("/api/matching-game/classify-intent", methods=["POST"])
+@csrf.exempt
+@login_required
+@limiter.limit("60 per minute")
+def matching_game_classify_intent():
+    """
+    Fallback intent classifier for Star's "play again, or finish for now?"
+
+    The client resolves obvious phrasings locally and only calls this when its
+    own patterns cannot decide. Output is constrained to one of four labels;
+    anything else (or any failure) makes the client keep its local result, so
+    this endpoint is never on the critical path.
+
+    `redirect` is the important non-obvious label: the speaker handed the
+    question to the child ("What do you think, Mikey?") rather than answering
+    it, and the game should keep listening instead of advancing.
+    """
+    data = request.get_json(silent=True) or {}
+
+    transcript = re.sub(r"\s+", " ", str(data.get("transcript", "")).strip())[:200]
+
+    if not transcript:
+        return jsonify({"success": False, "error": "Missing transcript"}), 400
+
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            temperature=0,
+            max_tokens=20,
+            response_format={"type": "json_object"},
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "A children's game character asked: \"Do you want to play another "
+                        "round, or do you want to finish for now?\" Classify the single "
+                        "reply you are given. Return ONLY JSON: {\"decision\": \"<label>\"}. "
+                        "Labels: "
+                        "\"play_again\" = the speaker chose to keep playing; "
+                        "\"stop\" = the speaker chose to finish/stop/be done; "
+                        "\"redirect\" = the speaker did not decide, but asked or handed the "
+                        "question to the child (e.g. 'What do you think, Mikey?', 'Do you "
+                        "want to keep playing or finish?', 'Tell Star what you want'); "
+                        "\"unclear\" = anything else, including off-topic speech. "
+                        "A question is never a decision -- prefer \"redirect\" for questions."
+                    )
+                },
+                {"role": "user", "content": transcript}
+            ]
+        )
+
+        parsed = json.loads(response.choices[0].message.content or "{}")
+        decision = str(parsed.get("decision", "")).strip().lower()
+
+        if decision not in MATCHING_INTENT_DECISIONS:
+            decision = "unclear"
+
+        return jsonify({"success": True, "decision": decision})
+
+    except Exception as e:
+        print("Matching game intent classification error:", repr(e))
+        return jsonify({"success": False, "error": "Could not classify intent"}), 500
+
+
 @app.route("/api/matching-game/message", methods=["POST"])
 @csrf.exempt
 @login_required
@@ -6218,77 +6359,143 @@ def clean_open_ended_animal_name(value):
 
 def is_probably_valid_mystery_animal_guess(value):
     """
-    Strict guardrail for guesses Star says aloud.
+    Final safety check for every animal guess Star says aloud.
 
-    This intentionally does NOT allow random noun phrases anymore. That was how
-    clue fragments like "one color" could become a spoken guess. A guess must be
-    a known animal name or a specific animal that can be broadened safely.
+    This function deliberately rejects clue fragments such as:
+    "fur", "a fur", "wings", "in water", "black and white", or "big".
+
+    Star may only say a guess that resolves to an animal contained in the
+    game's approved animal collections.
     """
     guess = clean_open_ended_animal_name(value)
 
     if not guess:
         return False
 
-    guess_l = guess.lower().strip()
+    guess_l = normalize_child_text(guess).lower().strip()
+
+    # Remove an article so phrases such as "a fur" become "fur" and are
+    # rejected correctly, while "an elephant" becomes "elephant".
+    guess_l = re.sub(r"^(?:a|an|the)\s+", "", guess_l).strip()
+
+    if not guess_l:
+        return False
+
     words = set(re.findall(r"[a-z']+", guess_l))
 
-    invalid_single_words = {
+    if not words:
+        return False
+
+    invalid_words = {
+        # Habitats and places
         "land", "water", "air", "sky", "ground", "outside", "inside",
-        "antler", "antlers", "horn", "horns", "shell", "fur", "feather", "feathers", "scale", "scales",
-        "beak", "beaks", "claw", "claws", "talon", "talons", "paw", "paws", "hoof", "hooves",
-        "snout", "nose", "ear", "ears", "eye", "eyes", "mouth", "tooth", "teeth", "stripe", "stripes", "spot", "spots",
-        "leg", "legs", "arm", "arms", "tail", "tails", "wing", "wings", "fin", "fins", "skin",
-        "backpack", "hand", "person", "human", "bigger", "smaller", "larger", "small", "big",
-        "walk", "run", "jump", "crawl", "swim", "fly", "walks", "runs", "jumps", "crawls", "swims", "flies",
-        "clue", "hint", "color", "colors", "colour", "colours", "food", "place", "one", "many", "same", "different"
+        "ocean", "sea", "river", "lake", "forest", "jungle", "farm",
+        "house", "home", "zoo",
+
+        # Body coverings and body parts
+        "fur", "furry", "hair", "hairy",
+        "feather", "feathers", "feathery",
+        "scale", "scales", "scaly",
+        "skin", "shell",
+        "antler", "antlers", "horn", "horns",
+        "beak", "beaks",
+        "claw", "claws", "talon", "talons",
+        "paw", "paws", "hoof", "hooves",
+        "snout", "nose", "ear", "ears",
+        "eye", "eyes", "mouth", "tooth", "teeth",
+        "stripe", "stripes", "spot", "spots",
+        "leg", "legs", "arm", "arms",
+        "tail", "tails", "wing", "wings",
+        "fin", "fins",
+
+        # Sizes, descriptions, and comparisons
+        "big", "small", "tiny", "large",
+        "bigger", "smaller", "larger", "shorter", "taller",
+        "than", "color", "colors", "colour", "colours",
+        "black", "white", "brown", "gray", "grey",
+        "red", "blue", "green", "yellow", "orange", "purple",
+        "one", "many", "same", "different",
+
+        # Movement and actions
+        "walk", "walks", "walking",
+        "run", "runs", "running",
+        "jump", "jumps", "jumping",
+        "crawl", "crawls", "crawling",
+        "swim", "swims", "swimming",
+        "fly", "flies", "flying",
+
+        # Other clue fragments
+        "food", "place", "clue", "hint",
+        "backpack", "hand", "person", "human",
+        "yes", "no", "yeah", "nope",
+        "something", "anything", "animal"
     }
 
-    invalid_anywhere = {
-        "than", "bigger", "smaller", "larger", "shorter", "taller",
-        "land", "water", "sky", "air", "backpack", "hand", "person",
-        "antler", "antlers", "horn", "horns", "shell", "fur", "feather", "feathers", "scale", "scales",
-        "beak", "beaks", "claw", "claws", "talon", "talons", "paw", "paws", "hoof", "hooves",
-        "snout", "nose", "ear", "ears", "eye", "eyes", "mouth", "tooth", "teeth", "stripe", "stripes", "spot", "spots",
-        "legs", "arms", "tail", "wings", "fins", "color", "colors", "colour", "colours", "one", "many"
+    invalid_exact_phrases = {
+        "one color",
+        "many colors",
+        "same color",
+        "different colors",
+        "mostly one color",
+        "mostly many colors",
+        "black and white",
+        "on land",
+        "in water",
+        "in the water",
+        "in air",
+        "in the air",
+        "in the sky",
+        "type of animal",
+        "kind of animal",
+        "sort of animal"
     }
 
-    invalid_exact = {
-        "one color", "many colors", "same color", "different colors", "mostly one color",
-        "mostly many colors", "one colour", "many colours", "same colour", "different colours"
-    }
-
-    if guess_l in invalid_exact:
+    if guess_l in invalid_exact_phrases:
         return False
 
-    if len(words) == 1 and next(iter(words)) in invalid_single_words:
+    # Any descriptive/clue word appearing in the guess makes the guess unsafe.
+    # This catches phrases such as "a fur", "furry thing", and "big animal".
+    if words.intersection(invalid_words):
         return False
 
-    if words and words.issubset(invalid_anywhere):
+    if re.search(
+        r"\b(?:"
+        r"type of|kind of|sort of|family of|"
+        r"on land|in water|in the water|in air|in the air|in the sky|"
+        r"bigger than|smaller than|larger than|"
+        r"covered in|covered with|has fur|has feathers|has scales"
+        r")\b",
+        guess_l
+    ):
         return False
 
-    if any(word in words for word in {"than", "bigger", "smaller", "larger"}):
+    if re.search(
+        r"^(?:on|in|at|under|over|near|with|without|has|have|covered)\s+",
+        guess_l
+    ):
         return False
 
-    if re.search(r"\b(?:on land|in water|in the water|in air|in the air|in the sky|bigger than|smaller than|one color|many colors|same color|different colors)\b", guess_l):
+    # Do not permit sentences or long descriptions.
+    guess_words = re.findall(r"[a-z']+", guess_l)
+
+    if not 1 <= len(guess_words) <= 3:
         return False
 
-    if re.search(r"^(?:on|in|at|under|over|near|with|without|has|have)\s+", guess_l):
-        return False
+    # The guess must resolve to an animal the game knows is an animal.
+    broadened = broaden_specific_mystery_animal_guess(guess_l)
 
-    broad = broaden_specific_mystery_animal_guess(guess_l)
-    if broad:
-        return broad in MYSTERY_ANIMAL_COMMON_ANIMALS or broad in MYSTERY_ANIMAL_BROAD_GUESS_ANIMALS
+    approved_animals = set(MYSTERY_ANIMAL_COMMON_ANIMALS)
+    approved_animals.update(MYSTERY_ANIMAL_BROAD_GUESS_ANIMALS)
+    approved_animals.update(MYSTERY_ANIMAL_GUESS_PROFILES.keys())
 
-    if guess_l in MYSTERY_ANIMAL_COMMON_ANIMALS:
+    if broadened and broadened in approved_animals:
         return True
 
-    # OpenAI may know valid animals that are not in our local list. Allow short
-    # animal-name-shaped guesses after the clue-fragment filters above.
-    if 1 <= len(words) <= 3 and all(re.fullmatch(r"[a-z']+", word) for word in words):
-        blocked_phrases = {"type of", "kind of", "sort of", "family of"}
-        if not any(phrase in guess_l for phrase in blocked_phrases):
-            return True
+    if guess_l in approved_animals:
+        return True
 
+    # Never accept an arbitrary short phrase simply because it looks like
+    # it could grammatically be an animal name.
     return False
 
 def get_mystery_animal_article(noun):
@@ -6416,70 +6623,67 @@ def is_no_response(text):
     }) or lowered in {"no", "nope", "nah"}
 
 
+def get_mystery_animal_round_choice_question(child_name, rounds_completed, ready_to_unlock_next):
+    """The exact end-of-round choice, so a repeat request can replay it.
+
+    Kept in one place so the question the child hears and the question replayed
+    on "can you say that again?" can never drift apart.
+    """
+    if ready_to_unlock_next:
+        return f"{child_name}, do you want to play again, or do you want to end here?"
+
+    return f"{child_name}, would you like to keep playing, or end for now?"
+
+
 def classify_mystery_animal_choice_response(text, offer_next_game=False):
+    """Read the child's answer to "play again, or end here?".
+
+    Previously this took the union of a `stop_words` set that contained both
+    "not"/"dont" AND "done"/"stop", so "I'm not done" and "I don't want to
+    stop" both classified as stop -- the negation was invisible to it. It also
+    missed ordinary phrasings like "that's enough" and "another one". The
+    shared classifier in intent.py handles negation properly; this function is
+    now just the game-specific mapping on top of it.
+
+    Returns "stop", "same_game", "next_game", "repeat" or "unclear".
+    """
     lowered = normalize_child_text(text).lower()
-    words = set(re.findall(r"[a-z']+", lowered))
 
     if not lowered:
         return "unclear"
 
-    stop_words = {
-        "stop", "done", "finish", "finished", "end", "quit", "leave",
-        "dashboard", "no", "nope", "nah", "not", "dont", "don't"
-    }
-
-    next_game_words = {
-        "different", "next", "other"
-    }
-
-    same_game_words = {
-        "again", "same", "replay", "more", "continue",
-        "yes", "yeah", "yep", "yup", "sure",
-        "okay", "ok", "alright", "fine", "good", "cool",
-        "this"
-    }
-
-    if words & stop_words:
-        return "stop"
-
-    if offer_next_game and words & next_game_words:
-        return "next_game"
-
-    if words & same_game_words:
-        return "same_game"
-
-    same_game_phrases = [
-        "play again",
-        "play another round",
-        "another round",
-        "one more round",
-        "this game",
-        "same game",
-        "let's play",
-        "lets play",
-        "let us play",
-        "keep playing",
-        "do it again",
-        "try again"
-    ]
-
-    if any(phrase in lowered for phrase in same_game_phrases):
-        return "same_game"
-
+    # "A different game" only means next_game when one is actually on offer;
+    # checked before the generic labels because "next" alone reads as continue.
     if offer_next_game:
         next_game_phrases = [
-            "different game",
-            "next game",
-            "new game",
-            "other game",
-            "different version",
-            "slightly different",
-            "guessing game"
+            "different game", "next game", "new game", "other game",
+            "different version", "slightly different", "guessing game",
+            "different one", "another game",
         ]
-
         if any(phrase in lowered for phrase in next_game_phrases):
             return "next_game"
 
+    result = intent_module.classify_intent(lowered)
+    label = result["intent"]
+
+    if label == "repeat":
+        return "repeat"
+    if label == "stop":
+        return "stop"
+    if label == "continue":
+        return "same_game"
+
+    # A bare "yes"/"sure" answers "do you want to play again?" affirmatively.
+    # Kept separate from the shared cues because "yes" is only a continuation
+    # in the context of this specific question.
+    words = set(re.findall(r"[a-z']+", lowered))
+    if words & {"yes", "yeah", "yep", "yup", "sure", "okay", "ok", "alright"}:
+        return "same_game"
+    if words & {"no", "nope", "nah"}:
+        return "stop"
+
+    # "redirect" and anything genuinely ambiguous stay unclear so the caller
+    # re-asks instead of assuming.
     return "unclear"
 
 
@@ -6608,6 +6812,33 @@ def calm_mystery_animal_line(text, game_complete=False):
     return text[:260].strip()
 
 
+def _mystery_animal_answer_reflection(game_state, child_response):
+    """The fact the child's latest answer established, as a short phrase.
+
+    Returns None whenever the answer did not establish a readable fact, so an
+    acknowledgment can never assert something the reasoning state does not
+    hold. Safe no-op if the decision-tree module is unavailable.
+    """
+    try:
+        from question import describe_answer
+    except Exception:
+        return None
+
+    question_key = (
+        game_state.get("last_question_key")
+        or game_state.get("pending_question_key")
+        or ""
+    )
+
+    if not question_key:
+        return None
+
+    try:
+        return describe_answer(str(question_key), str(child_response or ""))
+    except Exception:
+        return None
+
+
 def maybe_add_mystery_animal_acknowledgment(
     message,
     event_type,
@@ -6657,24 +6888,67 @@ def maybe_add_mystery_animal_acknowledgment(
 
     if use_name_now:
         acknowledgments = [
-            f"Thank you, {child_name}. That helps.",
+            f"Thank you, {child_name}. That gives me a clue.",
             f"That is helpful, {child_name}.",
             f"Thanks, {child_name}. I can use that clue.",
-            f"That clue helps, {child_name}."
+            f"Good detail, {child_name}.",
+            f"Okay, {child_name}. I will remember that."
         ]
     else:
+        # Previously six of the eight generic lines were built on "that
+        # helps", so Star sounded like it was repeating one phrase. These are
+        # genuinely different acknowledgments.
         acknowledgments = [
-            "Hmm, that helps.",
-            "That helps.",
-            "Okay, that helps.",
             "That gives me a clue.",
+            "I am getting closer.",
+            "Good detail!",
+            "That narrows it down.",
+            "I have a better idea now.",
+            "Interesting, let me think.",
+            "Okay, I will remember that.",
             "Hmm, that is useful.",
-            "Okay, I can use that clue.",
-            "That helps me narrow it down.",
             "Thank you, that helps."
         ]
 
     recent = list(game_state.get("recent_acknowledgments", []))[-5:]
+
+    """
+    Occasionally reflect the fact the answer actually established, rather than
+    only acknowledging that something was said. The phrase comes from the same
+    matcher the candidate filter uses, so Star can never restate a trait the
+    reasoning state did not record -- an answer it could not read confidently
+    yields no reflection at all.
+
+    Cadence is a gap counter, not a per-answer probability. Only answers that
+    produced a readable fact count as "eligible", and a reflection needs at
+    least four of them since the last one, with the randomness deciding only
+    whether it lands on the 4th, 5th or 6th. A flat probability made
+    reflections cluster (two in three turns) and then vanish for a dozen.
+    """
+    reflection = _mystery_animal_answer_reflection(game_state, child_response)
+
+    if reflection:
+        try:
+            since = int(game_state.get("eligible_since_reflection", 0))
+        except (TypeError, ValueError):
+            since = 0
+        since += 1
+        game_state["eligible_since_reflection"] = since
+
+        if since >= 4 and (since >= 6 or random.random() < 0.5):
+            reflection_line = random.choice([
+                f"Oh, so {reflection}. That gives me a clue.",
+                f"So {reflection}. I'll remember that.",
+                f"Okay, so {reflection}. I'm getting closer.",
+                f"Oh, so {reflection}. That narrows it down.",
+                f"So {reflection}. Interesting!",
+                f"Okay, so {reflection}. I have a better idea now.",
+                f"So {reflection}. That rules out a few animals.",
+            ])
+            game_state["eligible_since_reflection"] = 0
+            game_state["recent_acknowledgments"] = (recent + [reflection_line])[-5:]
+            return f"{reflection_line} {message}"
+
     fresh = [ack for ack in acknowledgments if ack not in recent]
 
     acknowledgment = random.choice(fresh or acknowledgments)
@@ -8076,57 +8350,136 @@ def extract_mystery_animal_guess_from_message(message):
 
 def get_open_ended_mystery_animal_guess(game_state, child_name=""):
     """
-    Ask OpenAI for a real animal guess only when the clues are strong enough.
-    This is open-ended, but every guess must pass strict validation before Star speaks it.
+    Decide whether Star has enough clues to guess a real animal.
+
+    Star must collect at least three usable question-answer pairs before
+    guessing. Invalid model outputs are discarded, and the caller will ask
+    another narrowing question instead.
     """
+    qa_history = [
+        item
+        for item in (game_state.get("qa_history") or [])
+        if isinstance(item, dict)
+    ]
+
     clue_dictionary = get_mystery_animal_clue_dictionary(game_state)
+
     rejected = [
         clean_open_ended_animal_name(item)
         for item in game_state.get("rejected_guesses", [])
         if clean_open_ended_animal_name(item)
     ]
-    required_tags = sorted(list(get_mystery_animal_required_guess_tags(game_state)))
-    families = sorted(list(get_mystery_animal_answer_families(game_state)))
 
-    if not is_mystery_animal_guess_ready(game_state):
+    required_tags = sorted(
+        list(get_mystery_animal_required_guess_tags(game_state))
+    )
+
+    families = sorted(
+        list(get_mystery_animal_answer_families(game_state))
+    )
+
+    # Complete ordered question-and-answer history for the current animal.
+    ordered_qa = [
+        {
+            "question": normalize_child_text(item.get("question", "")),
+            "answer": normalize_child_text(item.get("answer", ""))
+        }
+        for item in qa_history
+        if normalize_child_text(item.get("answer", ""))
+    ]
+
+    # Never guess from the first or second answer.
+    # Early answers such as "fur", "yes", or "in water" are only clues.
+    if len(ordered_qa) < 3:
         return None
+
+    latest = (
+        ordered_qa[-1]
+        if ordered_qa
+        else {"question": "", "answer": ""}
+    )
 
     rule_guess = get_rule_based_mystery_animal_guess(game_state)
 
     prompt = f"""
-You are helping Star play Mystery Animal.
+You are helping Star play a child-friendly game called Mystery Animal.
 
-The child is thinking of one real animal. There is no fixed candidate list.
-Use the entire structured clue dictionary like a smart human would.
-Your job is to make ONE animal guess only if the clues are strong enough.
+A young child is thinking of exactly ONE real animal. Star asks questions, and
+the child gives short spoken answers.
 
-Hard rules:
-- Return ONLY a JSON object. No markdown.
-- The guess must be a real animal common name.
-- The guess may be any real animal, including animals not listed in code.
-- Never return a clue, body part, habitat, movement, size, adjective, or phrase fragment.
-- Invalid examples: "on land", "bigger than a", "antlers", "shell", "water", "the sky", "walks", "small", "one color", "many colors".
-- If the clues are broad only, such as just size and habitat, return null.
-- Do not guess an animal that contradicts the clue dictionary.
-- Do not repeat rejected guesses: {rejected}
-- Treat food answers as food evidence, not identity. If the child says it eats fish, do not guess fish unless other clues say the animal itself is a fish.
-- Use reasoning, not a hardcoded clue map. For example, cold place + white + fur/four legs should suggest polar bear; black and white + waddles + eats fish should suggest penguin.
-- If two animals are still plausible, return null so Star can ask one more useful question.
-- If the child gives a broad category clue like "type of bird," do NOT guess only "bird." Use that as a constraint and either guess a specific animal that fits the full clue history, or return null and ask one narrowing question.
-- You may guess specific kid-familiar animals and species when the clues support them. Examples: penguin, polar bear, panda, parrot, owl, eagle, duck, flamingo, ostrich, peacock, dolphin, shark, whale, turtle, snake, butterfly, bee, elephant, giraffe, zebra, lion, tiger, kangaroo.
-- Do not collapse a specific correct guess into a broad category in later rounds. If the clues support penguin, return "penguin," not "bird."
+Your only job is to decide whether Star has enough information to guess a real
+animal now.
 
-Structured clue dictionary:
+STRICT RULES:
+
+1. You must never return a clue as the guess.
+2. The guess must be the common name of a real animal.
+3. Never guess a body covering, body part, habitat, movement, size, color,
+   adjective, or descriptive phrase.
+4. Invalid guesses include things such as:
+   "fur", "a fur", "feathers", "scales", "wings", "tail", "in water",
+   "on land", "big", "small", "black and white", and "something furry".
+5. If your proposed answer is not definitely the name of a real animal,
+   return should_guess=false.
+6. Consider all question-answer pairs together.
+7. Star has already collected at least three answers, but three answers do
+   not automatically require a guess.
+8. Guess only when the clues support one sensible, specific animal.
+9. If several common animals still fit, return should_guess=false so Star
+   can ask another narrowing question.
+10. Never repeat a previously rejected guess.
+11. Never contradict one of the child's answers.
+12. The "guess" field must contain only the animal name, without "a", "an",
+    "the", a sentence, punctuation, or an explanation.
+
+Examples of valid guess values:
+"penguin"
+"elephant"
+"dolphin"
+"axolotl"
+"golden retriever"
+
+Examples of invalid guess values:
+"fur"
+"a fur"
+"furry"
+"feathers"
+"something with wings"
+"it lives in water"
+"big animal"
+"black and white"
+
+Full ordered question-and-answer history:
+{json.dumps(ordered_qa, ensure_ascii=False, indent=2)}
+
+Latest question:
+{json.dumps(latest.get("question", ""), ensure_ascii=False)}
+
+Latest answer:
+{json.dumps(latest.get("answer", ""), ensure_ascii=False)}
+
+Previously rejected guesses:
+{json.dumps(rejected, ensure_ascii=False)}
+
+Normalized clue summary:
 {json.dumps(clue_dictionary, ensure_ascii=False, indent=2)}
 
-Normalized hard clue tags:
-{required_tags}
+Required clue tags:
+{json.dumps(required_tags, ensure_ascii=False)}
 
 Answered clue families:
-{families}
+{json.dumps(families, ensure_ascii=False)}
 
-Return JSON only:
-{{"guess": "animal name or null", "confidence": 0.0, "why": "short reason"}}
+Return ONLY one valid JSON object.
+
+When there is enough information:
+{{"should_guess": true, "guess": "penguin", "confidence": 0.82, "reason": "The clues strongly fit a penguin."}}
+
+When there is not enough information:
+{{"should_guess": false, "guess": null, "confidence": 0.30, "reason": "Several animals still fit."}}
+
+When the only possible output would be a clue rather than an animal:
+{{"should_guess": false, "guess": null, "confidence": 0.0, "reason": "The available information is only a clue, not an animal identity."}}
 """
 
     try:
@@ -8140,32 +8493,67 @@ Return JSON only:
         raw = re.sub(r"\s*```$", "", raw)
 
         data = json.loads(raw)
-        guess = clean_open_ended_animal_name(data.get("guess"))
 
-        try:
-            confidence = float(data.get("confidence", 0) or 0)
-        except (TypeError, ValueError):
-            confidence = 0
+        # Only the literal boolean True is treated as permission to guess.
+        # Strings such as "true" must not accidentally pass bool(...).
+        should_guess = data.get("should_guess") is True
 
-        if confidence >= 0.48 and guess and guess not in rejected:
-            if (
-                is_probably_valid_mystery_animal_guess(guess)
-                and not mystery_animal_guess_contradicts_clues(guess, game_state)
-                and not mystery_animal_guess_is_too_broad_for_declared_type(guess, game_state)
-            ):
-                return guess
+        raw_guess = data.get("guess")
+
+        if not should_guess or not isinstance(raw_guess, str):
+            return None
+
+        guess = clean_open_ended_animal_name(raw_guess)
+
+        if not guess:
+            return None
+
+        # Remove an article before validating or comparing.
+        guess = re.sub(
+            r"^(?:a|an|the)\s+",
+            "",
+            guess.lower().strip()
+        ).strip()
+
+        if not guess:
+            return None
+
+        if guess in rejected:
+            return None
+
+        # This is the final hard gate. Even if OpenAI says it should guess,
+        # Star cannot speak the result unless it passes as a real animal.
+        if not is_probably_valid_mystery_animal_guess(guess):
+            return None
+
+        if mystery_animal_guess_contradicts_clues(guess, game_state):
+            return None
+
+        if mystery_animal_guess_is_too_broad_for_declared_type(
+            guess,
+            game_state
+        ):
+            return None
+
+        return guess
 
     except Exception as e:
         print("Open-ended Mystery Animal guess error:", repr(e))
 
-    # Fallback only: use local scoring if OpenAI is unavailable or not confident.
-    # This keeps the game working without letting hardcoded rules dominate smart guesses.
+    # Local fallback only when OpenAI fails completely.
+    # It still cannot guess before three usable answers.
     if (
         rule_guess
         and rule_guess not in rejected
         and is_probably_valid_mystery_animal_guess(rule_guess)
-        and not mystery_animal_guess_contradicts_clues(rule_guess, game_state)
-        and not mystery_animal_guess_is_too_broad_for_declared_type(rule_guess, game_state)
+        and not mystery_animal_guess_contradicts_clues(
+            rule_guess,
+            game_state
+        )
+        and not mystery_animal_guess_is_too_broad_for_declared_type(
+            rule_guess,
+            game_state
+        )
     ):
         return rule_guess
 
@@ -8302,7 +8690,12 @@ def apply_mystery_animal_comfort_update(game_state, event_type, child_response, 
 
             game_state["possible_guess"] = None
             game_state["skip_guess_once"] = True
-            game_state["guess_cooldown_questions"] = random.choice([1, 2])
+            # After a wrong guess, Star may guess again once she has received
+            # one more useful clue. skip_guess_once already skips the very next
+            # turn (the child's yes/no), so a cooldown of 1 lands the re-guess
+            # on the next clear answer rather than making the child give several
+            # more clues first.
+            game_state["guess_cooldown_questions"] = 1
 
         elif event_type == "no_response":
             # Do not treat silence or a missed answer as "no."
@@ -8696,17 +9089,19 @@ def mystery_animal_message():
                 pause_ms=1900
             )
 
-        if rounds_completed >= MYSTERY_ANIMAL_REQUIRED_ROUNDS:
+        ready_to_unlock_next = rounds_completed >= MYSTERY_ANIMAL_REQUIRED_ROUNDS
+        choice_question = get_mystery_animal_round_choice_question(
+            child_name, rounds_completed, ready_to_unlock_next
+        )
+
+        if ready_to_unlock_next:
             message = (
                 f"{base_message} "
                 "That finishes our nine Mystery Animal rounds for today. "
-                f"{child_name}, do you want to play again, or do you want to end here?"
+                f"{choice_question}"
             )
         else:
-            message = (
-                f"{base_message} "
-                f"{child_name}, would you like to keep playing, or end for now?"
-            )
+            message = f"{base_message} {choice_question}"
 
         return make_mystery_animal_audio_response(
             message=message,
@@ -8781,12 +9176,39 @@ def mystery_animal_message():
         ready_to_unlock_next = rounds_completed >= MYSTERY_ANIMAL_REQUIRED_ROUNDS
 
         if event_type == "no_response":
-            choice = "stop" if ready_to_unlock_next else "same_game"
+            # Silence must not pull a child into another round they did not
+            # ask for -- that is what happened when a child said "I'm done"
+            # but the audio came through empty. Re-ask instead.
+            #
+            # Once the required rounds are finished, silence still ends the
+            # session: the game is over either way, and this is the path the
+            # completion/unlock flow runs through.
+            choice = "stop" if ready_to_unlock_next else "unclear"
         else:
             choice = classify_mystery_animal_choice_response(
                 child_response,
                 offer_next_game=ready_to_unlock_next
             )
+
+        # "Can you say that again?" must replay the choice, not answer it.
+        if choice == "repeat":
+            try:
+                return make_mystery_animal_audio_response(
+                    message=get_mystery_animal_round_choice_question(
+                        child_name, rounds_completed, ready_to_unlock_next
+                    ),
+                    stage="round_choice",
+                    response_mode="round_choice",
+                    expects_response=True,
+                    game_complete=False,
+                    game_state=game_state,
+                    history=history,
+                    event_type="round_choice_repeat",
+                    child_response=child_response
+                )
+            except Exception as e:
+                print("Mystery Animal choice repeat TTS error:", e)
+                return jsonify({"success": False, "error": "Could not repeat the question"}), 500
 
         if choice == "same_game":
             message = "Okay. Let's play another round. Think of a new animal in your head."
@@ -8850,29 +9272,14 @@ def mystery_animal_message():
                     "error": "Could not end the game"
                 }), 500
 
-        if ready_to_unlock_next:
-            message = (
-                "That's okay. Would you rather play again, or end here?"
-            )
-        else:
-            message = (
-                "That's okay. We can play another round together."
-            )
-
-            try:
-                return start_new_mystery_round(
-                    rounds_completed=rounds_completed,
-                    message=message,
-                    event_label="choice_unclear_continue",
-                    pause_ms=1500
-                )
-
-            except Exception as e:
-                print("Mystery Animal unclear-choice replay error:", e)
-                return jsonify({
-                    "success": False,
-                    "error": "Could not continue the game"
-                }), 500
+        # An answer we could not read is not permission to continue. This
+        # branch used to start a brand new round ("That's okay. We can play
+        # another round together."), which is what made a child saying "I'm
+        # done" get pulled straight into another round when the transcript
+        # came through unclearly. Always re-ask the same choice instead.
+        message = (
+            "That's okay. Would you like to play another round, or finish for now?"
+        )
 
         try:
             return make_mystery_animal_audio_response(
@@ -9110,18 +9517,26 @@ def mystery_animal_message():
         and is_clear_mystery_animal_response(child_response, previous_response_mode)
     )
 
-    guess_ready = is_mystery_animal_guess_ready(game_state)
     guesses_made = int(game_state.get("guesses_made", 0) or 0)
-    first_guess_ready = questions_asked >= 2 and (guess_ready or questions_asked >= 3)
-    later_guess_ready = rejected_guess_count >= 1 and questions_since_last_guess >= 1 and guess_ready
+    qa_pair_count = len([
+        item for item in (game_state.get("qa_history") or [])
+        if isinstance(item, dict) and normalize_child_text(item.get("answer", ""))
+    ])
 
+    # Consult OpenAI (the single source of truth in
+    # get_open_ended_mystery_animal_guess) after EVERY usable question-answer
+    # pair -- not only once a local candidate-count / scoring rule decides
+    # guessing is "allowed." This flag only gates *whether we ask OpenAI*; the
+    # actual should-guess/what-to-guess decision is OpenAI's. We still avoid
+    # asking on silence/unclear answers, right after a wrong guess
+    # (skip_guess_once / cooldown), and once the per-round guess cap is hit.
     should_guess = (
         clear_answer_for_guessing
+        and qa_pair_count >= 1
         and guesses_made < MYSTERY_ANIMAL_MAX_GUESSES_PER_ROUND
         and not bool(game_state.get("skip_guess_once", False))
         and guess_cooldown_questions <= 0
-        and (len(known_clues) >= 2 or bool(rule_guess_available))
-        and (first_guess_ready if guesses_made == 0 else later_guess_ready)
+        and (rejected_guess_count == 0 or questions_since_last_guess >= 1)
     )
 
     max_questions_reached = (
@@ -9883,10 +10298,70 @@ GUESSING_GAME_ANIMAL_DETAILS = {
 }
 
 
+#: Topics broad enough that the stored detail lists several identifying traits
+#: at once. Narrow questions ("does it have fur?") are answered in full.
+GUESSING_GAME_BROAD_TOPICS = {"appearance", "color", "size", "habitat", "category"}
+
+
+def condense_guessing_game_detail(text, topic, game_state):
+    """Trim a stored detail down to one clue.
+
+    The stored details are written as complete descriptions -- the cat's
+    `appearance` is "It is furry, has four legs, a tail, whiskers, and pointy
+    ears. It can be small or medium-sized, and it can be black, white, orange,
+    gray, brown, or a mix of colors." Reading that out in answer to "what does
+    it look like?" hands over the whole animal in one turn, and the child has
+    nothing left to discover.
+
+    For broad questions this keeps the first sentence and at most two clauses
+    from it. Asking the same topic again advances to the next clue rather than
+    repeating the first, so the child can keep digging without Star either
+    stonewalling or emptying the bag at once.
+    """
+    text = re.sub(r"\s+", " ", str(text or "")).strip()
+
+    if not text or topic not in GUESSING_GAME_BROAD_TOPICS:
+        return text
+
+    sentences = [s.strip() for s in re.split(r"(?<=[.!?])\s+", text) if s.strip()]
+    if not sentences:
+        return text
+
+    # Which clue of this topic the child has already been given.
+    served = game_state.setdefault("served_detail_clauses", {})
+    try:
+        offset = int(served.get(topic, 0))
+    except (TypeError, ValueError):
+        offset = 0
+
+    sentence = sentences[min(offset, len(sentences) - 1)]
+
+    # Split the sentence into clauses and keep at most two closely related ones.
+    clauses = [c.strip(" ,") for c in re.split(r",| and (?=[a-z])", sentence) if c.strip(" ,.")]
+    if not clauses:
+        return sentence
+
+    if offset < len(sentences):
+        served[topic] = offset + 1
+        game_state["served_detail_clauses"] = served
+
+    kept = clauses[:2]
+    condensed = " and ".join(kept).strip(" .,")
+
+    if not condensed:
+        return sentence
+
+    if not condensed[0].isupper():
+        condensed = "It " + condensed if not condensed.lower().startswith("it ") else condensed
+
+    return condensed.rstrip(".") + "."
+
+
 def get_guessing_game_detail(game_state, key, fallback=""):
     secret = normalize_guessing_text(game_state.get("secret_animal", ""))
     details = GUESSING_GAME_ANIMAL_DETAILS.get(secret, {})
-    return details.get(key, fallback)
+    detail = details.get(key, fallback)
+    return condense_guessing_game_detail(detail, key, game_state)
 
 
 def get_guessing_game_default_state(rounds_completed=0, avoid_animals=None, used_animals=None):
@@ -10106,32 +10581,54 @@ def is_guessing_direct_guess(text):
     if not named_animal:
         return False
 
-    # Treat broad category questions like "Is it a bird?" as questions,
-    # not as final guesses. This prevents a penguin/shark/etc. from being
-    # marked wrong when the child is really asking about the animal type.
-    category_words = {"bird", "fish"}
-    if named_animal in category_words and lowered.startswith(("is it", "is your animal", "are you thinking of")):
+    words = set(re.findall(r"[a-z']+", lowered))
+
+    # A descriptive question merely MENTIONS an animal; it is not a guess of the
+    # secret animal's identity. "Does it eat fish?", "Is it bigger than a dog?",
+    # "Does it sound like a bird?", "Can it run as fast as a horse?", and "Does
+    # it live near sharks?" all name an animal but ask about a property, so they
+    # must never be treated as a direct guess.
+    descriptive_markers = {
+        "eat", "eats", "eating", "food", "feed", "feeds",
+        "than", "bigger", "smaller", "larger", "faster", "slower",
+        "taller", "shorter", "near", "beside", "next",
+        "like", "as", "sound", "sounds", "noise", "noises",
+        "live", "lives", "living", "beat", "race", "fight", "fights",
+        "chase", "chases", "hunt", "hunts", "afraid", "scared", "friend", "friends"
+    }
+    if words & descriptive_markers:
         return False
 
-    direct_guess_phrases = [
-        "is it",
-        "is your animal",
-        "are you thinking of",
-        "i guess",
-        "my guess",
-        "i think",
-        "it's",
-        "it is",
-        "maybe",
-        "the animal is"
+    # Broad category words ("bird", "fish") asked as "Is it a bird?" are
+    # category questions answered yes/no (a penguin IS a kind of bird), not a
+    # final guess that could be wrongly marked incorrect.
+    category_words = {"bird", "fish"}
+    if named_animal in category_words and lowered.startswith(
+        ("is it", "is that", "is your animal", "are you thinking of")
+    ):
+        return False
+
+    # Clear guess frames: the child is proposing the animal's identity.
+    guess_frames = [
+        "is it", "is that", "is your animal", "are you thinking of",
+        "i guess", "my guess", "i think it", "i bet it",
+        "could it be", "it might be", "it must be",
+        "maybe it's", "maybe it is", "maybe its",
+        "it's a", "it is a", "it's an", "it is an", "its a", "its an",
+        "the animal is", "the animal's"
     ]
 
-    if any(phrase in lowered for phrase in direct_guess_phrases):
+    if any(frame in lowered for frame in guess_frames):
         return True
 
-    words = re.findall(r"[a-z']+", lowered)
+    # A short, standalone animal name is a guess ("fish", "a penguin",
+    # "penguin"). Everything except articles/filler must be the animal itself.
+    content_words = [
+        word for word in re.findall(r"[a-z']+", lowered)
+        if word not in {"a", "an", "the", "it", "its", "it's", "is", "um", "uh"}
+    ]
 
-    return len(words) <= 4
+    return len(content_words) <= 2 and named_animal in content_words
 
 
 def is_guessing_question(text):
@@ -10316,6 +10813,32 @@ def answer_guessing_question(text, game_state):
 
     named_animal = get_guessing_named_animal(lowered)
 
+    # A food question ("Does it eat fish?", "What does it eat?") names an animal
+    # as FOOD, not as the secret animal's identity. Answer it as food FIRST so
+    # the category ("is it a fish") and named-animal-guess branches below can
+    # never misread the mentioned animal as a guess. This is the exact case
+    # where "Does it eat fish?" was wrongly answered "No, it is not a fish."
+    if words & {"eat", "eats", "eating", "food", "feed", "feeds"}:
+        detail = get_guessing_game_detail(game_state, "food")
+        if detail:
+            answer = detail
+        elif "grass" in tags:
+            answer = "It eats grass."
+        elif "bamboo" in tags:
+            answer = "It eats bamboo."
+        elif "banana" in tags:
+            answer = "It can eat bananas."
+        elif "meat" in tags:
+            answer = "It eats meat."
+        else:
+            answer = "It can eat different kinds of food."
+
+        return {
+            "type": "answer",
+            "message": answer,
+            "question_answered": True
+        }
+
     if "mammal" in words:
         return {
             "type": "answer",
@@ -10351,7 +10874,12 @@ def answer_guessing_question(text, game_state):
             "question_answered": True
         }
 
-    if named_animal:
+    # Only treat a named animal as a guess when the child actually used guess
+    # syntax ("Is it a dog?", "I think it's a dog", or a bare "dog"). Merely
+    # mentioning an animal inside a broader question ("Does it live near
+    # sharks?", "Is it bigger than a dog?") must NOT be scored as a guess -- it
+    # falls through to the property answers / semantic fallback below.
+    if named_animal and is_guessing_direct_guess(text):
         if named_animal == secret:
             return {
                 "type": "correct_guess",
@@ -10572,6 +11100,90 @@ def answer_guessing_question(text, game_state):
             "question_answered": True
         }
 
+    # The local parser could not confidently answer this animal question. Rather
+    # than falling back to a canned "ask me another question" line, use OpenAI
+    # as a semantic fallback so valid but unusual questions still get a real,
+    # truthful answer. The canned support line is used only if OpenAI cannot
+    # understand the question (or is unavailable).
+    return get_guessing_game_openai_answer(text, game_state)
+
+
+def get_guessing_game_openai_answer(text, game_state):
+    """
+    Semantic fallback: answer a valid animal question about the secret animal
+    with OpenAI when the deterministic parser cannot. Never reveals the animal
+    unless the child is making a direct guess, and answers ONLY the question
+    asked, kept short and child-friendly.
+    """
+    profile = get_guessing_game_profile(game_state)
+    secret = normalize_guessing_text(game_state.get("secret_animal", ""))
+    display = profile.get("display", secret)
+    facts = GUESSING_GAME_ANIMAL_DETAILS.get(secret, {})
+    tags = sorted(list(profile.get("tags", set())))
+    question = normalize_child_text(text)
+
+    prompt = f"""
+You are Star, playing an animal guessing game with a young child (about five to seven years old). Star secretly picked an animal and the child asks questions to figure it out.
+
+The secret animal is: {display}
+Known facts about the secret animal:
+{json.dumps(facts, ensure_ascii=False, indent=2)}
+Descriptive tags for the secret animal: {tags}
+
+The child just said: "{question}"
+
+Rules:
+- Answer ONLY the exact question the child asked, using the known facts. Do not answer a different question.
+- Keep the answer to ONE short, truthful, child-friendly sentence that is useful for the guessing game.
+- Give exactly ONE fact: the one the child asked about. Do NOT volunteer extra traits they did not ask about. For example, if the child asks whether it is a pet, say that it is a pet -- do not also mention that it barks, has four legs, has fur, and is called man's best friend. Several decisive clues at once ends the game immediately.
+- Stay helpful and warm. Answer the question honestly and clearly; do not be evasive, vague, or refuse to answer.
+- Young children use short, informal, imperfect grammar. Interpret the meaning charitably.
+- Do NOT reveal or name the secret animal unless the child is directly guessing it. If the child is not guessing, describe the trait without naming the animal.
+- If the child directly names an animal as a guess, set is_direct_guess to true and do not answer as a normal question.
+- If the message is not a real, answerable question about the animal (it is empty, meaningless, or unrelated to the game), set question_understood to false and answer to null.
+
+Respond with ONLY a JSON object, no markdown:
+{{"question_understood": true, "is_direct_guess": false, "answer": "Yes, it eats fish."}}
+"""
+
+    try:
+        response = client.responses.create(
+            model="gpt-4.1-mini",
+            input=[{"role": "user", "content": prompt}]
+        )
+
+        raw = response.output_text.strip()
+        raw = re.sub(r"^```(?:json)?\s*", "", raw)
+        raw = re.sub(r"\s*```$", "", raw)
+
+        data = json.loads(raw)
+
+        understood = bool(data.get("question_understood"))
+        is_direct_guess = bool(data.get("is_direct_guess"))
+        answer = str(data.get("answer") or "").strip()
+
+        if understood and not is_direct_guess and answer:
+            # Safety net: never leak the secret animal's name in a non-guess
+            # answer, even if the model slips it in.
+            if display:
+                answer = re.sub(
+                    r"\b" + re.escape(display) + r"s?\b",
+                    "it",
+                    answer,
+                    flags=re.IGNORECASE
+                )
+            safe_answer = calm_guessing_game_line(answer)
+            return {
+                "type": "answer",
+                "message": safe_answer,
+                "question_answered": True
+            }
+
+    except Exception as e:
+        print("Guessing Game semantic fallback error:", repr(e))
+
+    # OpenAI could not understand the question or is unavailable -- fall back to
+    # the gentle canned support line.
     return get_guessing_game_ai_question_answer(text, game_state)
 
 
@@ -10829,10 +11441,107 @@ def maybe_add_good_question_prefix(message, game_state):
 
 
 
+# Round-1 coaching. Each topic maps to ways of suggesting it, so Star can
+# nudge the child toward a useful next question without ever naming the
+# animal. Topic keys match get_guessing_question_topic(), which is what
+# `asked_topics` records -- that is how an already-answered topic is skipped.
+GUESSING_GAME_TOPIC_SUGGESTIONS = {
+    "habitat": ["ask where it lives", "ask about its habitat", "find out where you would usually see it"],
+    "size": ["ask how big it is", "ask if it is bigger than you", "ask about its size"],
+    "appearance": ["ask what covers its body", "ask what it looks like", "ask if it has a tail"],
+    "food": ["ask what it likes to eat", "find out what it eats"],
+    "movement": ["ask how it moves", "ask if it is fast or slow", "ask how it gets around"],
+    "sound": ["ask what sound it makes", "find out what noise it makes"],
+    "category": ["ask if people keep it as a pet", "find out if it is a pet or a wild animal"],
+    "color": ["ask what color it is"],
+}
+
+# Order Star prefers to steer toward: broad, high-information topics first.
+GUESSING_GAME_SUGGESTION_ORDER = [
+    "habitat", "size", "appearance", "category", "movement", "food", "sound", "color"
+]
+
+
+def get_guessing_game_topic_suggestion(game_state):
+    """One or two suggested directions the child has not already covered."""
+    import random
+
+    asked = set(game_state.get("asked_topics", []) or [])
+    available = [topic for topic in GUESSING_GAME_SUGGESTION_ORDER if topic not in asked]
+
+    if not available:
+        return ""
+
+    # Prefer the first few (most useful) topics without always picking the same.
+    first = random.choice(available[:3])
+    remaining = [topic for topic in available[:4] if topic != first]
+    second = random.choice(remaining) if remaining else None
+
+    first_phrase = random.choice(GUESSING_GAME_TOPIC_SUGGESTIONS[first])
+
+    if second and random.random() < 0.5:
+        second_phrase = random.choice(GUESSING_GAME_TOPIC_SUGGESTIONS[second])
+        return random.choice([
+            f"You could {first_phrase} next, or {second_phrase}.",
+            f"Maybe {first_phrase}, or {second_phrase}.",
+            f"You could {first_phrase}, or {second_phrase} if you need another clue.",
+        ])
+
+    return random.choice([
+        f"You could {first_phrase} next.",
+        f"You might want to {first_phrase}.",
+        f"Maybe {first_phrase}.",
+        f"A question about that might help, so you could {first_phrase}.",
+        f"You could {first_phrase} if you need another clue.",
+    ])
+
+
+def get_guessing_game_first_round_follow_up(game_state, total_child_turns):
+    """Round-1-only coaching: what to ask next, and what the options are.
+
+    Deliberately not on every answer -- a suggestion after each reply would
+    crowd out the child's own thinking. Later rounds do not call this and keep
+    their existing, sparser follow-up behavior.
+    """
+    recent = list(game_state.get("recent_follow_ups", []))[-4:]
+
+    # Periodic reminder of the three things the child can always do.
+    if total_child_turns in {2, 6, 10}:
+        reminder = pick_non_repeating_line([
+            "You can ask another question, make a guess, or ask me for a clue.",
+            "Keep investigating, or guess whenever you think you know.",
+            "You can always ask for a clue if you get stuck.",
+            "Ask me something else, or take a guess when you are ready.",
+            "You can keep asking, guess if you have an idea, or ask me for a clue.",
+        ], recent)
+        game_state["recent_follow_ups"] = (recent + [reminder])[-4:]
+        return reminder
+
+    # Otherwise point at a topic still worth exploring. Front-loaded, then
+    # tapering off: the child needs the most help getting started, and once
+    # they have the idea Star should mostly stay out of the way.
+    suggest_now = total_child_turns in {1, 3, 5} or (
+        total_child_turns > 5 and total_child_turns % 4 == 1
+    )
+
+    if suggest_now:
+        suggestion = get_guessing_game_topic_suggestion(game_state)
+        if suggestion and suggestion not in recent:
+            game_state["recent_follow_ups"] = (recent + [suggestion])[-4:]
+            return suggestion
+
+    return ""
+
+
 def get_guessing_game_follow_up_after_answer(game_state):
     questions_asked = int(game_state.get("questions_asked", 0))
     wrong_guess_count = int(game_state.get("wrong_guess_count", 0))
     total_child_turns = questions_asked + wrong_guess_count
+
+    # The first round coaches the child through how the game works; later
+    # rounds keep exactly the behavior they had before.
+    if int(game_state.get("rounds_completed", 0) or 0) == 0:
+        return get_guessing_game_first_round_follow_up(game_state, total_child_turns)
 
     # Most of the time, just answer the child's question and give space.
     if total_child_turns not in {4, 8}:
@@ -11545,6 +12254,38 @@ def guessing_game_message():
                 "success": False,
                 "error": "Could not repeat reveal choice"
             }), 500
+
+    # "Can you say that again?" is never an answer, a guess or a question about
+    # the animal. Replay the line Star just said and keep every bit of game
+    # state exactly where it was -- checked before the unclear/silent branch so
+    # it cannot be mistaken for a child who did not respond.
+    if event_type == "child_answer" and intent_module.is_repeat_request(child_response):
+        last_star_line = ""
+        for entry in reversed(history):
+            if isinstance(entry, dict) and entry.get("star"):
+                last_star_line = str(entry["star"])
+                break
+
+        if last_star_line:
+            try:
+                return make_guessing_game_audio_response(
+                    message=f"Sure, no problem. {last_star_line}",
+                    stage=game_state.get("stage", "answering"),
+                    response_mode=previous_response_mode or "open_hint",
+                    expects_response=True,
+                    game_complete=False,
+                    game_state=game_state,
+                    history=history,
+                    event_type="repeat_request",
+                    child_response=child_response
+                )
+
+            except Exception as e:
+                print("Guessing Game repeat TTS error:", repr(e))
+                return jsonify({
+                    "success": False,
+                    "error": "Could not repeat the question"
+                }), 500
 
     if event_type == "no_response" or is_guessing_unclear_or_silent(child_response):
         game_state["unclear_or_silent_count"] = int(game_state.get("unclear_or_silent_count", 0)) + 1
@@ -20922,14 +21663,7 @@ def parent_academy_article(slug):
         "description": article["summary"],
         "url": canonical_url,
         "mainEntityOfPage": {"@type": "WebPage", "@id": canonical_url},
-        "publisher": {
-            "@type": "Organization",
-            "name": "MyBraveSprout",
-            "logo": {
-                "@type": "ImageObject",
-                "url": url_for("static", filename="images/logo_v4.png", _external=True)
-            }
-        }
+        "publisher": canonical_organization_entity(),
     }
     if image_url:
         article_jsonld["image"] = image_url
@@ -25467,8 +26201,16 @@ The MyBraveSprout Team
 # Mystery Animal decision-tree redesign (kept in three small support modules)
 # ---------------------------------------------------------------------------
 # These overrides intentionally preserve the existing route, session, audio,
-# progress, and front-end contract. Only question selection and candidate-based
-# guessing are replaced.
+# progress, and front-end contract.
+#
+# Single source of truth for guessing: get_open_ended_mystery_animal_guess().
+# The message route consults it after every usable question-answer pair and
+# OpenAI decides whether/what Star guesses. The functions below only affect
+#   (a) which question Star asks next (pick_structured_mystery_animal_question), and
+#   (b) the LOCAL FALLBACK guess used when OpenAI is unavailable
+#       (get_rule_based_mystery_animal_guess -> database candidate engine).
+# is_mystery_animal_guess_ready / has_confident_mystery_animal_guess are kept
+# only for backward compatibility; they no longer gate the OpenAI evaluation.
 try:
     from question import select_next_question as _ma_select_next_question, early_question_count as _ma_early_question_count
     from question import infer_candidates as _ma_infer_candidates
@@ -25513,4 +26255,4 @@ except Exception as mystery_animal_module_error:
 
 
 if __name__ == "__main__":
-    app.run(debug=app.config["DEBUG"], port=5002)
+    app.run(debug=app.config["DEBUG"], port=5004)

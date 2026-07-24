@@ -180,12 +180,18 @@
                   src="{{ url_for('static', filename='images/shine1.png') }}"
                   class="journey-node-shine journey-node-shine-left"
                   alt=""
+                  width="34"
+                  height="34"
+                  decoding="async"
                 >
 
                 <img
                   src="{{ url_for('static', filename='images/shine2.png') }}"
                   class="journey-node-shine journey-node-shine-right"
                   alt=""
+                  width="34"
+                  height="34"
+                  decoding="async"
                 >
               {% endif %}
 
@@ -199,6 +205,10 @@
                 <img
                   src="{{ url_for('static', filename='images/' + activity.activity_name + '.png') }}"
                   alt="{{ activity.activity_name.replace('_', ' ').title() }}"
+                  width="54"
+                  height="54"
+                  decoding="async"
+                  fetchpriority="high"
                 >
               </div>
 
@@ -460,12 +470,15 @@
           <span>Create PIN</span>
 
           <input
-            type="password"
+            type="text"
             id="activitySetupParentPin"
             inputmode="numeric"
+            minlength="4"
             pattern="[0-9]{4}"
             maxlength="4"
-            autocomplete="new-password"
+            autocomplete="one-time-code"
+            class="pin-masked-input"
+            data-pin-mask
             placeholder="••••"
           >
         </label>
@@ -477,12 +490,15 @@
           <span>Confirm PIN</span>
 
           <input
-            type="password"
+            type="text"
             id="activitySetupParentPinConfirm"
             inputmode="numeric"
+            minlength="4"
             pattern="[0-9]{4}"
             maxlength="4"
-            autocomplete="new-password"
+            autocomplete="one-time-code"
+            class="pin-masked-input"
+            data-pin-mask
             placeholder="••••"
           >
         </label>
@@ -649,11 +665,7 @@
 </div>
 
 <script
-  src="{{ url_for('static', filename='js/browser_permissions.js') }}?v=2"
-></script>
-
-<script
-  src="{{ url_for('static', filename='js/dashboard.js') }}?v=13"
+  src="{{ url_for('static', filename='js/browser_permissions.js') }}?v=3"
 ></script>
 
 <script

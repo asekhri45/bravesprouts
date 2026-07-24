@@ -3,7 +3,11 @@
 {% block title %} MyBraveSprout | Free Selective Mutism Games for Kids {% endblock %}
 
 {% block head %}
+<link rel="canonical" href="{{ canonical_home_url }}">
+<meta property="og:url" content="{{ canonical_home_url }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/home.css') }}?v=3">
+<script type="application/ld+json">{{ organization_jsonld | tojson }}</script>
+<script type="application/ld+json">{{ website_jsonld | tojson }}</script>
 {% endblock %}
 
 {% block content %}
@@ -22,6 +26,7 @@
         </div>
     </div>
 </div>
+
 <div class="landing-section">
     {% include "partials/nav.html" %}
 
@@ -29,8 +34,20 @@
         <div class="hero-container">
 
             <div class="hero-image">
-                <img src="{{ url_for('static', filename='images/heroimage_2.gif') }}" alt="Star, MyBraveSprout's animated character, inviting a child to play: &quot;Hey! Do you want to play a game?&quot;">
-            </div>
+    <picture>
+        <source
+            media="(min-width: 901px)"
+            srcset="{{ url_for('static', filename='images/heroimage_v5.gif') }}?v=1"
+        >
+
+        <img
+            src="{{ url_for('static', filename='images/heroimage_v5.gif') }}?v=1"
+            alt="Star, MyBraveSprout's animated character, inviting a child to play: &quot;Hey! Do you want to play a game?&quot;"
+            fetchpriority="high"
+            decoding="async"
+        >
+    </picture>
+</div>
 
             <div class="hero-text">
                 <h1>Help your child practice speaking</h1>
@@ -320,7 +337,7 @@
             <div class="approach-step reveal">
                 <div class="approach-step-visual">
                     <span class="approach-step-number" aria-hidden="true">2</span>
-                    <img src="{{ url_for('static', filename='images/stage2.gif') }}" class="floating-image" alt="Star introducing a new character">
+                    <img src="{{ url_for('static', filename='images/stage2_v2.gif') }}?v2" class="floating-image" alt="Star introducing a new character">
                 </div>
                 <h3>Meet new friends</h3>
                 <p>

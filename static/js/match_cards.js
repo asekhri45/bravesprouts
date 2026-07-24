@@ -2,7 +2,17 @@ document.addEventListener("DOMContentLoaded", function () {
   const matchPage = document.querySelector(".match-page");
 
   function dlog(...args) {
-    if (window.APP_DEBUG) console.log(`[match_cards:${matchPage ? matchPage.dataset.activityId : "unknown"}]`, ...args);
+    const debugEnabled =
+      Boolean(window.APP_DEBUG) ||
+      new URLSearchParams(window.location.search).get("debug") === "1" ||
+      window.localStorage?.getItem("matchCardsDebug") === "1";
+
+    if (debugEnabled) {
+      console.log(
+        `[match_cards:${matchPage ? matchPage.dataset.activityId : "unknown"}]`,
+        ...args
+      );
+    }
   }
 
   const cardGrid = document.getElementById("cardGrid");
@@ -371,6 +381,185 @@ document.addEventListener("DOMContentLoaded", function () {
     return labels[name] || "cards";
   }
 
+  /*
+    Card categories, and the follow-up questions Star asks about the two cards
+    that were just turned over (rounds 7-12).
+
+    The deck mixes animals with a flower, so a template is only offered when it
+    actually makes sense for both revealed cards. Without that check Star ended
+    up asking which of a dog and a flower you would rather keep as a pet, or
+    which of two animals smells nicer. Every template is a short, concrete
+    this-or-that a five-year-old can answer by naming one of the two pictures
+    in front of them -- never yes/no, and never a chore-shaped question like
+    "which would you rather take care of?".
+  */
+  const CARD_CATEGORIES = {
+    cat: "animal",
+    dog: "animal",
+    bunny: "animal",
+    fish: "animal",
+    bird: "animal",
+    flower: "plant"
+  };
+
+  function cardCategory(name) {
+    return CARD_CATEGORIES[name] || "thing";
+  }
+
+  // Work for any two cards, including a mixed animal/plant pair.
+  const ANY_PAIR_QUESTIONS = [
+    "Which one would you rather draw, the {first} or the {second}?",
+    "Which one has prettier colors, the {first} or the {second}?",
+    "Which one would you rather put on a sticker, the {first} or the {second}?",
+    "Which one would you rather take a picture of, the {first} or the {second}?",
+    "Which one would you rather see in a story, the {first} or the {second}?",
+    "Which one would make you smile more, the {first} or the {second}?",
+    "Which one would you rather show to a friend, the {first} or the {second}?",
+    "Which one would you rather see outside, the {first} or the {second}?",
+    "Which one would you pick for a birthday card, the {first} or the {second}?",
+    "Which one would you rather learn something fun about, the {first} or the {second}?"
+  ];
+
+  const BOTH_ANIMAL_QUESTIONS = [
+    "Which one would you rather have as a pet, the {first} or the {second}?",
+    "Which one would be more fun to play with, the {first} or the {second}?",
+    "Which one would you rather see at a zoo, the {first} or the {second}?",
+    "Which one do you think would move faster, the {first} or the {second}?",
+    "Which one would you rather watch for a whole day, the {first} or the {second}?"
+  ];
+
+  const BOTH_PLANT_QUESTIONS = [
+    "Which one would you rather grow in a garden, the {first} or the {second}?",
+    "Which one would you give to someone, the {first} or the {second}?",
+    "Which one do you think would smell nicer, the {first} or the {second}?",
+    "Which one would you rather see in a bouquet, the {first} or the {second}?"
+  ];
+
+  function getTwoCardChoiceQuestions(firstName, secondName) {
+    const questions = ANY_PAIR_QUESTIONS.slice();
+    const firstCategory = cardCategory(firstName);
+    const secondCategory = cardCategory(secondName);
+
+    if (firstCategory === "animal" && secondCategory === "animal") {
+      return questions.concat(BOTH_ANIMAL_QUESTIONS);
+    }
+
+    if (firstCategory === "plant" && secondCategory === "plant") {
+      return questions.concat(BOTH_PLANT_QUESTIONS);
+    }
+
+    // Mixed categories: only the neutral preference questions apply.
+    return questions;
+  }
+
+  /*
+    Both revealed cards show the same picture, so there is no second card to
+    compare against. These stay this-or-that by offering two concrete things
+    you could do with that one card.
+  */
+  const MATCHED_CARD_CHOICE_QUESTIONS = {
+    cat: [
+      "Would you rather pet the cat, or watch it chase a wiggly string?",
+      "Which would be more fun with the cat, playing with it, or having it curl up next to you?"
+    ],
+    dog: [
+      "Would you rather play fetch with the dog, or take it for a walk?",
+      "Which would be more fun with the dog, running around, or giving it a big hug?"
+    ],
+    bunny: [
+      "Would you rather feed the bunny a carrot, or watch it hop around?",
+      "Which would be more fun with the bunny, holding it, or watching it jump?"
+    ],
+    fish: [
+      "Would you rather watch the fish swim, or feed it?",
+      "Which would be more fun, one fish, or a whole tank of them?"
+    ],
+    bird: [
+      "Would you rather listen to the bird sing, or watch it fly?",
+      "Which would be more fun with the bird, teaching it a song, or watching it flap its wings?"
+    ],
+    flower: [
+      "Would you rather smell the flower, or pick one for somebody?",
+      "Which would be nicer, a whole garden of flowers, or one flower in a vase?"
+    ]
+  };
+
+  /*
+    The single entry point for the rounds 7-12 follow-up question. Rounds 10-12
+    used to ask "which card should I remember?" -- a memory chore rather than
+    something a child enjoys answering -- and rounds 7-9 asked about colours
+    Star could already see. Both now come from here.
+  */
+  function getRevealedCardQuestion(context) {
+    const firstName = context.firstCard;
+    const secondName = context.secondCard;
+    const isPair = Boolean(context.cardName) || firstName === secondName;
+
+    if (isPair) {
+      const matchedName = context.cardName || firstName;
+      const options = MATCHED_CARD_CHOICE_QUESTIONS[matchedName];
+      if (options) {
+        return pickCalmLine("pair_choice_" + matchedName, options, context);
+      }
+      return null;
+    }
+
+    if (firstName && secondName) {
+      return pickCalmLine(
+        "two_card_choice_" + firstName + "_" + secondName,
+        getTwoCardChoiceQuestions(firstName, secondName),
+        context
+      );
+    }
+
+    return null;
+  }
+
+  /*
+    Star's own opinion about the card the child picked. One short sentence,
+    specific to that card, and only stating things that are actually true of
+    it -- no invented facts. Used occasionally (see handleSpeechHeard) so the
+    agreement feels like a reaction rather than a formula.
+  */
+  const CARD_AGREEMENT_LINES = {
+    cat: [
+      "Me too. Cats can be so cute.",
+      "I like the cat too. It looks so soft.",
+      "Good choice. I think the cat is fun to watch."
+    ],
+    dog: [
+      "Me too. I think the dog would be fun to draw.",
+      "I like the dog too. It looks so friendly.",
+      "Good choice. Dogs are so playful."
+    ],
+    bunny: [
+      "Me too. I love how bunnies hop.",
+      "I like the bunny too. Those ears are great.",
+      "Good choice. The bunny looks so soft."
+    ],
+    fish: [
+      "Me too. I like watching fish swim.",
+      "I like the fish too. It looks so shiny.",
+      "Good choice. The fish has such pretty colors."
+    ],
+    bird: [
+      "Me too. I like how birds sing.",
+      "I like the bird too. Those wings are amazing.",
+      "Good choice. The bird looks so bright."
+    ],
+    flower: [
+      "I like that one too. It looks so bright.",
+      "Me too. Flowers make me happy.",
+      "Good choice. That flower has lovely colors."
+    ]
+  };
+
+  function getCardAgreementLine(cardName) {
+    const options = CARD_AGREEMENT_LINES[cardName];
+    if (!options) return null;
+    return pickCalmLine("card_agreement_" + cardName, options, {});
+  }
+
   function remainingPairsText(count) {
     if (count === 1) return "1 pair left";
     return `${count} pairs left`;
@@ -725,53 +914,42 @@ document.addEventListener("DOMContentLoaded", function () {
     };
   }
 
+  /*
+    Rounds 7-9. These used to ask the child to name a colour on a card, or
+    which of the two cards had just been turned over -- questions whose answer
+    Star can already see, and which pretended Star could not see the board.
+    They now ask a simple opinion question about the two cards that were just
+    revealed: concrete, never yes-or-no, and always built from the real card
+    labels so the question cannot reference a card that is not on screen.
+  /*
+    Rounds 7-9 and 10-12 both ask a short follow-up about the two cards that
+    were just revealed, and both now come from getRevealedCardQuestion(). The
+    old versions asked the child to name a colour on a card (rounds 7-9) or
+    which card Star should remember (rounds 10-12) -- the first is something
+    Star can already see, the second is a memory chore. Returns null when the
+    revealed cards do not support a sensible question, and the caller simply
+    skips the prompt rather than asking something that does not fit.
+  */
   function getHelpPrompt(context = {}) {
-    if (context.cardName) {
-      return {
-        askType: "help_question",
-        message: pickCalmLine("help_question_match", [
-          "Can you help me look at the {card} card? What color do you notice?",
-          "I missed part of that picture. What color do you see on the {card} card?",
-          "I can't see the {card} card clearly. What color do you see?",
-          "Help me look closely at the {card} card. What color stands out?",
-          "I need help looking at that {card} picture. What color should I look at first?"
-        ], context)
-      };
-    }
+    const message = getRevealedCardQuestion(context);
+    if (!message) return null;
 
-    return {
-      askType: "help_question",
-      message: pickCalmLine("help_question_no_match", [
-        "Can you help me remember one card? Was one of those the {first} card?",
-        "I missed the first card. Was it the {first} card or the {second} card?",
-        "Help me remember. Did we see the {first} card or the {second} card first?",
-      ], context)
-    };
+    return { askType: "help_question", isPreference: true, message: message };
   }
 
+  /*
+    Rounds 10-12. These used to ask which card Star should remember or watch
+    for next -- a memory chore, and one whose answer Star can already see. They
+    now use the same revealed-card preference questions as rounds 7-9, which is
+    what the child actually enjoys answering. The askType stays
+    "clear_question" so the existing comfort scoring, backoff and progression
+    for this band are untouched.
+  */
   function getClearQuestion(context = {}) {
-    if (context.cardName) {
-      return {
-        askType: "clear_question",
-        message: pickCalmLine("clear_question_match", [
-          "{child}, what card should I watch for next?",
-          "{child}, which card should we try to find next?",
-          "{child}, what card do you want me to look for next?",
-          "{child}, what card should we remember next?",
-          "{child}, what card do you want to find next?"
-        ], context)
-      };
-    }
+    const message = getRevealedCardQuestion(context);
+    if (!message) return null;
 
-    return {
-      askType: "clear_question",
-      message: pickCalmLine("clear_question_no_match", [
-        "{child}, which card should I remember, the {first} or the {second}?",
-        "{child}, what card should I watch for, the {first} or the {second}?",
-        "{child}, which one should we try to find next, the {first} or the {second}?",
-        "{child}, what card do you want to remember from those two?"
-      ], context)
-    };
+    return { askType: "clear_question", isPreference: true, message: message };
   }
 
   function getSimpleChoiceQuestion(context = {}) {
@@ -968,7 +1146,13 @@ document.addEventListener("DOMContentLoaded", function () {
         message: calmText,
         cardName: options.cardName || "",
         firstCard: options.firstCard || "",
-        secondCard: options.secondCard || ""
+        secondCard: options.secondCard || "",
+        // Rounds 7-9 ask an opinion about the revealed cards rather than a
+        // "help me look" question, so the answer is acknowledged differently.
+        isPreference: Boolean(options.isPreference),
+        // When set, the caller runs its own listen/classify loop and this
+        // call resolves with the raw transcript instead of dispatching.
+        deferDispatch: Boolean(options.deferDispatch)
       };
 
       if (askType !== "play_again_team" && askType !== "play_again_child") {
@@ -990,8 +1174,16 @@ document.addEventListener("DOMContentLoaded", function () {
         }
       }
 
-      await startResponseWindow(starState.currentQuestion, options.responseSeconds || null, turnToken);
+      const windowResult = await startResponseWindow(
+        starState.currentQuestion,
+        options.responseSeconds || null,
+        turnToken
+      );
+
+      if (options.deferDispatch) return windowResult;
     }
+
+    return null;
   }
 
 
@@ -1090,9 +1282,10 @@ document.addEventListener("DOMContentLoaded", function () {
           return;
         }
 
-        await speakStarLine(question.message, {
+        await runChildAnswerExchange(question, {
           expectsResponse: true,
           askType: question.askType,
+          isPreference: Boolean(question.isPreference),
           cardName: context.cardName || "",
           firstCard: context.firstCard || "",
           secondCard: context.secondCard || "",
@@ -1124,9 +1317,10 @@ document.addEventListener("DOMContentLoaded", function () {
           return;
         }
 
-        await speakStarLine(question.message, {
+        await runChildAnswerExchange(question, {
           expectsResponse: true,
           askType: question.askType,
+          isPreference: Boolean(question.isPreference),
           cardName: context.cardName || "",
           firstCard: context.firstCard || "",
           secondCard: context.secondCard || "",
@@ -1245,6 +1439,9 @@ document.addEventListener("DOMContentLoaded", function () {
       .find(track => track.readyState === "live");
 
     if (liveAudioTrack) {
+      // A previously acquired track can remain live but become disabled.
+      // Re-enable it before each response window.
+      liveAudioTrack.enabled = true;
       starState.micReady = true;
       return mediaStream;
     }
@@ -1327,6 +1524,8 @@ document.addEventListener("DOMContentLoaded", function () {
       );
     }
 
+    liveAudioTrack.enabled = true;
+
     starState.micReady = true;
     starState.micDenied = false;
 
@@ -1373,11 +1572,19 @@ document.addEventListener("DOMContentLoaded", function () {
     return 5000;
   }
 
-  function startSpeechEndDetector(stream, maxWindowMs) {
+  function startSpeechEndDetector(stream, maxWindowMs, question = null) {
     stopSpeechEndDetector();
 
     try {
       responseAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+      // Safari can create the context in a suspended state even though the
+      // microphone stream itself is valid. Resuming makes the level detector
+      // reliable without changing the MediaRecorder audio.
+      if (responseAudioContext.state === "suspended") {
+        responseAudioContext.resume().catch(function () {});
+      }
+
       responseAnalyser = responseAudioContext.createAnalyser();
       responseAnalyser.fftSize = 512;
 
@@ -1386,6 +1593,36 @@ document.addEventListener("DOMContentLoaded", function () {
 
       const dataArray = new Uint8Array(responseAnalyser.frequencyBinCount);
       const startedAt = Date.now();
+      const isPlayAgainWindow =
+        question?.intent === "play_again" ||
+        question?.askType === "play_again_team" ||
+        question?.askType === "play_again_child";
+
+      /*
+        Trailing silence used to be 1.6s on the play-again window so a parent
+        redirecting the question to the child ("What do you think, Mikey?")
+        would not end the window before the child answered. That made a child
+        who answered directly wait ~3s after finishing a two-word reply.
+
+        Redirection is now recovered by re-opening the microphone silently
+        (see runPlayAgainExchange), and a reply that turns out to be an
+        unfinished fragment is stitched onto the next one, so the window no
+        longer has to stay open "just in case". It closes as soon as the
+        utterance has actually ended.
+      */
+      const speechThreshold = isPlayAgainWindow ? 6 : 9;
+      const minimumRecordingMs = isPlayAgainWindow ? 700 : 900;
+      const endingSilenceMs = isPlayAgainWindow ? 900 : 800;
+
+      dlog("speech detector started", {
+        askType: question?.askType || null,
+        intent: question?.intent || null,
+        maxWindowMs,
+        speechThreshold,
+        minimumRecordingMs,
+        endingSilenceMs,
+        audioContextState: responseAudioContext.state
+      });
 
       function monitorSpeech() {
         if (!responseAnalyser || !micManager || !micManager.isRecording()) {
@@ -1404,18 +1641,34 @@ document.addEventListener("DOMContentLoaded", function () {
 
         const volume = Math.sqrt(sum / dataArray.length);
         const now = Date.now();
-        const speechThreshold = 9;
 
         if (volume > speechThreshold) {
+          if (!heardSpeechInWindow) {
+            dlog("speech first detected", {
+              askType: question?.askType || null,
+              volume: Number(volume.toFixed(2)),
+              elapsedMs: now - startedAt
+            });
+          }
+
           heardSpeechInWindow = true;
           lastSpeechTime = now;
         }
 
-        const hasRecordedLongEnough = now - startedAt > 900;
-        const silenceAfterSpeech = heardSpeechInWindow && now - lastSpeechTime > 800;
+        const hasRecordedLongEnough = now - startedAt > minimumRecordingMs;
+        const silenceAfterSpeech =
+          heardSpeechInWindow && now - lastSpeechTime > endingSilenceMs;
         const maxTimeReached = now - startedAt > maxWindowMs;
 
         if ((hasRecordedLongEnough && silenceAfterSpeech) || maxTimeReached) {
+          dlog("speech detector stopping response window", {
+            askType: question?.askType || null,
+            heardSpeechInWindow,
+            reason: maxTimeReached ? "maximum_time" : "silence_after_speech",
+            elapsedMs: now - startedAt,
+            silenceMs: lastSpeechTime ? now - lastSpeechTime : null
+          });
+
           stopResponseWindow();
           return;
         }
@@ -1426,6 +1679,7 @@ document.addEventListener("DOMContentLoaded", function () {
       monitorSpeech();
     } catch (error) {
       console.warn("Could not start speech end detector:", error);
+      dlog("speech detector failed", error?.message || error);
     }
   }
 
@@ -1450,6 +1704,18 @@ document.addEventListener("DOMContentLoaded", function () {
     responseAnalyser = null;
   }
 
+  /*
+    Single owner of the "Star is listening" visuals. Every path that ends a
+    listening window must call this with `false` -- previously the classes
+    were only removed inside handleRecordingStop, so any window that ended
+    without reaching it (a superseded recorder, a recorder error, a stale
+    turn) left the mic stuck in its active state with nothing listening.
+  */
+  function setMicListeningUI(active) {
+    if (starVideoTile) starVideoTile.classList.toggle("soft-listening", Boolean(active));
+    if (micControl) micControl.classList.toggle("quiet-listening", Boolean(active));
+  }
+
   async function startResponseWindow(question, overrideSeconds, turnToken) {
     if (!starState.waitingForResponse || starState.isListening) return null;
     if (turnGuard && turnGuard.isStale(turnToken)) return null;
@@ -1463,22 +1729,42 @@ document.addEventListener("DOMContentLoaded", function () {
     if (!stream) {
       diagLog("microphone_track_not_ready", { reason: "ensureMicPermission_failed" });
       starState.waitingForResponse = false;
+      setMicListeningUI(false);
       return null;
     }
 
     if (!micManager) {
       console.warn("Match Cards: shared mic manager unavailable.");
       starState.waitingForResponse = false;
+      setMicListeningUI(false);
       return null;
     }
 
     return new Promise(resolve => {
       const maxWindowMs = getResponseWindowMs(question, overrideSeconds);
 
+      // Reset once when a new recording window begins. Do not reset this in
+      // handleRecordingStop, because duplicate stop events must remain blocked.
+      responseSubmittedForCurrentWindow = false;
+
+      const liveTrack = stream.getAudioTracks().find(track => track.readyState === "live");
+      if (liveTrack) liveTrack.enabled = true;
+
+      dlog("starting response recording", {
+        askType: question?.askType || null,
+        intent: question?.intent || null,
+        maxWindowMs,
+        trackState: liveTrack?.readyState || null,
+        trackEnabled: liveTrack?.enabled ?? null,
+        trackMuted: liveTrack?.muted ?? null
+      });
+
       micManager.startRecording(stream, {
         onStart: function () {
           if (turnGuard && turnGuard.rejectIfStale(turnToken, "startResponseWindow_onStart")) {
             micManager.stopActive("stale_turn_after_start");
+            starState.isListening = false;
+            setMicListeningUI(false);
             resolve(null);
             return;
           }
@@ -1487,19 +1773,37 @@ document.addEventListener("DOMContentLoaded", function () {
           // confirmed the recorder actually started -- never before.
           starState.isListening = true;
 
-          if (starVideoTile) starVideoTile.classList.add("soft-listening");
-          if (micControl) micControl.classList.add("quiet-listening");
+          setMicListeningUI(true);
 
           heardSpeechInWindow = false;
           lastSpeechTime = 0;
 
-          startSpeechEndDetector(stream, maxWindowMs);
+          dlog("response recorder started", {
+            askType: question?.askType || null,
+            intent: question?.intent || null,
+            maxWindowMs,
+            trackState: stream.getAudioTracks()[0]?.readyState || null,
+            trackEnabled: stream.getAudioTracks()[0]?.enabled ?? null,
+            trackMuted: stream.getAudioTracks()[0]?.muted ?? null
+          });
+
+          startSpeechEndDetector(stream, maxWindowMs, question);
 
           recordingTimeout = setTimeout(function () {
             stopResponseWindow();
           }, maxWindowMs);
         },
         onStop: function (blob, mimeType, extension, wasActive) {
+          dlog("response recorder stopped", {
+            askType: question?.askType || null,
+            intent: question?.intent || null,
+            blobSize: blob?.size || 0,
+            blobType: blob?.type || mimeType || null,
+            extension: extension || null,
+            wasActive,
+            heardSpeechInWindow
+          });
+
           if (!wasActive) {
             // Superseded by a newer recording before it stopped on its
             // own -- that newer recording's own onStop owns resolve().
@@ -1509,7 +1813,17 @@ document.addEventListener("DOMContentLoaded", function () {
         },
         onError: function (error) {
           diagLog("error", { where: "startResponseWindow_recorder", message: String(error && error.message || error) });
+          // A recorder that errored will not deliver a usable `stop`, so this
+          // is the only chance to release the listening state and let the
+          // caller (and the board) move on instead of waiting forever.
+          stopSpeechEndDetector();
+          if (recordingTimeout) {
+            clearTimeout(recordingTimeout);
+            recordingTimeout = null;
+          }
           starState.isListening = false;
+          starState.waitingForResponse = false;
+          setMicListeningUI(false);
           resolve(null);
         }
       });
@@ -1525,6 +1839,12 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     if (micManager) micManager.stopActive("response_window_ended");
+
+    // Once we've asked the recorder to stop we are no longer listening, so
+    // the mic must not keep showing its active state. handleRecordingStop
+    // clears this too; doing it here as well covers the paths where the
+    // recorder was already inactive and no `stop` event is coming.
+    setMicListeningUI(false);
   }
 
   // Guards against the live-transcript path and the backup recording path
@@ -1535,18 +1855,18 @@ document.addEventListener("DOMContentLoaded", function () {
   let responseSubmittedForCurrentWindow = false;
 
   async function handleRecordingStop(question, turnToken, blob, extension) {
+    // When the caller drives its own listen/classify loop (the play-again
+    // exchange and the round 7-9 answers), this function only transcribes and
+    // hands the text back -- it must not speak or advance the game itself.
+    // Return values in that mode: a transcript string, "" for "nothing
+    // usable was heard", or null for "this turn is stale, abandon it".
+    const deferDispatch = Boolean(question && question.deferDispatch);
+
     starState.isListening = false;
     starState.waitingForResponse = false;
     starState.currentQuestion = null;
-    responseSubmittedForCurrentWindow = false;
 
-    if (starVideoTile) {
-      starVideoTile.classList.remove("soft-listening");
-    }
-
-    if (micControl) {
-      micControl.classList.remove("quiet-listening");
-    }
+    setMicListeningUI(false);
 
     diagLog("recording_stopped", { size: blob ? blob.size : 0 });
     dlog("recording stopped", { round: starState.roundNumber, size: blob ? blob.size : 0 });
@@ -1556,6 +1876,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     if (!blob || !blob.size) {
+      if (deferDispatch) return "";
       await handleNoSpeechHeard(question, turnToken);
       return null;
     }
@@ -1580,9 +1901,16 @@ document.addEventListener("DOMContentLoaded", function () {
 
       const data = await response.json();
       diagLog("upload_completed", { ok: response.ok, success: !!data.success });
-      dlog("transcribe response", { status: response.status, success: data.success, hasText: !!data.text });
+      dlog("transcribe response", {
+        status: response.status,
+        success: data.success,
+        hasText: Boolean(data.text),
+        text: data.text || "",
+        message: data.message || data.error || ""
+      });
 
       if (!data.success) {
+        if (deferDispatch) return "";
         await handleNoSpeechHeard(question, turnToken);
         return null;
       }
@@ -1591,6 +1919,7 @@ document.addEventListener("DOMContentLoaded", function () {
       diagLog("transcription_completed", { hasTranscript: !!transcript, length: transcript.length });
 
       if (!transcript) {
+        if (deferDispatch) return "";
         await handleNoSpeechHeard(question, turnToken);
         return null;
       }
@@ -1605,6 +1934,11 @@ document.addEventListener("DOMContentLoaded", function () {
       }
       responseSubmittedForCurrentWindow = true;
 
+      if (deferDispatch) {
+        diagLog("response_returned_to_caller", { length: transcript.length });
+        return transcript;
+      }
+
       diagLog("response_submission_started", {});
       await handleSpeechHeard(transcript, question, turnToken);
       return transcript;
@@ -1612,9 +1946,9 @@ document.addEventListener("DOMContentLoaded", function () {
       console.error("Transcription error:", error);
       diagLog("error", { where: "handleRecordingStop", message: String(error && error.message || error) });
       dlog("transcribe request failed", error.message || error);
-      if (!(turnGuard && turnGuard.isStale(turnToken))) {
-        await handleNoSpeechHeard(question, turnToken);
-      }
+      if (turnGuard && turnGuard.isStale(turnToken)) return null;
+      if (deferDispatch) return "";
+      await handleNoSpeechHeard(question, turnToken);
       return null;
     }
   }
@@ -1690,11 +2024,6 @@ document.addEventListener("DOMContentLoaded", function () {
     diagLog("speech_not_detected", { askType: question?.askType || null });
     starState.silentWindows += 1;
 
-    const isPlayAgainQuestion =
-      question?.askType === "play_again_team" ||
-      question?.askType === "play_again_child" ||
-      question?.intent === "play_again";
-
     const isDirectChildQuestion =
       question?.askType === "help_question" ||
       question?.askType === "clear_question" ||
@@ -1728,22 +2057,395 @@ document.addEventListener("DOMContentLoaded", function () {
       return;
     }
 
+    // Silence on the play-again question is handled by runPlayAgainExchange(),
+    // which owns that whole exchange and its retries.
     starState.questionCooldownUntil = Date.now() + 100 * 1000;
+  }
 
-    if (isPlayAgainQuestion && !roundInProgress && !nextRoundStarting && !starState.playAgainSilenceHandled) {
-      starState.playAgainSilenceHandled = true;
 
-      await sleep(500);
+  /*
+    A parent very often answers Star's "play again or finish?" by turning the
+    question around to the child ("What do you think, Mikey?"). That is not a
+    decision, and treating it as one -- or as an "unclear" answer worth another
+    spoken prompt -- talks over the child just as they are about to reply. The
+    classifier therefore has a distinct `redirect` outcome: the caller reopens
+    the microphone silently and lets the child answer.
 
-      await speakStarLine(pickCalmLine("play_again_silence_bridge", [
-        "That's okay. Let's play another round.",
-        "No problem. We can play another round together.",
-        "That's okay. Let's try one more round together.",
-        "No worries. Let's play another round."
-      ]));
+    The distinction is grammatical, not acoustic (no speaker identification):
+    a second-person interrogative or a hand-off ("tell Star...", "it's your
+    turn") does not answer Star, while a first-person declarative ("I want to
+    finish") or a bare choice ("play again") does.
+  */
+  /*
+    Match Cards' reading of the play-again answer.
 
-      startNextRound({ skipIntroLine: true });
+    The phrase tables that used to live here were a second copy of the same
+    done/continue/repeat/redirect knowledge held by the Drawing Game and the
+    server, and they drifted: this copy had no "repeat" outcome and its
+    negation handling was separate from everyone else's. Classification is now
+    delegated to the shared GameIntent module (mirrored by intent.py on the
+    server); all that remains here is the mapping onto this game's own labels.
+  */
+  function classifyPlayAgainResponseLocally(rawTranscript) {
+    if (!window.GameIntent) return "unclear";
+
+    var result = window.GameIntent.classify(rawTranscript);
+
+    if (result.intent === "continue") return "play_again";
+    if (result.intent === "stop") return "stop";
+    if (result.intent === "redirect") return "redirect";
+    if (result.intent === "repeat") return "repeat";
+
+    return "unclear";
+  }
+
+  /*
+    A reply that stopped mid-thought ("I want to...", "I'd like to..."). The
+    window closes quickly now, so an unfinished sentence has to be stitched
+    onto whatever the child says next rather than dispatched or treated as an
+    unclear answer that earns a spoken retry.
+  */
+  const INCOMPLETE_FRAGMENT_PATTERNS = [
+    /\b(?:i|we)\s+(?:want|would like|wanna|need)\s+to$/,
+    /\b(?:i|we)\s+(?:want|would like|wanna)$/,
+    // GameIntent.normalize() expands "let's" to "let us" before this runs.
+    /\blet us$/,
+    /\bi\s+(?:am|m)$/,
+    /\bcan\s+(?:we|i)$/,
+    /\bdo\s+(?:we|i)$/,
+    /\b(?:to|the|and|or|a|an|my|another)$/
+  ];
+
+  function looksLikeIncompleteFragment(rawTranscript) {
+    if (!window.GameIntent) return false;
+
+    var text = window.GameIntent.normalize(rawTranscript);
+    if (!text) return false;
+
+    // Anything that already carries a complete intent is not a fragment.
+    if (classifyPlayAgainResponseLocally(rawTranscript) !== "unclear") return false;
+
+    return INCOMPLETE_FRAGMENT_PATTERNS.some(function (pattern) {
+      return pattern.test(text);
+    });
+  }
+
+  /*
+    Only consulted when the local patterns above cannot decide. The backend
+    returns one of the same four labels from a constrained enum; any other
+    value (or a failed request) falls back to the local result, so the game
+    never depends on the model being reachable.
+  */
+  async function classifyPlayAgainResponse(rawTranscript) {
+    const local = classifyPlayAgainResponseLocally(rawTranscript);
+
+    if (local !== "unclear") return local;
+
+    const text = String(rawTranscript || "").trim();
+    if (!text) return "unclear";
+
+    try {
+      const response = await fetch("/api/matching-game/classify-intent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ transcript: text, intent: "play_again" })
+      });
+
+      if (!response.ok) return local;
+
+      const data = await response.json();
+      const decision = data && data.success ? String(data.decision || "") : "";
+
+      if (["play_again", "stop", "redirect", "unclear"].includes(decision)) {
+        diagLog("play_again_ai_classification", { decision: decision });
+        return decision;
+      }
+    } catch (error) {
+      diagLog("error", {
+        where: "classifyPlayAgainResponse",
+        message: String(error && error.message || error)
+      });
     }
+
+    return local;
+  }
+
+  /*
+    Reopens the microphone for the same question without Star saying anything.
+    Used after a parent redirects the question to the child: speaking again
+    there would talk straight over the child's answer.
+  */
+  async function listenAgainWithoutSpeaking(question, responseSeconds) {
+    const turnToken = turnGuard ? turnGuard.beginNewTurn() : null;
+
+    starState.waitingForResponse = true;
+    starState.questionAskedAt = Date.now();
+    starState.currentQuestion = Object.assign({}, question, { deferDispatch: true });
+
+    diagLog("silent_relisten_started", { askType: question.askType || null });
+
+    return startResponseWindow(starState.currentQuestion, responseSeconds || null, turnToken);
+  }
+
+  /*
+    Generic "this speaker handed the question to the child rather than
+    answering it" test, used for Star's direct child questions. Same idea as
+    the play-again classifier: a second-person interrogative or a hand-off is
+    not an answer, so Star keeps listening instead of acknowledging it and
+    moving on before the child has spoken.
+  */
+  function looksLikeRedirection(rawTranscript) {
+    if (!window.GameIntent) return false;
+
+    const text = window.GameIntent.normalize(rawTranscript);
+    if (!text) return false;
+
+    if (window.GameIntent.classify(rawTranscript).intent === "redirect") return true;
+
+    // "Which do you like more, Mikey?" -- a question in the second person
+    // that the shared patterns do not cover verbatim. Speech-to-text often
+    // drops the question mark, so the second-person check carries most of the
+    // weight and the mark is only corroborating.
+    return /[?]/.test(String(rawTranscript || "")) && /\byou\b|\byour\b/.test(text);
+  }
+
+  const CHILD_ANSWER_MAX_REDIRECTS = 2;
+
+  /*
+    Owns one direct-child-question exchange (rounds 4-12), so a parent
+    redirecting the question does not get acknowledged as the child's answer.
+    Star listens again silently in that case; anything else is handed to the
+    existing acknowledgment/silence handling unchanged.
+  */
+  async function runChildAnswerExchange(question, speakOptions) {
+    let transcript = await speakStarLine(
+      question.message,
+      Object.assign({}, speakOptions, { deferDispatch: true })
+    );
+
+    for (let redirects = 0; redirects <= CHILD_ANSWER_MAX_REDIRECTS; redirects += 1) {
+      // Superseded turn (round restart, navigation away) -- abandon quietly.
+      if (transcript === null) return;
+
+      // The listening window that just resolved belongs to the current turn,
+      // so hand these the live token -- turnGuard treats a null token as
+      // stale and would silently drop the answer.
+      const liveToken = turnGuard ? turnGuard.currentToken() : null;
+
+      if (transcript === "") {
+        await handleNoSpeechHeard(question, liveToken);
+        return;
+      }
+
+      if (redirects < CHILD_ANSWER_MAX_REDIRECTS && looksLikeRedirection(transcript)) {
+        diagLog("child_answer_redirect_detected", { askType: question.askType || null });
+        transcript = await listenAgainWithoutSpeaking(
+          Object.assign({}, speakOptions, { askType: question.askType }),
+          9
+        );
+        continue;
+      }
+
+      await handleSpeechHeard(
+        transcript,
+        Object.assign({}, speakOptions, { askType: question.askType }),
+        liveToken
+      );
+      return;
+    }
+  }
+
+  // Bounded so the microphone can never stay open indefinitely, while still
+  // leaving room for the common "parent redirects, then child answers" shape.
+  const PLAY_AGAIN_MAX_LISTENS = 7;
+  const PLAY_AGAIN_MAX_REDIRECTS = 3;
+  const PLAY_AGAIN_MAX_UNCLEAR = 2;
+  const PLAY_AGAIN_MAX_SILENCES = 2;
+
+  /*
+    Owns the whole "play again or finish?" exchange as one loop.
+
+    Previously each unclear answer re-entered speakStarLine from inside the
+    recording callback that was still unwinding, so every retry nested another
+    listening window inside the previous one's promise. The loop keeps exactly
+    one window open at a time and always terminates.
+  */
+  async function runPlayAgainExchange(question) {
+    let listens = 0;
+    let redirects = 0;
+    let unclearCount = 0;
+    let silences = 0;
+    // Carries an unfinished reply ("I want to...") onto the next window so the
+    // two halves are classified together instead of separately.
+    let pendingFragment = "";
+
+    let transcript = await speakStarLine(question.message, {
+      expectsResponse: true,
+      askType: question.askType,
+      intent: "play_again",
+      responseSeconds: 9,
+      deferDispatch: true
+    });
+
+    while (listens < PLAY_AGAIN_MAX_LISTENS) {
+      listens += 1;
+
+      /*
+        null means no usable listening window. If the game has already moved
+        on (a new round started, or we're exiting) something else owns it and
+        this exchange must stay quiet. Otherwise the window itself failed --
+        no mic permission, a recorder error -- and breaking to the default
+        below is what stops the board from staying locked forever.
+      */
+      if (transcript === null) {
+        if (roundInProgress || nextRoundStarting || starState.isEnding) {
+          diagLog("play_again_exchange_abandoned", { listens: listens });
+          return;
+        }
+
+        diagLog("play_again_listen_failed", { listens: listens });
+        break;
+      }
+
+      if (transcript === "") {
+        silences += 1;
+
+        if (silences > PLAY_AGAIN_MAX_SILENCES) break;
+
+        transcript = await speakStarLine(
+          pickCalmLine("play_again_silence_retry", [
+            "I didn't hear an answer. You can say, let's play again, or, let's finish for now.",
+            "I didn't quite hear you. Say, play again, or, I'm done.",
+            "Take your time. You can say, one more round, or, finish for now."
+          ]),
+          {
+            expectsResponse: true,
+            askType: question.askType,
+            intent: "play_again",
+            responseSeconds: 9,
+            deferDispatch: true
+          }
+        );
+        continue;
+      }
+
+      // Stitch an unfinished earlier reply onto this one before classifying.
+      if (pendingFragment) {
+        transcript = (pendingFragment + " " + transcript).trim();
+        pendingFragment = "";
+      }
+
+      /*
+        The child stopped mid-thought. The window closes quickly now, so this
+        is expected -- keep listening and join the halves rather than
+        dispatching a partial answer or talking over them with a retry.
+      */
+      if (looksLikeIncompleteFragment(transcript)) {
+        diagLog("play_again_fragment_held", { length: transcript.length });
+        pendingFragment = transcript;
+        transcript = await listenAgainWithoutSpeaking(question, 7);
+        continue;
+      }
+
+      const decision = await classifyPlayAgainResponse(transcript);
+
+      dlog("play again response classified", { decision: decision });
+      diagLog("play_again_response_classified", {
+        decision: decision,
+        transcriptLength: transcript.length,
+        listens: listens
+      });
+
+      // "Can you say that again?" -- replay the exact question, then listen.
+      if (decision === "repeat") {
+        transcript = await speakStarLine(
+          pickCalmLine("play_again_repeat_ack", [
+            "Sure, no problem.",
+            "Of course.",
+            "Okay, here it is again."
+          ]) + " " + question.message,
+          {
+            expectsResponse: true,
+            askType: question.askType,
+            intent: "play_again",
+            responseSeconds: 9,
+            deferDispatch: true
+          }
+        );
+        continue;
+      }
+
+      if (decision === "play_again") {
+        starState.playAgainStartedByVoice = true;
+        starState.playAgainSilenceHandled = false;
+
+        // Warm and varied: Star sounds pleased rather than reading a receipt.
+        await speakStarLine(pickCalmLine("play_again_yes_ack", [
+          "Great idea. I want to play again too.",
+          "Yay, let's play another round.",
+          "Sounds good. Let's keep going.",
+          "Me too. Here comes the next round.",
+          "Okay. Let's do one more round together.",
+          "Nice. Another round coming up."
+        ]));
+
+        startNextRound({ skipIntroLine: true });
+        return;
+      }
+
+      if (decision === "stop") {
+        starState.playAgainSilenceHandled = false;
+        await endGameWithGoodbye({ save: false });
+        return;
+      }
+
+      if (decision === "redirect" && redirects < PLAY_AGAIN_MAX_REDIRECTS) {
+        // Someone handed the question to the child. Say nothing, just keep
+        // listening -- with a longer window, because the child now has to
+        // think before answering.
+        redirects += 1;
+        transcript = await listenAgainWithoutSpeaking(question, 11);
+        continue;
+      }
+
+      unclearCount += 1;
+
+      if (unclearCount > PLAY_AGAIN_MAX_UNCLEAR) break;
+
+      transcript = await speakStarLine(
+        pickCalmLine("play_again_unclear_retry", [
+          "I wasn't sure. You can say, let's play again, or, let's finish for now.",
+          "I didn't quite catch that. Say, play again, or, I'm done.",
+          "That's okay. You can say, one more round, or, finish for now."
+        ]),
+        {
+          expectsResponse: true,
+          askType: question.askType,
+          intent: "play_again",
+          responseSeconds: 9,
+          deferDispatch: true
+        }
+      );
+    }
+
+    /*
+      No decision arrived. Continuing is the recoverable default: the board
+      stays live, Star asks again after the next two rounds, and the child or
+      parent can leave any time with the on-screen back link. Stopping here
+      instead would strand the game on a finished board with the microphone
+      closed and no on-screen way forward.
+    */
+    if (roundInProgress || nextRoundStarting || starState.isEnding) return;
+
+    diagLog("play_again_exchange_defaulted", { listens: listens });
+
+    await speakStarLine(pickCalmLine("play_again_no_answer_default", [
+      "That's okay. I'll set up another round, and you can tell me any time you want to finish.",
+      "No problem. Let's play one more, and just tell me when you'd like to stop.",
+      "That's alright. I'll deal another round. Tell me whenever you want to finish."
+    ]));
+
+    startNextRound({ skipIntroLine: true });
   }
 
   async function handleSpeechHeard(transcript, question, turnToken = null) {
@@ -1777,54 +2479,48 @@ document.addEventListener("DOMContentLoaded", function () {
       addComfort(question?.askType === "one_word" ? 7 : 5);
     }
 
-    const lower = transcript.toLowerCase();
-
-    const isYes = /\b(yes|yeah|yep|sure|okay|ok|again|play|more|one more|another|round|continue|keep going)\b/.test(lower);
-    const isNo = /\b(no|nope|not|stop|done|finished|finish|all done|be done|end|early|break|pause|dashboard)\b/.test(lower);
-
-    let intent = question?.intent || null;
-
-    if (question?.askType === "play_again_team" || question?.askType === "play_again_child") {
-      intent = "play_again";
-    }
-
-    if (intent === "play_again") {
-      if (isYes && !isNo) {
-        starState.playAgainStartedByVoice = true;
-
-        await speakStarLine(pickCalmLine("play_again_yes_ack", [
-          "Okay. Let's play another round.",
-          "Sounds good. Let's play another round.",
-          "Okay. Let's do one more round together.",
-          "Sure. Let's play another round."
-        ]));
-
-        startNextRound({ skipIntroLine: true });
-        return;
-      }
-
-      if (isNo && !isYes) {
-        await endGameWithGoodbye({ save: false });
-        return;
-      }
-
-      await speakStarLine(pickCalmLine("play_again_unclear_ack", [
-        "Okay. Let's play another round.",
-        "Got it. Let's try one more round.",
-        "Okay. One more round together."
-      ]));
-
-      startNextRound({ skipIntroLine: true });
-      return;
-    }
-
+    // The play-again exchange is driven by runPlayAgainExchange(), which
+    // listens with deferDispatch and never routes through here.
     starState.questionCooldownUntil = Date.now() + 75 * 1000;
 
     let responseLine = "Thanks for telling me. Let's keep playing.";
     const namedCard = getNamedCardFromTranscript(transcript);
     const color = getColorFromTranscript(transcript);
 
-    if (
+    if (question?.isPreference) {
+      /*
+        A rounds 7-12 opinion answer. A short reply ("the dog") is a complete
+        answer here, so naming the card back is the natural acknowledgment --
+        the "thanks for helping me look" wording used for the help/clear
+        questions would not make sense for an opinion.
+
+        When Star can tell which card was chosen it sometimes agrees with a
+        short, specific line about that card. Only sometimes: agreeing every
+        single time stops sounding like an opinion and starts sounding like a
+        tic. If the answer was not understood, Star never pretends it was.
+      */
+      if (namedCard) {
+        const agreement = getCardAgreementLine(namedCard);
+
+        if (agreement && Math.random() < 0.45) {
+          responseLine = agreement;
+        } else {
+          responseLine = pickCalmLine("preference_named_ack", [
+            "The {first}. Good pick, {child}.",
+            "Ooh, the {first}. I like that one too.",
+            "The {first}. Thanks for telling me, {child}.",
+            "Got it, the {first}. Nice choice."
+          ], { firstCard: namedCard });
+        }
+      } else {
+        responseLine = pickCalmLine("preference_ack", [
+          "That's a good choice, {child}.",
+          "Nice. Thanks for telling me.",
+          "I like hearing what you think, {child}.",
+          "Good pick. Let's keep playing."
+        ]);
+      }
+    } else if (
       question?.askType === "help_question" ||
       question?.askType === "clear_question"
     ) {
@@ -2068,12 +2764,7 @@ document.addEventListener("DOMContentLoaded", function () {
       const question = getPlayAgainQuestion();
       starState.lastPlayAgainQuestionRound = starState.roundsCompleted;
 
-      await speakStarLine(question.message, {
-        expectsResponse: true,
-        askType: question.askType,
-        intent: "play_again",
-        responseSeconds: 6
-      });
+      await runPlayAgainExchange(question);
 
       return;
     }
@@ -2204,11 +2895,11 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     await speakStarLine(pickCalmLine("goodbye_end", [
-      "Okay, I think we should end here for now. Bye-bye. See you later.",
-      "Okay, we can finish here for now. Bye-bye. See you later.",
-      "Sounds good. We can stop here for now. Bye-bye. I'll see you later.",
       "Okay. Thanks for playing with me. Bye-bye. See you later.",
-      "Okay, let's end here for now. Bye-bye. See you later."
+      "That was fun. We can play again another time. Bye-bye.",
+      "All right, we can finish for now. Bye-bye. See you later.",
+      "Okay, we can finish here for now. Bye-bye. See you later.",
+      "Sounds good. We can stop here for now. Bye-bye. I'll see you later."
     ]));
 
     cleanupMedia();
@@ -2225,7 +2916,14 @@ document.addEventListener("DOMContentLoaded", function () {
       '#backDashboardBtn',
       '.back-to-dashboard',
       '.dashboard-link',
-      '.go-back-dashboard'
+      '.go-back-dashboard',
+      // The red leave button in the call bar. It previously had no handler at
+      // all, so pressing it did nothing. Routing it through this same list
+      // means it exits by exactly the path Back to Dashboard uses --
+      // endGameWithGoodbye(), which saves progress, stops the recorder and
+      // Star's audio, invalidates in-flight turns and navigates once -- rather
+      // than a second, separate exit implementation.
+      '#hangupButton'
     ];
 
     const elements = new Set();
@@ -2239,10 +2937,21 @@ document.addEventListener("DOMContentLoaded", function () {
     elements.forEach(function (element) {
       if (!element || element === declineCall) return;
 
-      element.addEventListener("click", function (event) {
+      const exit = function (event) {
         event.preventDefault();
         endGameWithGoodbye();
-      });
+      };
+
+      element.addEventListener("click", exit);
+
+      // `role="button"` elements do not activate on Enter/Space by themselves.
+      if (element.getAttribute("role") === "button") {
+        element.addEventListener("keydown", function (event) {
+          if (event.key === "Enter" || event.key === " " || event.key === "Spacebar") {
+            exit(event);
+          }
+        });
+      }
     });
   }
 

@@ -66,6 +66,19 @@ input, button, textarea, select, a {
     margin-bottom: 28px;
 }
 
+/*
+ * The logo is now the link home (the separate "Back to Home" button was
+ * removed). Shrink-wrapping the anchor around the image keeps the logo in
+ * exactly the position it occupied as a bare <img> -- no inline baseline gap,
+ * no extra margin. Deliberately without signup.css's page-specific
+ * `margin-left`, which does not apply to this layout.
+ */
+.logo-link {
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+}
+
 .logo {
     height: 40px;
     width: auto;

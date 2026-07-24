@@ -27,17 +27,19 @@
         </label>
 
         <input
-            type="password"
+            type="text"
             id="parentPin"
             name="parent_pin"
             maxlength="4"
             inputmode="numeric"
+            minlength="4"
             pattern="[0-9]{4}"
-            autocomplete="off"
+            autocomplete="one-time-code"
             placeholder="••••"
             required
             autofocus
-            class="pin-input"
+            class="pin-input pin-masked-input"
+            data-pin-mask
         >
 
         {% if error %}

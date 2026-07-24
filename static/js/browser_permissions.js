@@ -229,7 +229,6 @@ window.BraveSproutPermissions = (() => {
 
 document.addEventListener("DOMContentLoaded", () => {
   setupSettingsTourMode();
-  setupProfileDropdown();
   setupAgeSlider();
   setupPermissionToggles();
   setupPasswordModal();
@@ -260,59 +259,6 @@ function setupSettingsTourMode() {
       event.stopImmediatePropagation();
     }
   }, true);
-}
-
-function setupProfileDropdown() {
-  const profileDropdown = document.querySelector(".profile-dropdown");
-  const profileTrigger = document.getElementById("profileTrigger");
-  const dropdownMenu = document.getElementById("dropdownMenu");
-  const currentProfileIcon = document.getElementById("currentProfileIcon");
-  const iconButtons = document.querySelectorAll(".icon-option");
-
-  if (!profileDropdown || !profileTrigger || !dropdownMenu) return;
-
-  profileTrigger.addEventListener("click", (event) => {
-    event.stopPropagation();
-    dropdownMenu.classList.toggle("active");
-  });
-
-  dropdownMenu.addEventListener("click", (event) => {
-    event.stopPropagation();
-  });
-
-  document.addEventListener("click", () => {
-    dropdownMenu.classList.remove("active");
-  });
-
-  iconButtons.forEach((button) => {
-    button.addEventListener("click", async () => {
-      const icon = button.dataset.icon;
-
-      if (!icon) return;
-
-      try {
-        const formData = new FormData();
-        formData.append("icon", icon);
-
-        const response = await fetch("/update-profile-icon", {
-          method: "POST",
-          body: formData
-        });
-
-        const data = await response.json();
-
-        if (!data.success) return;
-
-        if (currentProfileIcon) {
-          currentProfileIcon.src = `/static/images/${icon}`;
-        }
-
-        dropdownMenu.classList.remove("active");
-      } catch (error) {
-        console.error("Profile icon update failed:", error);
-      }
-    });
-  });
 }
 
 function setupAgeSlider() {

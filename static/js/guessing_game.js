@@ -548,10 +548,27 @@ document.addEventListener("DOMContentLoaded", function () {
         // A required prompt genuinely failed to play (not merely
         // cancelled/superseded). Never enter listening for a question the
         // child was never actually asked -- pause here instead.
+        /*
+          The line genuinely never played. Offer to hear it again -- but
+          replay the audio we already have rather than calling the model
+          again: re-requesting would generate a different answer and re-run
+          the turn's state transition for a question that was already
+          answered.
+        */
         diagLog("prompt_failed", { eventType: eventType, status: playbackResult.status });
         setStatus("Tap to hear that again.", true);
-        showReplayButton(function () {
-          requestStarMessage(eventType, childResponse);
+        showReplayButton(async function () {
+          if (isTurnStale(turnToken)) return;
+
+          const replayResult = await playCurrentPrompt(data.audio, turnToken);
+          if (isTurnStale(turnToken)) return;
+
+          // Replaying must not advance the game on its own; resume listening
+          // exactly as the normal path would have.
+          if (expectsResponse && gameActive && !sessionDone &&
+              (replayResult.status === "ended" || replayResult.status === "skipped_no_audio")) {
+            startListeningForChild(turnToken);
+          }
         });
         return;
       }
@@ -1315,9 +1332,23 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     });
 
-    // One safe automatic retry for a genuinely failed (not cancelled)
-    // prompt, mirroring the Mystery Animal reference behavior.
-    if (result.status !== "ended" && result.status !== "cancelled" && !isTurnStale(turnToken)) {
+    /*
+      One automatic retry, but ONLY when the child never actually heard the
+      line -- the browser refused to start playback, or the media errored
+      before producing sound.
+
+      This used to retry on any non-"ended" status, including "timed_out".
+      A long answer could out-run the old flat 20s playback timeout while
+      still playing fine, and the retry then spoke the whole answer a second
+      time and left a "tap to continue" button behind it. That is the
+      duplicate-speech report: answer, answer again, then a button blocking
+      the game. A timeout after sound has started means we lost track of the
+      end of a line the child did hear -- carry on rather than repeat it.
+    */
+    const neverHeard = !result.startedPlaying &&
+      (result.status === "play_rejected" || result.status === "error");
+
+    if (neverHeard && !isTurnStale(turnToken)) {
       diagLog("recovery_started", { action: "auto_retry", status: result.status });
       result = await audioManager.playAndWait(audioSrc, {
         onMouthLevel: updateMouthFromLevel,
@@ -1326,6 +1357,14 @@ document.addEventListener("DOMContentLoaded", function () {
           audioEl.playbackRate = 0.94;
         }
       });
+    }
+
+    // Audio that started and then lost its `ended` event still counts as
+    // heard, so the game continues normally instead of stalling on a replay
+    // button.
+    if (result.startedPlaying && result.status === "timed_out") {
+      diagLog("prompt_end_event_missed", { treatedAs: "ended" });
+      return { status: "ended", startedPlaying: true, recoveredFromTimeout: true };
     }
 
     return result;

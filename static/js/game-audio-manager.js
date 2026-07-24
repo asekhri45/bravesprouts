@@ -197,12 +197,18 @@
         var settled = false;
         var timeoutHandle = null;
         var mouthSync = null;
+        // Whether the browser ever actually started producing sound. Callers
+        // need this to tell "the child never heard the line" (safe to replay)
+        // from "we lost track of the end of a line they did hear" (replaying
+        // would say the whole thing twice).
+        var startedPlaying = false;
 
         function cleanup() {
           audioEl.removeEventListener("playing", onPlaying);
           audioEl.removeEventListener("ended", onEnded);
           audioEl.removeEventListener("error", onError);
           audioEl.removeEventListener("stalled", onStalled);
+          audioEl.removeEventListener("loadedmetadata", onLoadedMetadata);
           if (timeoutHandle) window.clearTimeout(timeoutHandle);
           if (mouthSync) mouthSync.stop();
         }
@@ -216,11 +222,37 @@
           }
           settled = true;
           cleanup();
+          result.startedPlaying = startedPlaying;
           log("prompt_play_" + result.status, result.error ? { message: String(result.error && result.error.message || result.error) } : {});
           resolve(result);
         }
 
+        function armTimeout(ms) {
+          if (timeoutHandle) window.clearTimeout(timeoutHandle);
+          timeoutHandle = window.setTimeout(function () {
+            settle({ status: "timed_out" });
+          }, ms);
+        }
+
+        /*
+          The flat timeout was a guess made before the clip's length was
+          known, so a long line could out-run it and be reported as
+          "timed_out" even while it was still playing perfectly well. Once the
+          real duration is available, extend the deadline to cover it (plus
+          headroom for buffering). Never shortens the caller's timeout.
+        */
+        function onLoadedMetadata() {
+          var duration = Number(audioEl.duration);
+          if (!isFinite(duration) || duration <= 0) return;
+
+          var rate = Number(audioEl.playbackRate) || 1;
+          var needed = (duration / rate) * 1000 + 5000;
+
+          if (needed > timeoutMs) armTimeout(needed);
+        }
+
         function onPlaying() {
+          startedPlaying = true;
           log("prompt_playing", { url: safeUrlForLog(url) });
           if (onMouthLevel && audioContext) {
             mouthSync = attachMouthSync(audioEl, onMouthLevel);
@@ -244,10 +276,9 @@
         audioEl.addEventListener("ended", onEnded);
         audioEl.addEventListener("error", onError);
         audioEl.addEventListener("stalled", onStalled);
+        audioEl.addEventListener("loadedmetadata", onLoadedMetadata);
 
-        timeoutHandle = window.setTimeout(function () {
-          settle({ status: "timed_out" });
-        }, timeoutMs);
+        armTimeout(timeoutMs);
 
         var playPromise = audioEl.play();
         if (playPromise && typeof playPromise.catch === "function") {

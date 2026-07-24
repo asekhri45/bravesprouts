@@ -108,12 +108,29 @@
      * to release its stream (e.g. on page exit).
      */
     function stopActive(reason) {
-      if (activeRecorder && activeRecorder.state !== "inactive") {
+      var recorder = activeRecorder;
+
+      if (recorder && recorder.state !== "inactive") {
+        // Deliberately leave `activeRecorder` pointing at this recorder.
+        // MediaRecorder.stop() flips state to "inactive" synchronously (so
+        // isRecording() is already false for callers) but fires its `stop`
+        // event asynchronously. Clearing activeRecorder here would make that
+        // event compute wasActive === false, i.e. report a normally-ended
+        // window as "superseded" -- which made callers discard the child's
+        // recording and never run their onStop cleanup. The recorder's own
+        // `stop` listener clears activeRecorder instead. A genuine supersede
+        // is still reported correctly, because startRecording() assigns the
+        // NEW recorder to activeRecorder before the old one's event lands.
         try {
-          activeRecorder.stop();
-        } catch (e) { /* ignore */ }
+          recorder.stop();
+        } catch (e) {
+          // stop() threw, so no `stop` event is coming; clear it here or the
+          // manager would stay wedged on a recorder that can never finish.
+          activeRecorder = null;
+        }
+      } else {
+        activeRecorder = null;
       }
-      activeRecorder = null;
 
       log("recording_cleanup", { reason: reason || "stop_active" });
     }

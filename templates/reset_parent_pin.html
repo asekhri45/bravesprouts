@@ -28,17 +28,19 @@
             </label>
 
             <input
-                type="password"
+                type="text"
                 id="newPin"
                 name="new_pin"
                 maxlength="4"
                 inputmode="numeric"
+                minlength="4"
                 pattern="[0-9]{4}"
-                autocomplete="off"
+                autocomplete="one-time-code"
                 placeholder="New PIN"
                 required
                 autofocus
-                class="pin-input pin-input-with-placeholder"
+                class="pin-input pin-input-with-placeholder pin-masked-input"
+                data-pin-mask
             >
 
             <label for="confirmPin" class="sr-only">
@@ -46,16 +48,18 @@
             </label>
 
             <input
-                type="password"
+                type="text"
                 id="confirmPin"
                 name="confirm_pin"
                 maxlength="4"
                 inputmode="numeric"
+                minlength="4"
                 pattern="[0-9]{4}"
-                autocomplete="off"
+                autocomplete="one-time-code"
                 placeholder="Confirm PIN"
                 required
-                class="pin-input pin-input-with-placeholder pin-second-input"
+                class="pin-input pin-input-with-placeholder pin-second-input pin-masked-input"
+                data-pin-mask
             >
 
             {% if error %}

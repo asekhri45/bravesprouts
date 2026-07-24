@@ -1,3 +1,19 @@
 body {
     font-family: "Nunito", sans-serif;
 }
+
+/*
+ * Visual masking for the four-digit parent PIN.
+ *
+ * The PIN is a lightweight parental gate, not the account password -- the
+ * account has its own email/password used for authentication. Chrome offers
+ * to save any `type="password"` field as an account password and ignores
+ * `autocomplete="off"` on it, so the PIN inputs are plain text inputs with
+ * one-time-code semantics and are masked here instead. Applies only to
+ * elements that opt in with this class; the real password fields keep
+ * `type="password"` and their password-manager behavior.
+ */
+.pin-masked-input {
+    -webkit-text-security: disc;
+    text-security: disc;
+}

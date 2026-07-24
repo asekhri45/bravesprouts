@@ -47,13 +47,16 @@
         <div class="input-group">
           <img src="{{ url_for('static', filename='images/lockiconblue.svg') }}" class="input-icon" alt="">
           <input
-            type="password"
+            type="text"
             name="parent_pin"
             id="parent_pin"
             maxlength="4"
             inputmode="numeric"
+            minlength="4"
             pattern="[0-9]{4}"
-            autocomplete="off"
+            autocomplete="one-time-code"
+            class="pin-masked-input"
+            data-pin-mask
             required
           >
         </div>

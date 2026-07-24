@@ -4,10 +4,12 @@
     {
       "name": "flask-preview",
       "runtimeExecutable": ".venv/bin/python",
-      "runtimeArgs": ["/private/tmp/claude-501/-Users-aaravsekhri-Documents-GitHub-bravesprouts/8e55fe3d-f275-4425-aff2-cb4f200f7181/scratchpad/preview_runner.py"],
+      "runtimeArgs": [
+        "/private/tmp/claude-501/-Users-aaravsekhri-Documents-GitHub-bravesprouts/915f5362-52ea-452c-b9f5-afe62db57ce1/scratchpad/preview_runner.py"
+      ],
       "port": 5010,
       "env": {
-        "DATABASE_PATH": "/private/tmp/claude-501/-Users-aaravsekhri-Documents-GitHub-bravesprouts/8e55fe3d-f275-4425-aff2-cb4f200f7181/scratchpad/preview.db",
+        "DATABASE_PATH": "/private/tmp/claude-501/-Users-aaravsekhri-Documents-GitHub-bravesprouts/915f5362-52ea-452c-b9f5-afe62db57ce1/scratchpad/preview.db",
         "SECRET_KEY": "preview-secret",
         "FLASK_ENV": "development",
         "FLASK_DEBUG": "1"

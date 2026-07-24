@@ -206,30 +206,63 @@ document.addEventListener("DOMContentLoaded", function () {
     return Math.min(Math.max(value, min), max);
   }
 
-  function waitForTarget(selector, attempts = 25) {
+  /*
+    Resolves the instant the target exists.
+
+    This used to poll every 80ms for up to 25 attempts, so a target that
+    mounted a moment after the check began still cost a full 80ms tick, and a
+    slower one cost multiples of that -- on top of the fixed positioning
+    delays below. A MutationObserver fires as soon as the node is inserted and
+    is disconnected immediately, so nothing is left observing between steps.
+    The timeout is only a safety net for a target that never appears.
+  */
+  function waitForTarget(selector, timeoutMs = 2000) {
+    const existing = document.querySelector(selector);
+    if (existing) return Promise.resolve(existing);
+
     return new Promise((resolve) => {
-      let count = 0;
+      let settled = false;
+      let observer = null;
+      let timer = null;
 
-      const check = () => {
-        const element = document.querySelector(selector);
-
-        if (element) {
-          resolve(element);
-          return;
-        }
-
-        count += 1;
-
-        if (count >= attempts) {
-          resolve(null);
-          return;
-        }
-
-        window.setTimeout(check, 80);
+      const finish = (element) => {
+        if (settled) return;
+        settled = true;
+        if (observer) observer.disconnect();
+        if (timer) window.clearTimeout(timer);
+        resolve(element);
       };
 
-      check();
+      observer = new MutationObserver(() => {
+        const element = document.querySelector(selector);
+        if (element) finish(element);
+      });
+
+      observer.observe(document.documentElement, { childList: true, subtree: true });
+
+      timer = window.setTimeout(() => finish(document.querySelector(selector)), timeoutMs);
     });
+  }
+
+  /*
+    The next step usually lives on another page, and that navigation is a full
+    document load. Warming it while the current tooltip is on screen means the
+    HTML/CSS is already in the HTTP cache by the time Next is pressed.
+    Hint-only: if the browser ignores it, behaviour is unchanged.
+  */
+  function prefetchStepRoute(stepNumber) {
+    const step = getStep(stepNumber);
+    if (!step || !step.path || currentPage() === step.page) return;
+
+    const href = `${step.path}?tour=${step.step}`;
+    if (document.querySelector(`link[data-tour-prefetch="${href}"]`)) return;
+
+    const link = document.createElement("link");
+    link.rel = "prefetch";
+    link.as = "document";
+    link.href = href;
+    link.dataset.tourPrefetch = href;
+    document.head.appendChild(link);
   }
 
   function createTourElements() {
@@ -654,11 +687,19 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
+  // Set once a cross-page navigation has been committed. A second rapid click
+  // must not fire window.location.href again, which would restart the load and
+  // make the next step appear to take twice as long.
+  let tourNavigationStarted = false;
+
   function goToStep(stepNumber) {
+    if (tourNavigationStarted) return;
+
     const nextStep = getStep(stepNumber);
     if (!nextStep) return;
 
     if (currentPage() !== nextStep.page) {
+      tourNavigationStarted = true;
       window.location.href = `${nextStep.path}?tour=${nextStep.step}`;
       return;
     }
@@ -1103,20 +1144,79 @@ document.addEventListener("DOMContentLoaded", function () {
       document.documentElement.classList.add("bravesprouts-tour-no-scroll");
     }
 
+    /*
+      Position as soon as layout is ready, then re-position when the smooth
+      scroll actually finishes.
+
+      This previously waited a fixed 330ms (260ms on mobile) before the first
+      positioning and another 220ms before the second -- 550ms of dead time on
+      every step, including same-page steps where nothing needed to settle.
+      That was the bulk of the "laggy" feeling. The tooltip now appears on the
+      next frame, and the follow-up positioning is driven by the scroll
+      genuinely coming to rest rather than by a guessed duration.
+    */
     requestAnimationFrame(() => {
+      if (requestId !== renderRequestId) return;
+
       scrollTargetIntoView(step, target);
 
-      window.setTimeout(() => {
+      positionTour();
+      cleanUrl();
+
+      whenScrollSettles(() => {
         if (requestId !== renderRequestId) return;
         positionTour();
-        cleanUrl();
-
-        window.setTimeout(() => {
-          if (requestId !== renderRequestId) return;
-          positionTour();
-        }, 220);
-      }, isMobileTourScreen() ? 260 : 330);
+      });
     });
+
+    // Warm the next step's page while this one is being read.
+    prefetchStepRoute(step.step + 1);
+  }
+
+  /*
+    Calls `done` once the window has stopped scrolling. Uses the native
+    `scrollend` event where available and otherwise watches scrollY settle
+    across animation frames. Either way it is bounded, so a scroll that never
+    settles cannot strand the tour.
+  */
+  function whenScrollSettles(done) {
+    let finished = false;
+
+    const finish = () => {
+      if (finished) return;
+      finished = true;
+      window.removeEventListener("scrollend", finish);
+      done();
+    };
+
+    if ("onscrollend" in window) {
+      window.addEventListener("scrollend", finish, { once: true });
+      window.setTimeout(finish, 600);
+      return;
+    }
+
+    let lastY = window.scrollY;
+    let stableFrames = 0;
+    let frames = 0;
+
+    const tick = () => {
+      if (finished) return;
+
+      frames += 1;
+      const y = window.scrollY;
+      stableFrames = y === lastY ? stableFrames + 1 : 0;
+      lastY = y;
+
+      // Two consecutive still frames means the scroll has come to rest.
+      if (stableFrames >= 2 || frames > 40) {
+        finish();
+        return;
+      }
+
+      requestAnimationFrame(tick);
+    };
+
+    requestAnimationFrame(tick);
   }
 
   renderStep();

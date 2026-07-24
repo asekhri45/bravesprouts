@@ -1713,15 +1713,62 @@ document.addEventListener("DOMContentLoaded", function () {
       .filter(Boolean);
   }
 
+  /*
+    Phrases that mean "I'm still working on this", checked before any
+    completion phrase. "I'm not done" and "I'm not ready" contain "done" and
+    "ready", so without this gate a plain substring match reads them as the
+    exact opposite of what the child said.
+  */
+  const KEEP_DRAWING_PHRASES = [
+    "not done", "not finished", "not ready", "more time", "keep drawing",
+    "keep working", "keep going", "wait", "not yet", "a little more",
+    "i'm still", "im still", "i am still", "hold on", "one second",
+    "one more minute", "stay here", "not there yet"
+  ];
+
+  function transcriptWantsToKeepDrawing(text) {
+    const lower = String(text || "").toLowerCase();
+    return KEEP_DRAWING_PHRASES.some(phrase => lower.includes(phrase));
+  }
+
+  /*
+    "This drawing part is finished."
+
+    The child should never have to produce the exact phrase "I'm done" -- the
+    point of the activity is to encourage speech, not to drill one sentence.
+    Completion is read from the shared GameIntent classifier (the same one the
+    other games and the server use), which understands "I'm finished",
+    "I'm ready", "next", "let's move on" and so on, and which handles negation
+    properly. In a drawing step BOTH of its decision labels mean "this part is
+    finished": "stop" ("I'm done") and "continue" ("next one", "move on").
+    Which is why the keep-drawing gate has to run first.
+  */
   function transcriptHasExplicitDoneIntent(text) {
     const lower = String(text || "").toLowerCase();
 
+    if (transcriptWantsToKeepDrawing(lower)) return false;
+
+    if (window.GameIntent) {
+      const intent = window.GameIntent.classify(lower).intent;
+      if (intent === "stop" || intent === "continue") return true;
+      // A repeat request or a question aimed at the child is not completion.
+      if (intent === "repeat" || intent === "redirect") return false;
+    }
+
+    /*
+      Wordings the shared classifier deliberately leaves alone, plus the ones
+      that are only unambiguous in this context. "I'm ready" is a good example:
+      at an end-of-round prompt it could mean either choice, so GameIntent
+      reports it as unclear -- but while drawing a part it plainly means "this
+      part is ready". The keep-drawing gate above has already removed
+      "I'm not ready".
+    */
     const explicitDonePhrases = [
-      "i'm done", "im done", "i am done", "all done", "i'm finished",
-      "im finished", "i am finished", "finished", "done", "this is done",
-      "it is done", "it's done", "its done", "next part", "move on",
-      "go to the next", "ready for the next", "ready to move", "that's it",
-      "that is it"
+      "this is done", "it is done", "it's done", "its done",
+      "that's it", "that is it", "i finished it", "i completed it",
+      "i did it", "ta da", "tada",
+      "i'm ready", "im ready", "i am ready",
+      "ready for the next", "ready to move"
     ];
 
     return explicitDonePhrases.some(phrase => lower.includes(phrase));
@@ -1730,13 +1777,8 @@ document.addEventListener("DOMContentLoaded", function () {
   function transcriptHasPassiveDoneIntent(text) {
     const lower = String(text || "").toLowerCase();
 
-    const keepPhrases = [
-      "not done", "not finished", "i'm not done", "im not done",
-      "i am not done", "more time", "keep drawing", "keep working",
-      "wait", "not yet", "a little more"
-    ];
-
-    if (keepPhrases.some(phrase => lower.includes(phrase))) {
+    // Same keep-drawing gate as the explicit path, so the two cannot disagree.
+    if (transcriptWantsToKeepDrawing(lower)) {
       return false;
     }
 
@@ -1819,32 +1861,52 @@ document.addEventListener("DOMContentLoaded", function () {
     const hasMoveWord = moveWords.some(word => lower.includes(word));
     const asksForMoreDrawingTime = lower.includes("more time") || lower.includes("a little more") || lower.includes("more details");
 
+    /*
+      Order matters. "Keep drawing" signals are checked before any completion
+      signal, because "I'm not done" / "not ready" / "need more time" all
+      contain words that a plain substring match would read as completion.
+    */
+    if (transcriptWantsToKeepDrawing(lower) || asksForMoreDrawingTime) return "keep";
+    if (keepPhrases.some(phrase => lower.includes(phrase))) return "keep";
+    if (words.has("no") || words.has("nope") || words.has("nah")) return "keep";
+
+    // Leaving the activity altogether, as distinct from finishing this part.
     if (stopPhrases.some(phrase => lower.includes(phrase))) return "stop";
 
-    // For move-on prompts, a plain affirmative answer should mean "yes, move on."
+    // Naming the destination is a complete answer: "the farm", "let's draw
+    // the grass", "move on to the sun". This is what the child most often
+    // says, and treating it as unclear left them stuck on the current part.
+    if (mentionsNextPart || mentionsNextScene) {
+      if (hasMoveWord || words.size <= 5) return "done";
+    }
+
+    // For move-on prompts, a plain affirmative means "yes, move on."
     if (["yes", "yeah", "yep", "yup", "sure", "okay", "ok"].some(word => words.has(word))) {
       return "done";
     }
 
-    // After Star offers the next part/scene, answers like "draw the grass" or even
-    // just "grass" should count as moving on, not as unclear or "keep drawing."
-    if ((mentionsNextPart || mentionsNextScene) && !lower.includes("not ") && !asksForMoreDrawingTime) {
-      if (hasMoveWord || words.size <= 4) return "done";
-    }
-
-    if (lower.includes("move on") || lower.includes("next part") || lower.includes("next stage")) return "done";
-    if (keepPhrases.some(phrase => lower.includes(phrase))) return "keep";
-    if (words.has("no") || words.has("nope") || words.has("nah")) return "keep";
     if (transcriptHasExplicitDoneIntent(text)) return "done";
-
-    if (words.has("yes") || words.has("yeah") || words.has("yep") || words.has("okay") || words.has("ok")) {
-      return "done";
-    }
 
     return "unclear";
   }
 
   function transcriptSoundsLikeDone(text) {
+    const lower = String(text || "").toLowerCase();
+
+    // "Not done yet", "I'm not done", "I need more time", "keep drawing", etc.
+    // contain "done"/"finished" as substrings but explicitly mean the OPPOSITE.
+    // They must never trip the done-intent priority path in handleSpeech.
+    const keepPhrases = [
+      "not done", "not finished", "i'm not done", "im not done",
+      "i am not done", "not yet", "more time", "need more",
+      "keep drawing", "keep working", "keep going", "a little more",
+      "not ready", "wait"
+    ];
+
+    if (keepPhrases.some(phrase => lower.includes(phrase))) {
+      return false;
+    }
+
     return transcriptHasExplicitDoneIntent(text);
   }
 
@@ -2089,6 +2151,11 @@ document.addEventListener("DOMContentLoaded", function () {
       state.redirectedQuestions += 1;
     }
 
+    // Dedicated choice prompts own their own classifier: when Star has
+    // explicitly asked a stage_done, scene_choice, or passive_stage_done
+    // question, the child's "done"/"yes"/"no"/next-part reply is an answer to
+    // THAT prompt, so let those handlers decide. (These are the intended
+    // exceptions to the done-intent-wins rule below.)
     if (question?.intent === "passive_stage_done") {
       if (transcriptHasPassiveDoneIntent(transcript)) {
         await handleDoneIntentFromSpeech();
@@ -2114,6 +2181,17 @@ document.addEventListener("DOMContentLoaded", function () {
       return;
     }
 
+    // Explicit completion intent wins over EVERY generic conversational prompt
+    // (side_question, teacher-direct/indirect/redirect, or no active prompt).
+    // Once the child has drawn during this stage and clearly says they are
+    // done, treat it as completion regardless of which optional teacher prompt
+    // was most recently active -- previously a pending side_question consumed
+    // "I'm done" as a generic answer and the completion was ignored.
+    if (hasDrawnThisStage && transcriptSoundsLikeDone(transcript)) {
+      await handleDoneIntentFromSpeech();
+      return;
+    }
+
     if (question?.intent === "side_question") {
       await speakNow("star", pickLine([
         "That sounds nice.",
@@ -2133,11 +2211,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
       scheduleStageCheck(6500);
       schedulePassiveDoneListen(1400);
-      return;
-    }
-
-    if (hasDrawnThisStage && transcriptSoundsLikeDone(transcript)) {
-      await handleDoneIntentFromSpeech();
       return;
     }
 
@@ -2309,12 +2382,19 @@ document.addEventListener("DOMContentLoaded", function () {
     let options;
 
     if (isLastStageInCurrentScene() && !isLastSceneInGame()) {
+      /*
+        This drawing is complete, so the real choice is "start the next
+        drawing" versus "finish for today". Offering to keep working on a
+        picture the child has already finished is confusing, and it is what
+        made the old wording ("or do you want to continue drawing this?") read
+        as though nothing had been completed.
+      */
       const nextSceneTarget = nextSceneDrawingTargetForSpeech();
 
       options = [
-        `Do you want to move on to drawing ${nextSceneTarget} now, or end the call for now?`,
-        `Should we start drawing ${nextSceneTarget} now, or end the call for now?`,
-        `Do you want to keep going and draw ${nextSceneTarget}, or end the call for now?`
+        `Do you want to move on to drawing ${nextSceneTarget}, or be done with drawing for today?`,
+        `Should we start drawing ${nextSceneTarget}, or finish drawing for today?`,
+        `Do you want to start ${nextSceneTarget}, or be done with drawing for today?`
       ];
     } else if (isLastStageInCurrentScene() && isLastSceneInGame()) {
       options = [
@@ -2370,6 +2450,9 @@ document.addEventListener("DOMContentLoaded", function () {
     const shouldFinishGame = isLastStageInCurrentScene() && isLastSceneInGame();
 
     state.pendingDoneConfirmation = false;
+
+    // A readable answer clears the clarification counter.
+    if (choice !== "unclear") state.stageDoneClarifications = 0;
 
     if (choice === "stop") {
       await speakNow("star", pickLine([
@@ -2429,6 +2512,28 @@ document.addEventListener("DOMContentLoaded", function () {
       return;
     }
 
+    /*
+      The answer could not be read. Ask the same choice again rather than
+      quietly keeping the child on the current part -- silently defaulting to
+      "stay" is what made a child who asked to move on hear "keep working on
+      this part" and go nowhere. Bounded, so an unreadable microphone cannot
+      loop forever; after that we fall back to staying, which is recoverable.
+    */
+    state.stageDoneClarifications = Number(state.stageDoneClarifications || 0) + 1;
+
+    if (state.stageDoneClarifications <= 2) {
+      await queueSpeak("star", buildStageDoneRetryPrompt(), {
+        expectsResponse: true,
+        askType: "choice",
+        source: "star-done-confirm",
+        intent: "stage_done",
+        responseSeconds: 8.5
+      });
+      return;
+    }
+
+    state.stageDoneClarifications = 0;
+
     await speakNow("star", pickLine([
       "That's okay. Keep working on this part for now.",
       "No rush. You can keep going.",
@@ -2443,16 +2548,40 @@ document.addEventListener("DOMContentLoaded", function () {
     const lower = String(text || "").toLowerCase();
     const words = new Set(normalizedWords(lower));
 
+    /*
+      "Do you want to move on to drawing the farm, or be done for today?"
+
+      Naming the destination ("the farm", "let's draw the farm") is the most
+      natural way for a child to answer this, and it used to fall through to
+      "unclear" -- which is why choosing the next drawing could leave the game
+      sitting on the finished one. Checked first, and before the shared
+      classifier, because the scene name may itself contain a cue word.
+    */
+    const nextScene = nextSceneNameForSpeech().toLowerCase().replace(/^the /, "");
+    const nextTarget = nextSceneDrawingTargetForSpeech().toLowerCase().replace(/^the /, "");
+
+    const namesDestination =
+      (nextScene && nextScene !== "next picture" && lower.includes(nextScene)) ||
+      (nextTarget && nextTarget !== "next picture" && lower.includes(nextTarget));
+
+    if (namesDestination && !lower.includes("not ")) return "continue";
+
+    // Negation-safe done/continue reading, shared with the other games.
+    if (window.GameIntent) {
+      const intent = window.GameIntent.classify(lower).intent;
+      if (intent === "stop") return "stop";
+      if (intent === "continue") return "continue";
+      if (intent === "repeat") return "repeat";
+    }
+
     const stopPhrases = [
-      "be done", "done for the day", "all done", "i'm done", "im done",
-      "i am done", "stop", "finish", "finished", "no more", "go back",
-      "dashboard", "that's enough", "that is enough", "i want to stop",
-      "end the call", "end call", "end this call", "call for now"
+      "be done", "done for the day", "all done", "go back",
+      "dashboard", "end the call", "end call", "end this call", "call for now"
     ];
 
     const continuePhrases = [
-      "another", "next", "more", "keep going", "continue", "keep drawing",
-      "play another", "draw another", "one more", "yes", "yeah", "yep", "sure", "okay", "ok"
+      "keep drawing", "play another", "draw another",
+      "yes", "yeah", "yep", "sure", "okay", "ok"
     ];
 
     if (stopPhrases.some(phrase => lower.includes(phrase))) return "stop";
@@ -2465,6 +2594,13 @@ document.addEventListener("DOMContentLoaded", function () {
 
   async function handleSceneChoiceResponse(transcript) {
     const choice = classifySceneChoice(transcript);
+
+    // "Can you say that again?" -- replay the same choice, change nothing.
+    if (choice === "repeat") {
+      await speakNow("star", "Sure, no problem.");
+      await offerContinueAfterScene();
+      return;
+    }
 
     if (choice === "stop") {
       await speakNow("star", pickLine([
@@ -2498,7 +2634,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function buildStageDoneRetryPrompt() {
     if (isLastStageInCurrentScene() && !isLastSceneInGame()) {
-      return `I might have missed that. Do you want to move on to drawing ${nextSceneDrawingTargetForSpeech()} now, or end the call for now?`;
+      return `I might have missed that. Do you want to move on to drawing ${nextSceneDrawingTargetForSpeech()}, or be done with drawing for today?`;
     }
 
     if (isLastStageInCurrentScene() && isLastSceneInGame()) {
@@ -3592,15 +3728,24 @@ document.addEventListener("DOMContentLoaded", function () {
       return;
     }
 
+    const recordedMimeType = chunks[0]?.type || "audio/webm";
     const blob = new Blob(chunks, {
-      type: chunks[0]?.type || "audio/webm"
+      type: recordedMimeType
     });
+
+    // Upload with the extension matching what MediaRecorder actually produced
+    // (webm on Chrome/Firefox, mp4/m4a on Safari) -- the transcription endpoint
+    // infers the audio container from the filename, so hardcoding ".webm" here
+    // corrupted every Safari passive-done recording.
+    const passiveExtension = (window.GameMicManager && window.GameMicManager.extensionForMimeType)
+      ? window.GameMicManager.extensionForMimeType(recordedMimeType)
+      : "webm";
 
     passiveTranscribing = true;
 
     try {
       const formData = new FormData();
-      formData.append("audio", blob, "drawing-passive-done.webm");
+      formData.append("audio", blob, `drawing-passive-done.${passiveExtension}`);
 
       const response = await fetch("/api/drawing-game/transcribe", {
         method: "POST",
