@@ -120,12 +120,7 @@
               </p>
             </div>
 
-            <a
-              href="https://www.harveyfamilypsychology.com/"
-              class="visit-button"
-              target="_blank"
-              rel="noopener"
-            >
+            <a href="https://www.harveyfamilypsychology.com/" class="visit-button" target="_blank" rel="noopener">
               Visit Website ↗
             </a>
           </div>
@@ -170,33 +165,6 @@
       </p>
       <p class="purple-note">
         Their courage and determination motivate every improvement made to this platform. 💜
-      </p>
-    </div>
-  </section>
-
-  <section class="thanks-info-row">
-    <a
-      href="https://www.selectivemutism.org/"
-      class="sma-circle-link"
-      target="_blank"
-      rel="noopener"
-      aria-label="Visit the Selective Mutism Association website"
-    >
-      <img
-        src="https://www.selectivemutism.org/wp-content/uploads/2022/01/selective_mutism_association_logo_118x110.png"
-        alt="Selective Mutism Association"
-        class="sma-logo-art"
-      >
-    </a>
-
-    <div>
-      <h2>Selective Mutism Association</h2>
-      <p>
-        Thank you to the Selective Mutism Association for helping families and professionals
-        find education, resources, and support around selective mutism.
-      </p>
-      <p class="purple-note">
-        Click the SMA logo to explore their resources and learn more. 💜
       </p>
     </div>
   </section>

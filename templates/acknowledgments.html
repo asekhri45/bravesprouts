@@ -1,15 +1,56 @@
-{% extends "dashboard_layout.html" %}
+{% extends "base.html" %}
+
+{% block title %}Acknowledgments | MyBraveSprout{% endblock %}
 
 {% block head %}
-{{ super() }}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/acknowledgments.css') }}?v=1">
+<meta
+    name="description"
+    content="Meet the specialists, families, and contributors whose feedback and support helped shape MyBraveSprout for children with selective mutism."
+>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/acknowledgments2.css') }}?v=1">
 {% endblock %}
 
-{% block title %}Acknowledgments{% endblock %}
+{% block content %}
 
-{% block dashboard_content %}
+<div
+    class="announcement-bar"
+    role="note"
+    aria-label="Early access announcement"
+>
+    <div class="announcement-track">
+        <div class="announcement-group">
+            <span class="announcement-message">
+                LIMITED EARLY ACCESS &middot; Welcoming our first 100 parent accounts
+            </span>
 
-<section class="thanks-page">
+            <span class="announcement-message">
+                Growing carefully so every activity can keep improving
+            </span>
+
+            <span class="announcement-message">
+                Free &middot; Parent-guided &middot; No credit card
+            </span>
+        </div>
+
+        <div class="announcement-group" aria-hidden="true">
+            <span class="announcement-message">
+                LIMITED EARLY ACCESS &middot; Welcoming our first 100 parent accounts
+            </span>
+
+            <span class="announcement-message">
+                Growing carefully so every activity can keep improving
+            </span>
+
+            <span class="announcement-message">
+                Free &middot; Parent-guided &middot; No credit card
+            </span>
+        </div>
+    </div>
+</div>
+
+{% include "partials/nav.html" %}
+
+<main class="thanks-page">
 
   <section class="thanks-hero">
     <div class="thanks-hero-copy">
@@ -59,16 +100,23 @@
           </div>
 
           <p class="contributor-bio">
-            Dr. Caroline Harvey is a licensed clinical psychologist in New York, New Jersey, Connecticut, and Florida. She specializes in treating youth with selective mutism, ADHD, oppositional behaviors, and other childhood anxiety disorders, utilizing evidence-based approaches including PCIT, CBT, SPACE, and Parent Management Training.
+            Dr. Caroline Harvey is a licensed clinical psychologist in New York, New Jersey,
+            Connecticut, and Florida. She specializes in treating youth with selective mutism,
+            ADHD, oppositional behaviors, and other childhood anxiety disorders, utilizing
+            evidence-based approaches including PCIT, CBT, SPACE, and Parent Management Training.
+          </p>
 
-She is committed to collaborating with schools, psychiatrists, and other service providers to best support children across all settings.
+          <p class="contributor-bio">
+            She is committed to collaborating with schools, psychiatrists, and other service
+            providers to best support children across all settings.
           </p>
 
           <div class="contribution-row">
             <div>
               <h4>Contribution to MyBraveSprout</h4>
               <p>
-                Provided feedback on activity design and approaches for supporting children with selective mutism through games.
+                Provided feedback on activity design and approaches for supporting children with
+                selective mutism through games.
               </p>
             </div>
 
@@ -97,6 +145,33 @@ She is committed to collaborating with schools, psychiatrists, and other service
       <p>
         Your feedback continues to help shape MyBraveSprout into a better resource for
         future families. 💚
+      </p>
+    </div>
+  </section>
+
+  <section class="thanks-info-row">
+    <a
+      href="https://www.selectivemutism.org/"
+      class="sma-circle-link"
+      target="_blank"
+      rel="noopener"
+      aria-label="Visit the Selective Mutism Association website"
+    >
+      <img
+        src="https://www.selectivemutism.org/wp-content/uploads/2022/01/selective_mutism_association_logo_118x110.png"
+        alt="Selective Mutism Association"
+        class="sma-logo-art"
+      >
+    </a>
+
+    <div>
+      <h2>Selective Mutism Association</h2>
+      <p>
+        Thank you to the Selective Mutism Association for helping families and professionals
+        find education, resources, and support around selective mutism.
+      </p>
+      <p class="purple-note">
+        Click the SMA logo to explore their resources and learn more. 💜
       </p>
     </div>
   </section>
@@ -133,6 +208,7 @@ She is committed to collaborating with schools, psychiatrists, and other service
       class="final-thanks-art"
     >
   </section>
-</section>
+</main>
 
+<script src="{{ url_for('static', filename='js/nav-bar.js') }}"></script>
 {% endblock %}
