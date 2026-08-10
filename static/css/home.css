@@ -132,10 +132,10 @@ body {
 }
 
 .navbar.scrolled .nav-buttons .hero-btn {
-    padding: 11px 14px 6px;
-    font-size: 0.82rem;
-    transform: translateY(-3px);
-    line-height: 1.6;
+    padding: 10px 16px !important;
+    font-size: 0.82rem !important;
+    transform: none !important;
+    line-height: 1.2 !important;
 }
 
 /* ── Landing composition: header (fixed, above) + hero (flexible middle) +
@@ -713,8 +713,10 @@ body {
     }
 
     .nav-cta-primary {
-        padding: 10px 14px;
-        font-size: 0.78rem;
+        padding: 10px 16px !important;
+        font-size: 0.82rem !important;
+        line-height: 1.2 !important;
+        transform: none !important;
         white-space: nowrap;
     }
 
@@ -1185,20 +1187,26 @@ body {
   }
 }
 
-/* ── Mobile nav CTA: final, authoritative override ──
+/* ── Mobile navigation: final, authoritative override ──
    This file has several earlier, higher-specificity duplicate media-query
-   blocks (".navbar .nav-buttons { display: none }" at up to 950px) left
-   over from prior patches, which would otherwise silently re-hide the
-   primary CTA this redesign requires on mobile. Rather than untangle every
+   blocks left over from prior patches, one of which hides the mobile
+   navigation. Rather than untangle every
    duplicate block (out of scope for this change), this final block wins
    the cascade deliberately: it is last in source order and uses
-   !important on the properties those earlier rules fight over, so mobile
-   visitors always have a reachable primary CTA regardless of viewport
-   width down to phone sizes. */
+   !important on the properties those earlier rules fight over. */
 @media (max-width: 950px) {
+    .nav-inner,
+    .navbar .nav-inner {
+        flex-direction: row !important;
+        flex-wrap: wrap;
+        row-gap: 0;
+    }
+
     .top-tabs,
     .navbar .top-tabs {
-        display: none !important;
+        display: flex !important;
+        order: 1;
+        flex-basis: 100%;
     }
 
     .nav-buttons,
@@ -1216,6 +1224,7 @@ body {
     .nav-cta-primary {
         padding: 10px 14px;
         font-size: 0.78rem;
+        min-width: 0 !important;
         white-space: nowrap;
     }
 
@@ -1231,6 +1240,12 @@ body {
     }
 }
 
+@media (max-width: 340px) {
+    .navbar .top-tabs {
+        gap: 8px;
+    }
+}
+
 @media (min-width: 951px) {
     .nav-cta-text-short {
         display: none;
@@ -1239,12 +1254,12 @@ body {
 
 @media (max-width: 768px) {
     :root {
-        --nav-height: 68px !important;
+        --nav-height: 100px !important;
         --container-width: min(92%, 430px);
     }
 
     .navbar {
-        padding: 0 !important;
+        padding: 10px 0 4px !important;
     }
 
     .nav-inner,
@@ -1254,7 +1269,8 @@ body {
         align-items: center;
         justify-content: space-between;
         gap: 10px;
-        height: var(--nav-height);
+        row-gap: 18px;
+        height: calc(var(--nav-height) - 14px);
     }
 
     .logo,
@@ -1264,7 +1280,12 @@ body {
         height: auto;
         max-height: 40px;
     }
+
+    .navbar .top-tabs {
+        margin-top: 0;
+    }
 }
+
 /* ══════════════════════════════════════════════════════════════
    Phase 2 redesign additions: hero extras, activities carousel,
    trust, privacy, and FAQ sections.
@@ -1826,4 +1847,40 @@ body {
 
 .faq-section {
     background: white;
+}
+
+/* Mobile public-header signup button sizing */
+@media (max-width: 950px) {
+    .navbar .nav-buttons .hero-btn,
+    .navbar.scrolled .nav-buttons .hero-btn {
+        padding: 7px 13px !important;
+        font-size: 0.72rem !important;
+        line-height: 1 !important;
+        border-radius: 11px !important;
+        min-width: 0 !important;
+        height: auto !important;
+        transform: none !important;
+    }
+}
+
+/* Final mobile public header adjustments */
+@media (max-width: 950px) {
+    /* Smaller signup button */
+    .navbar .nav-buttons .hero-btn,
+    .navbar.scrolled .nav-buttons .hero-btn {
+        padding: 6px 12px !important;
+        font-size: 0.70rem !important;
+        line-height: 1 !important;
+        border-radius: 10px !important;
+        min-width: 0 !important;
+        height: auto !important;
+        transform: none !important;
+    }
+
+    /* More breathing room between logo/signup row and navigation */
+    .navbar-inner {
+        row-gap: 14px !important;
+        padding-top: 8px !important;
+        padding-bottom: 10px !important;
+    }
 }

@@ -2584,9 +2584,12 @@ def add_no_chache_headers(response):
     # no-store behavior so authenticated pages are never cached (e.g. by
     # the back/forward cache after logout).
     if (request.path.startswith("/static/") or request.path == "/favicon.ico") and response.status_code < 400:
-        response.headers["Cache-Control"] = "public, max-age=31536000"
-        response.headers.pop("Pragma", None)
-        response.headers.pop("Expires", None)
+        if is_production:
+            response.headers["Cache-Control"] = "public, max-age=31536000"
+        else:
+            response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
+            response.headers["Pragma"] = "no-cache"
+            response.headers["Expires"] = "0"
         return response
 
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age-0"
@@ -26255,4 +26258,4 @@ except Exception as mystery_animal_module_error:
 
 
 if __name__ == "__main__":
-    app.run(debug=app.config["DEBUG"], port=5004)
+    app.run(host="0.0.0.0", debug=app.config["DEBUG"], port=5004)

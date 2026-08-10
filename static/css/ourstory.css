@@ -1032,17 +1032,25 @@ a:focus-visible {
     font-size: 0.77rem;
   }
 }
-/* ── Mobile nav CTA: consistency fix shared with home.css ──
+/* ── Mobile navigation: consistency fix shared with home.css ──
    This file has earlier, higher-specificity duplicate media-query blocks
-   (".nav-buttons { display: none }" at up to 950px) left over from prior
-   patches, which would otherwise hide the primary CTA. This final block
+   left over from prior patches, one of which hides the mobile navigation.
+   This final block
    wins the cascade deliberately (last in source order, !important on the
-   contested properties) so mobile visitors always have a reachable CTA,
-   matching the homepage's mobile nav behavior. */
+   contested properties), matching the homepage's mobile nav behavior. */
 @media (max-width: 950px) {
+    .nav-inner,
+    .navbar .nav-inner {
+        flex-direction: row !important;
+        flex-wrap: wrap;
+        row-gap: 0;
+    }
+
     .top-tabs,
     .navbar .top-tabs {
-        display: none !important;
+        display: flex !important;
+        order: 1;
+        flex-basis: 100%;
     }
 
     .nav-buttons,
@@ -1058,8 +1066,11 @@ a:focus-visible {
     }
 
     .nav-cta-primary {
-        padding: 10px 14px;
-        font-size: 0.78rem;
+        padding: 10px 16px !important;
+        font-size: 0.82rem !important;
+        line-height: 1.2 !important;
+        transform: none !important;
+        min-width: 0 !important;
         white-space: nowrap;
     }
 
@@ -1072,6 +1083,12 @@ a:focus-visible {
     }
 }
 
+@media (max-width: 340px) {
+    .navbar .top-tabs {
+        gap: 8px;
+    }
+}
+
 @media (min-width: 951px) {
     .nav-cta-text-short {
         display: none;
@@ -1080,11 +1097,11 @@ a:focus-visible {
 
 @media (max-width: 768px) {
     :root {
-        --nav-height: 68px !important;
+        --nav-height: 100px !important;
     }
 
     .navbar {
-        padding: 0 !important;
+        padding: 10px 0 4px !important;
     }
 
     .nav-inner,
@@ -1094,7 +1111,8 @@ a:focus-visible {
         align-items: center;
         justify-content: space-between;
         gap: 10px;
-        height: var(--nav-height);
+        row-gap: 18px;
+        height: calc(var(--nav-height) - 14px);
     }
 
     .logo,
@@ -1104,7 +1122,12 @@ a:focus-visible {
         height: auto;
         max-height: 40px;
     }
+
+    .navbar .top-tabs {
+        margin-top: 0;
+    }
 }
+
 
 :root {
     --announcement-height: 34px;
