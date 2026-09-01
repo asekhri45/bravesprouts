@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+
+{% block title %}Acknowledgments | MyBraveSprout{% endblock %}
+
+{% block head %}
+<meta
+    name="description"
+    content="Meet the specialists, families, and contributors whose feedback and support helped shape MyBraveSprout for children with selective mutism."
+>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/acknowledgments2.css') }}?v=1">
+{% endblock %}
+
+{% block content %}
+
+<div
+    class="announcement-bar"
+    role="note"
+    aria-label="Early access announcement"
+>
+    <div class="announcement-track">
+        <div class="announcement-group">
+            <span class="announcement-message">
+                LIMITED EARLY ACCESS &middot; Welcoming our first 100 parent accounts
+            </span>
+
+            <span class="announcement-message">
+                Growing carefully so every activity can keep improving
+            </span>
+
+            <span class="announcement-message">
+                Free &middot; Parent-guided &middot; No credit card
+            </span>
+        </div>
+
+        <div class="announcement-group" aria-hidden="true">
+            <span class="announcement-message">
+                LIMITED EARLY ACCESS &middot; Welcoming our first 100 parent accounts
+            </span>
+
+            <span class="announcement-message">
+                Growing carefully so every activity can keep improving
+            </span>
+
+            <span class="announcement-message">
+                Free &middot; Parent-guided &middot; No credit card
+            </span>
+        </div>
+    </div>
+</div>
+
+{% include "partials/nav.html" %}
+
+<main class="thanks-page">
+
+  <section class="thanks-hero">
+    <div class="thanks-hero-copy">
+      <h1>With Gratitude</h1>
+      <p class="thanks-subtitle">The people who helped shape MyBraveSprout.</p>
+
+      <p class="thanks-intro">
+        MyBraveSprout has been shaped by the generosity of therapists, psychologists,
+        educators, parents, and families who shared their expertise, experiences, and
+        feedback throughout development. Their insights have helped improve activities,
+        resources, and the overall experience for children and families.
+      </p>
+    </div>
+
+    <img
+      src="{{ url_for('static', filename='images/thanks_hero_star.png') }}"
+      class="thanks-hero-art"
+      alt="Happy MyBraveSprout star"
+    >
+  </section>
+
+  <section class="thanks-section">
+    <h2>Clinical &amp; Professional Contributors</h2>
+    <p class="thanks-section-subtitle">
+      These professionals provided valuable feedback and guidance during development.
+    </p>
+
+    <div class="contributor-list">
+
+      <article class="contributor-card">
+        <div class="contributor-photo-wrap">
+          <img
+            src="{{ url_for('static', filename='images/contributor_caroline_harvey.png') }}"
+            class="contributor-photo"
+            alt="Dr. Caroline Harvey"
+          >
+        </div>
+
+        <div class="contributor-main">
+          <div class="contributor-top">
+            <div>
+              <h3>Dr. Caroline Harvey</h3>
+              <p class="contributor-title">Clinical Psychologist</p>
+            </div>
+
+            <span class="feedback-pill">✧ Provided Feedback</span>
+          </div>
+
+          <p class="contributor-bio">
+            Dr. Caroline Harvey is a licensed clinical psychologist in New York, New Jersey,
+            Connecticut, and Florida. She specializes in treating youth with selective mutism,
+            ADHD, oppositional behaviors, and other childhood anxiety disorders, utilizing
+            evidence-based approaches including PCIT, CBT, SPACE, and Parent Management Training.
+          </p>
+
+          <p class="contributor-bio">
+            She is committed to collaborating with schools, psychiatrists, and other service
+            providers to best support children across all settings.
+          </p>
+
+          <div class="contribution-row">
+            <div>
+              <h4>Contribution to MyBraveSprout</h4>
+              <p>
+                Provided feedback on activity design and approaches for supporting children with
+                selective mutism through games.
+              </p>
+            </div>
+
+            <a href="https://www.harveyfamilypsychology.com/" class="visit-button" target="_blank" rel="noopener">
+              Visit Website ↗
+            </a>
+          </div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="thanks-info-row">
+    <img
+      src="{{ url_for('static', filename='images/thanks_families.png') }}"
+      alt=""
+      class="thanks-circle-art"
+    >
+
+    <div>
+      <h2>Families &amp; Beta Testers</h2>
+      <p>
+        A heartfelt thank you to the families who participated in early testing and
+        shared their experiences, suggestions, and encouragement throughout development.
+      </p>
+      <p>
+        Your feedback continues to help shape MyBraveSprout into a better resource for
+        future families. 💚
+      </p>
+    </div>
+  </section>
+
+  <section class="thanks-info-row">
+    <a
+      href="https://www.selectivemutism.org/"
+      class="sma-circle-link"
+      target="_blank"
+      rel="noopener"
+      aria-label="Visit the Selective Mutism Association website"
+    >
+      <img
+        src="https://www.selectivemutism.org/wp-content/uploads/2022/01/selective_mutism_association_logo_118x110.png"
+        alt="Selective Mutism Association"
+        class="sma-logo-art"
+      >
+    </a>
+
+    <div>
+      <h2>Selective Mutism Association</h2>
+      <p>
+        Thank you to the Selective Mutism Association for helping families and professionals
+        find education, resources, and support around selective mutism.
+      </p>
+      <p class="purple-note">
+        Click the SMA logo to explore their resources and learn more. 💜
+      </p>
+    </div>
+  </section>
+
+  <section class="thanks-info-row">
+    <img
+      src="{{ url_for('static', filename='images/thanks_sprout.png') }}"
+      alt=""
+      class="thanks-circle-art"
+    >
+
+    <div>
+      <h2>Inspiration</h2>
+      <p>
+        MyBraveSprout was inspired by my younger sister’s experience with selective mutism
+        and the belief that every child deserves opportunities to practice communication
+        in a safe, encouraging environment.
+      </p>
+      <p class="purple-note">
+        Their courage and determination motivate every improvement made to this platform. 💜
+      </p>
+    </div>
+  </section>
+
+  <section class="final-thanks-card">
+    <div>
+      <h2>Thank you. <span>💜</span></h2>
+      <p>Together, we can help children grow braver one conversation at a time.</p>
+    </div>
+
+    <img
+      src="{{ url_for('static', filename='images/thanks_footer_star.png') }}"
+      alt=""
+      class="final-thanks-art"
+    >
+  </section>
+</main>
+
+<script src="{{ url_for('static', filename='js/nav-bar.js') }}"></script>
+{% endblock %}
