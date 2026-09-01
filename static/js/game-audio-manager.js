@@ -23,6 +23,7 @@
     var activeAudio = null;
     var activeOperationToken = 0;
     var activeMouthSync = null;
+    var activeCancel = null;
 
     function log(eventName, details) {
       if (diagnostics) diagnostics.log(eventName, details);
@@ -145,15 +146,26 @@
      * rather than being left dangling.
      */
     function cancelActive(reason) {
-      activeOperationToken += 1;
-      stopMouthSync();
-
+      // Stop the element before settling its promise; settlement clears the
+      // active reference, so doing this afterward would let the voice keep
+      // playing even though the queue believed it had been cancelled.
       if (activeAudio) {
         try {
           activeAudio.pause();
         } catch (e) { /* ignore */ }
         activeAudio = null;
       }
+
+      // Resolve the current caller before invalidating its token. Previously
+      // cancelActive() paused the element and changed the token, while the
+      // pending playAndWait() promise could no longer settle. Any dialogue
+      // queue awaiting that promise then remained frozen forever.
+      var cancel = activeCancel;
+      activeCancel = null;
+      if (cancel) cancel(reason || "superseded");
+
+      activeOperationToken += 1;
+      stopMouthSync();
 
       log("audio_cancelled", { reason: reason || "superseded" });
     }
@@ -222,10 +234,18 @@
           }
           settled = true;
           cleanup();
+          if (activeCancel === cancelThisOperation) activeCancel = null;
+          if (activeAudio === audioEl) activeAudio = null;
           result.startedPlaying = startedPlaying;
           log("prompt_play_" + result.status, result.error ? { message: String(result.error && result.error.message || result.error) } : {});
           resolve(result);
         }
+
+        function cancelThisOperation(reason) {
+          settle({ status: "cancelled", reason: reason || "superseded" });
+        }
+
+        activeCancel = cancelThisOperation;
 
         function armTimeout(ms) {
           if (timeoutHandle) window.clearTimeout(timeoutHandle);

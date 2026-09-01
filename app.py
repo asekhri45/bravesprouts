@@ -714,6 +714,14 @@ def favicon():
         mimetype="image/vnd.microsoft.icon"
     )
 
+@app.route("/robots.txt")
+def robots_txt():
+    return send_from_directory(
+        app.static_folder,
+        "robots.txt",
+        mimetype="text/plain"
+    )
+
 @app.route("/signup", methods=["GET", "POST"])
 @limiter.limit("3 per minute")
 @limiter.limit("10 per hour")
@@ -14580,39 +14588,38 @@ CLASSROOM_OBJECT_MAX_QUESTIONS_PER_ROUND = 9
 CLASSROOM_OBJECT_SOFT_REVEAL_QUESTION_LIMIT = 9
 
 
+def get_drawing_teacher_voice_id():
+    """Return the one voice identity shared by the drawing/classroom Teacher."""
+    return (
+        os.getenv("LIBRARIAN_VOICE_ID")
+        or os.getenv("BOOK_GUESSING_VOICE_ID")
+        or os.getenv("ELEVENLABS_VOICE_ID", "piI8Kku0DcvcL6TTSeQt")
+    )
+
+
+def get_drawing_teacher_voice_settings(game_complete=False):
+    settings = {
+        "stability": 0.99,
+        "similarity_boost": 0.90,
+        "style": 0.0,
+        "use_speaker_boost": False
+    }
+
+    if game_complete:
+        settings["style"] = 0.12
+
+    return settings
+
+
 def generate_book_guessing_voice_elevenlabs(text, game_complete=False, thinking=False):
     """Teacher voice for the classroom object game.
 
     Keep the function name so the old frontend/backend references do not break.
-    Add TEACHER_VOICE_ID to your .env if you want a dedicated teacher voice.
+    This intentionally uses the exact same voice identity and delivery profile
+    as the Teacher in the drawing game.
     """
-    voice_id = (
-        os.getenv("TEACHER_VOICE_ID")
-        or os.getenv("LIBRARIAN_VOICE_ID")
-        or os.getenv("ELEVENLABS_VOICE_ID", "piI8Kku0DcvcL6TTSeQt")
-    )
-
-    if game_complete:
-        voice_settings = {
-            "stability": 0.84,
-            "similarity_boost": 0.90,
-            "style": 0.25,
-            "use_speaker_boost": False
-        }
-    elif thinking:
-        voice_settings = {
-            "stability": 0.98,
-            "similarity_boost": 0.88,
-            "style": 0.02,
-            "use_speaker_boost": False
-        }
-    else:
-        voice_settings = {
-            "stability": 0.94,
-            "similarity_boost": 0.90,
-            "style": 0.06,
-            "use_speaker_boost": False
-        }
+    voice_id = get_drawing_teacher_voice_id()
+    voice_settings = get_drawing_teacher_voice_settings(game_complete=game_complete)
 
     response = eleven_client.text_to_speech.convert(
         voice_id=voice_id,
@@ -16216,17 +16223,13 @@ def is_classroom_object_guess_ready(game_state, previous_response_mode="none", c
 
     return False
 
-def get_classroom_object_cached_audio_url(text, namespace="mystery-classroom-object-main-v1"):
+def get_classroom_object_cached_audio_url(text, namespace="mystery-classroom-object-main-v2"):
     text = sanitize_short_line(text, fallback="Hmm, let me think.", max_len=320)
 
     cache_dir = os.path.join(BASE_DIR, "static", "audio", "mystery_classroom_object")
     os.makedirs(cache_dir, exist_ok=True)
 
-    voice_id = (
-        os.getenv("TEACHER_VOICE_ID")
-        or os.getenv("LIBRARIAN_VOICE_ID")
-        or os.getenv("ELEVENLABS_VOICE_ID", "piI8Kku0DcvcL6TTSeQt")
-    )
+    voice_id = get_drawing_teacher_voice_id()
     cache_key = f"{namespace}:{voice_id}:{text}"
     filename = hashlib.md5(cache_key.encode("utf-8")).hexdigest() + ".mp3"
     filepath = os.path.join(cache_dir, filename)
@@ -17768,12 +17771,8 @@ def book_guessing_game_thinking_audio():
     cache_dir = os.path.join(BASE_DIR, "static", "audio", "mystery_classroom_object_thinking")
     os.makedirs(cache_dir, exist_ok=True)
 
-    voice_id = (
-        os.getenv("TEACHER_VOICE_ID")
-        or os.getenv("LIBRARIAN_VOICE_ID")
-        or os.getenv("ELEVENLABS_VOICE_ID", "piI8Kku0DcvcL6TTSeQt")
-    )
-    cache_key = f"mystery-classroom-object-thinking-v1:{voice_id}:{line}"
+    voice_id = get_drawing_teacher_voice_id()
+    cache_key = f"mystery-classroom-object-thinking-v2:{voice_id}:{line}"
     filename = hashlib.md5(cache_key.encode("utf-8")).hexdigest() + ".mp3"
     filepath = os.path.join(cache_dir, filename)
 
@@ -22466,17 +22465,8 @@ def generate_drawing_game_voice_elevenlabs(text, speaker="star", game_complete=F
     speaker = str(speaker or "star").strip().lower()
 
     if speaker in {"librarian", "teacher"}:
-        voice_id = (
-            os.getenv("LIBRARIAN_VOICE_ID")
-            or os.getenv("BOOK_GUESSING_VOICE_ID")
-            or os.getenv("ELEVENLABS_VOICE_ID", "piI8Kku0DcvcL6TTSeQt")
-        )
-        voice_settings = {
-            "stability": 0.99,
-            "similarity_boost": 0.90,
-            "style": 0.0,
-            "use_speaker_boost": False
-        }
+        voice_id = get_drawing_teacher_voice_id()
+        voice_settings = get_drawing_teacher_voice_settings(game_complete=game_complete)
     else:
         voice_id = os.getenv("ELEVENLABS_VOICE_ID", "piI8Kku0DcvcL6TTSeQt")
         voice_settings = {
@@ -22486,7 +22476,7 @@ def generate_drawing_game_voice_elevenlabs(text, speaker="star", game_complete=F
             "use_speaker_boost": False
         }
 
-    if game_complete:
+    if game_complete and speaker not in {"librarian", "teacher"}:
         voice_settings["style"] = max(voice_settings.get("style", 0), 0.12)
 
     response = eleven_client.text_to_speech.convert(

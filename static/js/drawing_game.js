@@ -525,6 +525,7 @@ document.addEventListener("DOMContentLoaded", function () {
   let lastSpeechTime = 0;
 
   let speechQueue = Promise.resolve();
+  let speechQueueGeneration = 0;
   let stageCheckTimer = null;
   let teacherIndirectQuestionTimer = null;
   let passiveDoneTimer = null;
@@ -823,8 +824,13 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function queueSpeak(actor, text, options = {}) {
+    const generation = speechQueueGeneration;
+
     speechQueue = speechQueue
-      .then(() => speakNow(actor, text, options))
+      .then(() => {
+        if (generation !== speechQueueGeneration) return;
+        return speakNow(actor, text, options);
+      })
       .catch(error => {
         console.error("Drawing speak queue error:", error);
       });
@@ -857,9 +863,13 @@ document.addEventListener("DOMContentLoaded", function () {
       pausePassiveDoneListenForResponse();
     }
 
-    const earlyQuestion = shouldCatchEarlyChoiceResponse(options)
-      ? buildResponseQuestion(actor, calmText, options)
-      : null;
+    // Listen during character speech both for an early answer to a choice and
+    // for a child saying a completion phrase while someone is still talking.
+    // The prompt-text guard in the listener prevents the character's own
+    // words from being mistaken for the child's.
+    const earlyQuestion = buildResponseQuestion(actor, calmText, options);
+    earlyQuestion.catchesChoice = shouldCatchEarlyChoiceResponse(options);
+    earlyQuestion.interruptedDone = false;
 
     const tile = getTile(actor);
 
@@ -886,10 +896,10 @@ document.addEventListener("DOMContentLoaded", function () {
       }
 
       if (data.success && data.audio) {
-        if (earlyQuestion) startEarlyResponseSpeechRecognition(earlyQuestion, calmText);
+        startEarlyResponseSpeechRecognition(earlyQuestion, calmText);
         await playCharacterAudio(actor, data.audio);
       } else {
-        if (earlyQuestion) startEarlyResponseSpeechRecognition(earlyQuestion, calmText);
+        startEarlyResponseSpeechRecognition(earlyQuestion, calmText);
         await sleep(750);
       }
     } catch (error) {
@@ -911,12 +921,19 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     }
 
-    if (earlyQuestion) {
-      stopEarlyResponseSpeechRecognition();
+    stopEarlyResponseSpeechRecognition();
+
+    if (earlyQuestion.interruptedDone) {
+      await handleDoneIntentFromSpeech({
+        interruptedActor: actor,
+        playInterruptionReaction: true,
+        audioAlreadyStopped: true
+      });
+      return;
     }
 
     if (options.expectsResponse) {
-      await askForResponse(actor, calmText, options, earlyQuestion);
+      await askForResponse(actor, calmText, options, earlyQuestion.catchesChoice ? earlyQuestion : null);
     }
   }
 
@@ -1283,6 +1300,29 @@ document.addEventListener("DOMContentLoaded", function () {
 
     if (childOwnedMovePhrases.some(phrase => lower.includes(phrase))) return cleaned;
 
+    const destinationNames = [
+      nextStageNameForSpeech(),
+      nextSceneNameForSpeech(),
+      nextSceneDrawingTargetForSpeech()
+    ].map(name => String(name || "")
+      .toLowerCase()
+      .replace(/^(?:the|a|an)\s+/, "")
+      .replace(/\s+picture$/, ""))
+      .filter(Boolean);
+
+    const namesDestination = destinationNames.some(name => lower.includes(name));
+    const hasDestinationAction = [
+      "want", "start", "started", "draw", "drawing", "go", "move",
+      "continue", "next", "ready", "let's", "lets"
+    ].some(word => lower.includes(word));
+
+    if (namesDestination && (hasDestinationAction || words.length <= 3)) return cleaned;
+
+    if (window.GameIntent) {
+      const intent = window.GameIntent.classify(lower).intent;
+      if (intent === "stop" || intent === "continue" || intent === "repeat") return cleaned;
+    }
+
     const childOwnedKeepPhrases = [
       "not yet", "more time", "keep drawing", "keep working", "i want more time", "a little more"
     ];
@@ -1332,6 +1372,27 @@ document.addEventListener("DOMContentLoaded", function () {
 
       for (let i = event.resultIndex; i < event.results.length; i += 1) {
         const transcript = cleanTranscript(event.results[i][0]?.transcript || "");
+        const lower = transcript.toLowerCase();
+        const promptLower = cleanTranscript(promptText).toLowerCase();
+
+        // Allow natural barge-in completion at any point in the activity.
+        // Reject text copied verbatim from the spoken prompt so echo from the
+        // speakers cannot make a character interrupt itself.
+        if (hasDrawnThisStage
+            && lower
+            && !(promptLower && promptLower.includes(lower))
+            && transcriptHasPassiveDoneIntent(transcript)
+            && !state.pendingDoneConfirmation) {
+          earlyResponseQuestion.interruptedDone = true;
+          earlyResponseQuestion.browserTranscript = transcript;
+
+          interruptCurrentCharacterAudio();
+          stopEarlyResponseSpeechRecognition();
+          return;
+        }
+
+        if (!earlyResponseQuestion.catchesChoice) continue;
+
         const earlyChoice = isLikelyEarlyChoiceResponse(transcript, promptText);
 
         if (!earlyChoice) continue;
@@ -1339,8 +1400,12 @@ document.addEventListener("DOMContentLoaded", function () {
         earlyResponseQuestion.earlyTranscript = earlyChoice;
         earlyResponseQuestion.browserTranscript = earlyChoice;
 
-        // Do not interrupt the character's audio. Store the response and let
-        // the prompt finish naturally, then handle the answer right after.
+        // The child answered before the prompt finished. Stop the remaining
+        // audio and handle that answer immediately after speakNow unwinds.
+        // Waiting for the whole line made the mic appear unresponsive and
+        // encouraged the child to repeat the same answer several times.
+        if (audioManager) audioManager.cancelActive("child_answered_early");
+        stopMouthAnimation();
         stopEarlyResponseSpeechRecognition();
         return;
       }
@@ -1678,6 +1743,11 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function interruptCurrentCharacterAudio() {
+    // Invalidate lines that were queued behind the interrupted one. Merely
+    // replacing speechQueue does not cancel callbacks already chained to the
+    // old promise, so they could otherwise start talking over the reaction.
+    speechQueueGeneration += 1;
+
     if (audioManager) {
       audioManager.cancelActive("interrupted_by_speech");
     }
@@ -1687,13 +1757,23 @@ document.addEventListener("DOMContentLoaded", function () {
     speechQueue = Promise.resolve();
   }
 
-  async function handleDoneIntentFromSpeech() {
+  async function handleDoneIntentFromSpeech(options = {}) {
     const now = Date.now();
 
     if (now - state.lastDoneHeardAt < 1200) return;
 
     state.lastDoneHeardAt = now;
-    interruptCurrentCharacterAudio();
+    if (!options.audioAlreadyStopped) interruptCurrentCharacterAudio();
+
+    if (options.playInterruptionReaction) {
+      await speakNow(options.interruptedActor || "star", pickLine([
+        "Oh!",
+        "Oh, okay!",
+        "Oh! Got it."
+      ]));
+      await sleep(90);
+    }
+
     await askStarConfirmStageDone();
   }
 
@@ -1723,7 +1803,9 @@ document.addEventListener("DOMContentLoaded", function () {
     "not done", "not finished", "not ready", "more time", "keep drawing",
     "keep working", "keep going", "wait", "not yet", "a little more",
     "i'm still", "im still", "i am still", "hold on", "one second",
-    "one more minute", "stay here", "not there yet"
+    "one more minute", "stay here", "not there yet", "give me a moment",
+    "a moment", "pause", "don't want to move", "do not want to move",
+    "don't want to stop", "do not want to stop"
   ];
 
   function transcriptWantsToKeepDrawing(text) {
@@ -1749,7 +1831,14 @@ document.addEventListener("DOMContentLoaded", function () {
     if (transcriptWantsToKeepDrawing(lower)) return false;
 
     if (window.GameIntent) {
-      const intent = window.GameIntent.classify(lower).intent;
+      const classification = window.GameIntent.classify(lower);
+      const intent = classification.intent;
+
+      // The shared classifier reverses a negated cue (for example, "I don't
+      // want to move on" becomes a stop decision). During a drawing step,
+      // either kind of negated completion cue means the part is not ready.
+      if (String(classification.cue || "").startsWith("not ")) return false;
+
       if (intent === "stop" || intent === "continue") return true;
       // A repeat request or a question aimed at the child is not completion.
       if (intent === "repeat" || intent === "redirect") return false;
@@ -1782,22 +1871,16 @@ document.addEventListener("DOMContentLoaded", function () {
       return false;
     }
 
-    const nextPart = nextStageNameForSpeech().toLowerCase();
-    const nextScene = nextSceneNameForSpeech().toLowerCase();
-
-    const donePhrases = [
-      "i'm done", "im done", "i am done", "all done",
-      "i'm finished", "im finished", "i am finished",
-      "this is done", "it is done", "it's done", "its done",
-      "i'm ready", "im ready", "i am ready",
-      "move on", "next part", "next stage", "go to the next",
-      "ready for the next", "ready to move", "let's move on", "lets move on",
-      "that's it", "that is it"
-    ];
-
-    if (donePhrases.some(phrase => lower.includes(phrase))) {
+    // Passive listening must accept the same natural completion language as
+    // an active response window. Keeping a second, narrower phrase list here
+    // meant that phrases such as "I completed it", "finished", and "next"
+    // worked only when a question happened to be listening for an answer.
+    if (transcriptHasExplicitDoneIntent(text)) {
       return true;
     }
+
+    const nextPart = nextStageNameForSpeech().toLowerCase();
+    const nextScene = nextSceneNameForSpeech().toLowerCase();
 
     if (nextPart && nextPart !== "the next part") {
       const nextPartPhrases = [
@@ -1838,6 +1921,10 @@ document.addEventListener("DOMContentLoaded", function () {
     const words = new Set(normalizedWords(lower));
     const nextPart = nextStageNameForSpeech().toLowerCase();
     const nextScene = nextSceneNameForSpeech().toLowerCase();
+    const nextSceneTarget = nextSceneDrawingTargetForSpeech()
+      .toLowerCase()
+      .replace(/^(?:the|a|an)\s+/, "")
+      .replace(/\s+picture$/, "");
 
     const stopPhrases = [
       "done for the day", "be done for the day", "stop for today",
@@ -1857,7 +1944,14 @@ document.addEventListener("DOMContentLoaded", function () {
     ];
 
     const mentionsNextPart = nextPart && nextPart !== "the next part" && lower.includes(nextPart);
-    const mentionsNextScene = nextScene && nextScene !== "the next picture" && lower.includes(nextScene.replace(/^the /, ""));
+    const mentionsNextScene = (
+      nextScene &&
+      nextScene !== "the next picture" &&
+      (
+        lower.includes(nextScene.replace(/^(?:the|a|an)\s+/, "")) ||
+        (nextSceneTarget && nextSceneTarget !== "next picture" && lower.includes(nextSceneTarget))
+      )
+    );
     const hasMoveWord = moveWords.some(word => lower.includes(word));
     const asksForMoreDrawingTime = lower.includes("more time") || lower.includes("a little more") || lower.includes("more details");
 
@@ -2406,9 +2500,9 @@ document.addEventListener("DOMContentLoaded", function () {
       const nextPartName = nextStageNameForSpeech();
 
       options = [
-        `Do you want to continue adding details to the ${partName}, or move on to drawing the ${nextPartName} now?`,
-        `Should we draw the ${nextPartName} now, or do you want more time with the ${partName}?`,
-        `Do you want to move on to drawing the ${nextPartName}, or keep working on the ${partName}?`
+        `Your ${partName} is finished. Should we move on to drawing the ${nextPartName} now, or take a moment first?`,
+        `Nice work finishing the ${partName}. Do you want to draw the ${nextPartName} now, or pause for a moment first?`,
+        `The ${partName} is ready. Should we start drawing the ${nextPartName} now, or wait a moment first?`
       ];
     }
 
@@ -2480,11 +2574,7 @@ document.addEventListener("DOMContentLoaded", function () {
           "Okay. We can be done drawing for today."
         ]));
       } else if (shouldMoveStraightToNextScene) {
-        await speakNow("star", pickLine([
-          `Okay. Let's move on to drawing ${nextSceneDrawingTargetForSpeech()}.`,
-          `Got it. We can start drawing ${nextSceneDrawingTargetForSpeech()} now.`,
-          `Okay. This ${friendlySceneNameForSpeech()} is ready, so we can go to drawing ${nextSceneDrawingTargetForSpeech()}.`
-        ]));
+        await speakNow("star", `Yay! Let's get started on ${nextSceneDrawingTargetForSpeech()}.`);
       } else {
         await speakNow("star", pickLine([
           `Okay. Let's move to the ${nextStageNameForSpeech()}.`,
@@ -2502,9 +2592,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
     if (choice === "keep") {
       await speakNow("star", pickLine([
-        "Okay. Keep working on this part.",
-        "Sure. Add a little more when you want.",
-        "Okay, keep going with this part."
+        "Okay. Take a little more time, and tell me when you are ready.",
+        "Sure. We can pause for a moment before moving on.",
+        "Okay. Let me know when you are ready for the next part."
       ]));
 
       scheduleStageCheck(11000);
@@ -2641,7 +2731,7 @@ document.addEventListener("DOMContentLoaded", function () {
       return `I might have missed that. Do you want to finish drawing for today, or keep adding details?`;
     }
 
-    return `I might have missed that. Do you want to move on to drawing the ${nextStageNameForSpeech()}, or keep working on this part?`;
+    return `I might have missed that. Do you want to move on to drawing the ${nextStageNameForSpeech()} now, or take a moment first?`;
   }
 
   async function handleNoSpeech(question) {
@@ -3881,13 +3971,13 @@ document.addEventListener("DOMContentLoaded", function () {
       state.scenesCompleted = Math.max(state.scenesCompleted, state.sceneIndex + 1);
 
       if (!isLastScene) {
-        await saveDrawingProgress();
-        await sleep(180);
-
         if (options.skipSceneChoice) {
           await continueToNextScene();
           return;
         }
+
+        await saveDrawingProgress();
+        await sleep(180);
 
         state.stageAdvanceLocked = false;
         await offerContinueAfterScene();
@@ -3938,7 +4028,15 @@ document.addEventListener("DOMContentLoaded", function () {
     state.stageIndex = 0;
     restoredCanvasData = false;
     savedCanvasDataToRestore = "";
-    await saveDrawingProgress({ canvas_data: "" });
+
+    /*
+      Loading the next drawing must not depend on the progress endpoint
+      answering first. A slow request here used to leave the UI permanently
+      showing round 2 after the child had clearly chosen the farm. The payload
+      is captured synchronously, so it is safe to persist in the background
+      while the new scene starts.
+    */
+    saveDrawingProgress({ canvas_data: "" });
 
     setTimeout(function () {
       beginStage({ clearCanvas: true });

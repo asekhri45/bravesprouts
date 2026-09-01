@@ -7,12 +7,41 @@ Also covers the transcribe endpoint's format/timeout handling, matching the
 fix already applied to the other four migrated games.
 """
 import io
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import httpx
 from conftest import login_as_user
 
 import app as app_module
+
+
+def test_classroom_character_uses_exact_drawing_teacher_voice_profile():
+    fake_client = MagicMock()
+    fake_client.text_to_speech.convert.return_value = [b"audio"]
+
+    voice_environment = {
+        "TEACHER_VOICE_ID": "old-classroom-only-voice",
+        "LIBRARIAN_VOICE_ID": "shared-drawing-teacher-voice",
+        "BOOK_GUESSING_VOICE_ID": "fallback-book-voice",
+        "ELEVENLABS_VOICE_ID": "star-voice",
+    }
+
+    with patch.object(app_module, "eleven_client", fake_client), patch.dict(
+        app_module.os.environ, voice_environment, clear=False
+    ):
+        app_module.generate_book_guessing_voice_elevenlabs("Let me think.", thinking=True)
+        classroom_call = fake_client.text_to_speech.convert.call_args.kwargs
+
+        app_module.generate_drawing_game_voice_elevenlabs("That looks nice.", speaker="teacher")
+        drawing_call = fake_client.text_to_speech.convert.call_args.kwargs
+
+    assert classroom_call["voice_id"] == "shared-drawing-teacher-voice"
+    assert classroom_call["voice_id"] == drawing_call["voice_id"]
+    assert classroom_call["voice_settings"] == drawing_call["voice_settings"]
+    assert (
+        app_module.get_classroom_object_cached_audio_url.__defaults__[0]
+        == "mystery-classroom-object-main-v2"
+    )
 
 
 def _setup_book_guessing_game_activity():

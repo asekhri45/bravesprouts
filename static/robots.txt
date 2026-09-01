@@ -1,0 +1,20 @@
+User-agent: *
+Allow: /
+
+Disallow: /api/
+Disallow: /admin/
+Disallow: /dashboard
+Disallow: /settings
+Disallow: /parent-setup
+Disallow: /parent-pin
+Disallow: /login
+Disallow: /signup
+Disallow: /logout
+Disallow: /activity/
+Disallow: /debug/
+Disallow: /reset-password/
+Disallow: /reset-parent-pin
+Disallow: /forgot-password
+Disallow: /forgot-parent-pin
+
+Sitemap: https://www.mybravesprout.com/sitemap.xml
