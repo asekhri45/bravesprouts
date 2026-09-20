@@ -7,43 +7,22 @@
     name="description"
     content="Meet the specialists, families, and contributors whose feedback and support helped shape MyBraveSprout for children with selective mutism."
 >
-<link rel="stylesheet" href="{{ url_for('static', filename='css/acknowledgments2.css') }}?v=2">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/acknowledgments2.css') }}?v=3">
 {% endblock %}
 
 {% block content %}
 
-<div
-    class="announcement-bar"
-    role="note"
-    aria-label="Early access announcement"
->
+<div class="announcement-bar" role="note" aria-label="Early access announcement">
     <div class="announcement-track">
         <div class="announcement-group">
-            <span class="announcement-message">
-                LIMITED EARLY ACCESS &middot; Welcoming our first 100 parent accounts
-            </span>
-
-            <span class="announcement-message">
-                Growing carefully so every activity can keep improving
-            </span>
-
-            <span class="announcement-message">
-                Free &middot; Parent-guided &middot; No credit card
-            </span>
+            <span class="announcement-message">Trusted by Over 200 Families &middot; Helping Kids Practice Brave Talking</span>
+            <span class="announcement-message">Growing carefully so every activity can keep improving</span>
+            <span class="announcement-message">Free &middot; Parent-guided &middot; No credit card</span>
         </div>
-
         <div class="announcement-group" aria-hidden="true">
-            <span class="announcement-message">
-                LIMITED EARLY ACCESS &middot; Welcoming our first 100 parent accounts
-            </span>
-
-            <span class="announcement-message">
-                Growing carefully so every activity can keep improving
-            </span>
-
-            <span class="announcement-message">
-                Free &middot; Parent-guided &middot; No credit card
-            </span>
+            <span class="announcement-message">Trusted by Over 200 Families &middot; Helping Kids Practice Brave Talking</span>
+            <span class="announcement-message">Growing carefully so every activity can keep improving</span>
+            <span class="announcement-message">Free &middot; Parent-guided &middot; No credit card</span>
         </div>
     </div>
 </div>
@@ -80,6 +59,62 @@
 
     <div class="contributor-list">
 
+      <!-- Dr. Steven Kurtz -->
+      <article class="contributor-card">
+        <div class="contributor-photo-wrap">
+          <img
+            src="{{ url_for('static', filename='images/contributer_steven_kurtz.jpeg') }}"
+            class="contributor-photo contributor-photo--steven"
+            alt="Dr. Steven Kurtz"
+          >
+        </div>
+
+        <div class="contributor-main">
+          <div class="contributor-top">
+            <div>
+              <h3>Dr. Steven Kurtz</h3>
+              <p class="contributor-title">Clinical Child Psychologist</p>
+            </div>
+
+            <span class="feedback-pill">✧ Provided Feedback</span>
+          </div>
+
+          <p class="contributor-bio">
+            Dr. Steven Kurtz is a board-certified clinical child psychologist specializing
+            in the assessment and treatment of selective mutism, anxiety, and disruptive
+            behavior disorders in children. He is the developer of Parent-Child Interaction
+            Therapy adapted for Selective Mutism (PCIT-SM), a leading evidence-based treatment
+            approach for helping children overcome the fear of speaking.
+          </p>
+
+          <p class="contributor-bio">
+            Dr. Kurtz has also developed intensive treatment programs for children with
+            selective mutism, including Mighty Mouth Kids and Brave Buddies, and has trained
+            professionals internationally in evidence-based treatment for selective mutism.
+          </p>
+
+          <div class="contribution-row">
+            <div>
+              <h4>Contribution to MyBraveSprout</h4>
+              <p>
+                Provided feedback on activity design, conversational responses,
+                speech clarity, and the overall user experience for children and families.
+              </p>
+            </div>
+
+            <a
+              href="https://www.kurtzpsychology.com/"
+              class="visit-button"
+              target="_blank"
+              rel="noopener"
+            >
+              Visit Website ↗
+            </a>
+          </div>
+        </div>
+      </article>
+
+      <!-- Dr. Caroline Harvey -->
       <article class="contributor-card">
         <div class="contributor-photo-wrap">
           <img
@@ -131,6 +166,7 @@
           </div>
         </div>
       </article>
+
     </div>
   </section>
 

@@ -255,6 +255,11 @@ body {
   display: block;
 }
 
+.contributor-photo--steven {
+  object-position: center 15%;
+  filter: brightness(0.8);
+}
+
 .contributor-main {
   min-width: 0;
 }
