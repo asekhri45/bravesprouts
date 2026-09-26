@@ -1,0 +1,198 @@
+/* Shared contact callout for the public-page navigation. This stylesheet is
+   loaded after the older page-specific navbar rules so one responsive design
+   applies consistently to Home, Our Story, Parent Resources, and
+   Acknowledgments. */
+
+.navbar .nav-inner {
+    width: min(1500px, 96%);
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    column-gap: clamp(12px, 1.5vw, 24px);
+}
+
+.navbar .logo {
+    width: clamp(210px, 18vw, 280px);
+}
+
+.navbar .top-tabs {
+    gap: clamp(14px, 1.7vw, 26px);
+}
+
+.nav-contact {
+    display: grid;
+    grid-template-columns: auto auto;
+    align-items: baseline;
+    justify-content: center;
+    gap: 1px 4px;
+    min-width: 205px;
+    padding: 8px 12px;
+    border: 1px solid #bfdbfe;
+    border-radius: 13px;
+    background: linear-gradient(135deg, #eff6ff 0%, #f0fdfa 100%);
+    box-shadow: 0 3px 0 rgba(59, 130, 246, 0.13);
+    color: #334155;
+    font-size: 0.72rem;
+    font-style: normal;
+    font-weight: 700;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+.nav-contact-question {
+    color: #1e3a8a;
+    font-weight: 800;
+}
+
+.nav-contact-email {
+    grid-column: 1 / -1;
+    color: #2563eb;
+    font-size: 0.78rem;
+    font-weight: 900;
+    text-align: center;
+    text-decoration: underline;
+    text-decoration-color: rgba(37, 99, 235, 0.35);
+    text-decoration-thickness: 1.5px;
+    text-underline-offset: 2px;
+}
+
+.nav-contact-email:hover {
+    color: #1d4ed8;
+    text-decoration-color: currentColor;
+}
+
+.nav-contact-email:focus-visible {
+    border-radius: 3px;
+    outline: 3px solid rgba(59, 130, 246, 0.3);
+    outline-offset: 2px;
+}
+
+/* Compact, but keep the complete message visible on small laptops. */
+@media (min-width: 951px) and (max-width: 1350px) {
+    .navbar .nav-inner {
+        column-gap: 10px;
+    }
+
+    .navbar .logo {
+        width: clamp(175px, 18vw, 220px);
+    }
+
+    .navbar .top-tabs {
+        gap: 12px;
+    }
+
+    .navbar .top-tab {
+        font-size: 0.82rem;
+    }
+
+    .nav-contact {
+        min-width: 160px;
+        padding: 7px 8px;
+        font-size: 0.62rem;
+    }
+
+    .nav-contact-email {
+        font-size: 0.66rem;
+    }
+
+    .navbar .nav-buttons {
+        gap: 7px;
+    }
+
+    .navbar .nav-buttons .hero-btn,
+    .navbar.scrolled .nav-buttons .hero-btn {
+        padding: 9px 11px !important;
+        font-size: 0.72rem !important;
+    }
+
+    .nav-cta-text-full {
+        display: none;
+    }
+
+    .nav-cta-text-short {
+        display: inline;
+    }
+}
+
+/* On tablets and phones the callout becomes its own centered row under the
+   navigation tabs. The extra header height prevents overlap with page copy. */
+@media (max-width: 950px) {
+    :root {
+        --nav-height: 152px !important;
+    }
+
+    .navbar .nav-inner {
+        width: min(94%, 720px);
+        height: calc(var(--nav-height) - 14px);
+        align-content: center;
+        row-gap: 7px !important;
+    }
+
+    .navbar .nav-logo-link {
+        order: 0;
+    }
+
+    .navbar .nav-buttons {
+        order: 0;
+    }
+
+    .navbar .top-tabs {
+        order: 1;
+        flex-basis: 100%;
+    }
+
+    .nav-contact {
+        order: 2;
+        flex-basis: 100%;
+        display: flex;
+        min-width: 0;
+        padding: 5px 10px;
+        gap: 4px;
+        border-radius: 10px;
+        font-size: 0.68rem;
+        line-height: 1.15;
+    }
+
+    .nav-contact-email {
+        font-size: 0.7rem;
+    }
+}
+
+@media (max-width: 420px) {
+    :root {
+        --nav-height: 158px !important;
+    }
+
+    .navbar .nav-inner {
+        row-gap: 6px !important;
+    }
+
+    .nav-contact {
+        flex-wrap: wrap;
+        padding: 5px 7px;
+        gap: 1px 4px;
+        white-space: normal;
+    }
+
+    .nav-contact-email {
+        flex-basis: 100%;
+    }
+}
+
+@media (max-width: 340px) {
+    :root {
+        --nav-height: 164px !important;
+    }
+
+    .navbar .top-tabs {
+        gap: 7px !important;
+    }
+
+    .navbar .top-tab {
+        font-size: 0.7rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .nav-contact-email {
+        transition: none;
+    }
+}

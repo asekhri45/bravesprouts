@@ -27,6 +27,12 @@
             <a href="{{ url_for('acknowledgments2') }}" class="top-tab{% if active_page == 'acknowledgments2' %} active{% endif %}"{% if active_page == 'acknowledgments2' %} aria-current="page"{% endif %}>Acknowledgments</a>
         </nav>
 
+        <aside class="nav-contact" aria-label="Contact MyBraveSprout">
+            <span class="nav-contact-question">Have a question?</span>
+            <span class="nav-contact-prompt">Email us at:</span>
+            <a href="mailto:mybravesprout@gmail.com" class="nav-contact-email">mybravesprout@gmail.com</a>
+        </aside>
+
         <div class="nav-buttons">
             <a href="{{ url_for('signup') }}" class="hero-btn primary nav-cta-primary">
                 <span class="nav-cta-text-full">Create Free Parent Account</span>

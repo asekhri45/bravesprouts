@@ -26,6 +26,13 @@ def _assert_public_cta(resp):
         assert phrase not in resp.data
 
 
+def _assert_contact_callout(resp):
+    assert b"Have a question?" in resp.data
+    assert b"Email us at:" in resp.data
+    assert b'href="mailto:mybravesprout@gmail.com"' in resp.data
+    assert b"mybravesprout@gmail.com" in resp.data
+
+
 def test_homepage_cta_logged_out(app_client):
     _assert_public_cta(app_client.get("/"))
 
@@ -44,7 +51,9 @@ def test_homepage_cta_unchanged_when_incomplete_account_logged_in(app_client, ma
 
 def test_all_four_public_pages_show_same_cta_logged_out(app_client):
     for path in PUBLIC_PAGES:
-        _assert_public_cta(app_client.get(path))
+        resp = app_client.get(path)
+        _assert_public_cta(resp)
+        _assert_contact_callout(resp)
 
 
 def test_all_four_public_pages_show_same_cta_when_logged_in_complete(app_client, make_user):
