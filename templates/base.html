@@ -29,6 +29,8 @@
 >
 
 <!-- Link previews for social media and messaging platforms -->
+{# Pages with their own preview (e.g. /research) override this block. #}
+{% block social_meta %}
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="MyBraveSprout">
 <meta
@@ -63,6 +65,7 @@
     name="twitter:image"
     content="https://www.mybravesprout.com/static/images/social_preview.png"
 >
+{% endblock %}
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

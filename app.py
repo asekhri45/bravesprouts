@@ -1098,6 +1098,32 @@ def privacy():
     return render_template("privacy.html")
 
 
+# Public research page. The manuscript lives under static/research/ with a
+# descriptive filename; /research/paper.pdf is the stable public URL used by
+# the page and its citation, so the file can be swapped for a revised version
+# without changing any link. No login is required for either route.
+RESEARCH_PAPER_FILENAME = "Sekhri_Parameter-Efficient_Trustworthy_Transformers_Stress_Detection_Reddit.pdf"
+
+
+@app.route("/research")
+def research():
+    return render_template(
+        "research.html",
+        paper_filename=RESEARCH_PAPER_FILENAME,
+    )
+
+
+@app.route("/research/paper.pdf")
+def research_paper_pdf():
+    return send_from_directory(
+        os.path.join(app.static_folder, "research"),
+        RESEARCH_PAPER_FILENAME,
+        mimetype="application/pdf",
+        as_attachment=request.args.get("download") == "1",
+        download_name=RESEARCH_PAPER_FILENAME,
+    )
+
+
 @app.route("/welcome-activity")
 @login_required
 def welcomeActivity():
@@ -21710,6 +21736,7 @@ def sitemap():
         url_for("our_story", _external=True),
         url_for("parent_academy", _external=True),
         url_for("acknowledgments2", _external=True),
+        url_for("research", _external=True),
         url_for("terms", _external=True),
         url_for("privacy", _external=True),
     ]

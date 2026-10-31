@@ -1,0 +1,773 @@
+{% extends "base.html" %}
+
+{#
+  Public research page (/research). Every number on this page is transcribed
+  from the manuscript served at /research/paper.pdf; table and figure numbers
+  match the manuscript. If the manuscript is revised, update the PDF in
+  static/research/ and re-check each value here against it.
+#}
+
+{% set page_title = "Toward Parameter-Efficient and Trustworthy Transformers for Stress Detection in Reddit Posts" %}
+{% set page_description = "Manuscript by Aarav Sekhri evaluating feature-based models, fixed transformer embeddings, full fine-tuning, and LoRA for stress detection on the Dreaddit Reddit dataset, with error analysis, LIME, calibration, and selective prediction." %}
+{% set canonical_url = "https://www.mybravesprout.com/research" %}
+{% set og_image = "https://www.mybravesprout.com/static/research/research-og.jpg" %}
+{% set pdf_url = url_for('research_paper_pdf') %}
+{% set pdf_download_url = url_for('research_paper_pdf', download=1) %}
+
+{% block title %}{{ page_title }} | MyBraveSprout Research{% endblock %}
+
+{% block body_class %}research-body{% endblock %}
+
+{% block head %}
+<meta name="description" content="{{ page_description }}">
+<link rel="canonical" href="{{ canonical_url }}">
+
+<meta name="citation_title" content="{{ page_title }}">
+<meta name="citation_author" content="Sekhri, Aarav">
+<meta name="citation_publication_date" content="2026/10/31">
+<meta name="citation_pdf_url" content="https://www.mybravesprout.com/research/paper.pdf">
+<meta name="citation_keywords" content="deep learning; machine learning; affective computing; social media analysis">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link
+    href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=Source+Sans+3:wght@400;500;600;700&display=swap"
+    rel="stylesheet"
+>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/research.css') }}?v=3">
+<script defer src="{{ url_for('static', filename='js/research.js') }}?v=3"></script>
+{% endblock %}
+
+{% block social_meta %}
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="MyBraveSprout">
+<meta property="og:url" content="{{ canonical_url }}">
+<meta property="og:title" content="{{ page_title }}">
+<meta property="og:description" content="Manuscript by Aarav Sekhri on stress detection in Reddit text: parameter-efficient adaptation (LoRA), error analysis, LIME, calibration, and selective prediction on Dreaddit.">
+<meta property="og:image" content="{{ og_image }}">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Overview of the feature-based and end-to-end transformer modeling frameworks evaluated in the manuscript (Fig. 2)">
+<meta property="article:author" content="Aarav Sekhri">
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{ page_title }}">
+<meta name="twitter:description" content="Stress detection in Reddit text with LoRA, error analysis, LIME, calibration, and selective prediction. Manuscript by Aarav Sekhri.">
+<meta name="twitter:image" content="{{ og_image }}">
+{% endblock %}
+
+{% block content %}
+
+<a class="rp-skip" href="#rp-main">Skip to content</a>
+
+<header class="rp-masthead">
+  <div class="rp-masthead-inner">
+    <a href="{{ url_for('home') }}" class="rp-brand" aria-label="MyBraveSprout home">
+      <img src="{{ url_for('static', filename='images/logo_v4.png') }}" alt="MyBraveSprout" class="rp-brand-logo" width="150" height="40">
+    </a>
+    <span class="rp-brand-divider" aria-hidden="true"></span>
+    <span class="rp-brand-label">Research</span>
+    <nav class="rp-masthead-nav" aria-label="Research page">
+      <a href="#rp-cite">Cite</a>
+      <a href="{{ pdf_url }}">PDF</a>
+      <a href="{{ url_for('home') }}" class="rp-masthead-home">MyBraveSprout home <span aria-hidden="true">&rarr;</span></a>
+    </nav>
+  </div>
+</header>
+
+<main id="rp-main" class="rp">
+
+  <!-- ========== Publication header ========== -->
+  <section class="rp-titleblock" aria-labelledby="rp-title">
+    <p class="rp-kicker">
+      <span class="rp-status">Manuscript &middot; Not peer reviewed</span>
+      <span class="rp-kicker-sep" aria-hidden="true">/</span>
+      <span>Computational mental health &middot; Natural language processing</span>
+    </p>
+
+    <h1 id="rp-title" class="rp-title">{{ page_title }}</h1>
+
+    <p class="rp-author">Aarav Sekhri</p>
+    <p class="rp-mentor">
+      Conducted under the research mentorship of
+      Dr. Bartosz Krawczyk, Rochester Institute of Technology
+    </p>
+
+    <dl class="rp-meta">
+      <div><dt>Version</dt><dd>Manuscript dated October 31, 2026</dd></div>
+      <div><dt>Length</dt><dd>16 pages &middot; PDF, 2.8&nbsp;MB</dd></div>
+      <div><dt>Data</dt><dd>Dreaddit (public Reddit stress dataset)</dd></div>
+    </dl>
+
+    <div class="rp-actions">
+      <a class="rp-btn rp-btn--primary" href="{{ pdf_url }}" target="_blank" rel="noopener">
+        Read Full Paper (PDF)
+      </a>
+      <a class="rp-btn rp-btn--secondary" href="{{ pdf_download_url }}" download="{{ paper_filename }}">
+        Download PDF
+      </a>
+      <a class="rp-btn rp-btn--text" href="#rp-cite">Cite this work</a>
+    </div>
+  </section>
+
+  <div class="rp-layout">
+
+    <!-- ========== Sidebar (contents + article info) ========== -->
+    <aside class="rp-aside" aria-label="Article information">
+      <nav class="rp-toc" aria-label="Contents">
+        <p class="rp-aside-heading">Contents</p>
+        <ol>
+          <li><a href="#abstract">Abstract</a></li>
+          <li><a href="#principal-results">Principal results</a></li>
+          <li><a href="#research-questions">Research questions</a></li>
+          <li><a href="#data">Data</a></li>
+          <li><a href="#methodology">Methodology</a></li>
+          <li><a href="#results">Experimental results</a></li>
+          <li><a href="#error-analysis">Error analysis &amp; explainability</a></li>
+          <li><a href="#calibration">Calibration &amp; selective prediction</a></li>
+          <li><a href="#findings">Key findings</a></li>
+          <li><a href="#limitations">Limitations &amp; scope</a></li>
+          <li><a href="#reproducibility">Reproducibility</a></li>
+          <li><a href="#full-paper">Full paper</a></li>
+          <li><a href="#rp-cite">Cite this work</a></li>
+        </ol>
+      </nav>
+
+      <div class="rp-info">
+        <p class="rp-aside-heading">Article information</p>
+        <dl>
+          <dt>Status</dt>
+          <dd>Manuscript; not peer reviewed or formally published</dd>
+          <dt>Index terms</dt>
+          <dd>Deep learning, machine learning, affective computing, social media analysis</dd>
+          <dt>Models</dt>
+          <dd>Word2Vec, MiniLM, MPNet, DistilBERT; XGBoost, Random Forest</dd>
+          <dt>Code &amp; artifact</dt>
+          <dd><a href="https://github.com/nlp-artifact-review/stress-nlp-artifact-review" rel="noopener">Anonymized reproducibility artifact</a></dd>
+        </dl>
+      </div>
+    </aside>
+
+    <div class="rp-body">
+
+      <!-- ========== Abstract ========== -->
+      <section id="abstract" class="rp-abstract" aria-labelledby="abstract-heading">
+        <h2 id="abstract-heading">Abstract</h2>
+        <p>
+          Social media provides a rich source of data in which to explore large-scale language patterns
+          using automated stress detection. However, the effectiveness of adaptation techniques, model
+          inaccuracies and reliability of model confidence should be explored. Stress classification on
+          Dreaddit is assessed using classical feature representations; fixed pretrained transformer
+          embeddings; training only the classifier head; full fine-tuning; and parameter-efficient
+          adaptation (LoRA) with MiniLM, MPNet and DistilBERT. Misclassifications are explored via error
+          analysis and LIME. Calibration and uncertainty are explored via confidence-based selective
+          prediction and temperature scaling. Fixed pretrained embeddings outperform Word2Vec baseline
+          models and adaptation also provides an advantage. A matched ten-seed experiment compared full
+          fine-tuning and MPNet LoRA-large at equal effective batch sizes. MPNet LoRA-large achieved a mean
+          ROC-AUC of 0.913&nbsp;&plusmn;&nbsp;0.003 and mean F1-score of 0.847&nbsp;&plusmn;&nbsp;0.005 with
+          about 1.07% of total parameters being updated during training. Full fine-tuning produced a mean
+          ROC-AUC of 0.894&nbsp;&plusmn;&nbsp;0.016 and mean F1-score of 0.822&nbsp;&plusmn;&nbsp;0.011. In the
+          original selected-model analysis, there were approximately 2.20 times more false positives than
+          false negatives. There is also evidence of repetition of self-referential and affective
+          vocabulary in the misclassified posts. In the original selected LoRA-large model, temperature
+          scaling reduced ECE from 0.0887 to 0.0343; the matched ten-seed mean decreased from 0.1003 to
+          0.0434. Using confidence-based selective prediction, there is an increase in accuracy on retained
+          samples as fewer samples are considered. Overall, an integration of parameter-efficient
+          adaptation techniques with reliability, explainability and error analysis can yield effective
+          stress classification. An anonymized reproducibility artifact is available at
+          <a href="https://github.com/nlp-artifact-review/stress-nlp-artifact-review" rel="noopener">https://github.com/nlp-artifact-review/stress-nlp-artifact-review</a>.
+        </p>
+        <p class="rp-keywords"><span>Index Terms</span> deep learning, machine learning, affective computing, social media analysis.</p>
+      </section>
+
+      <!-- ========== Principal results ========== -->
+      <section id="principal-results" class="rp-section" aria-labelledby="principal-heading">
+        <h2 id="principal-heading">Principal results</h2>
+        <p class="rp-lede">
+          Matched ten-seed comparison of MPNet LoRA-large and MPNet full fine-tuning on the official
+          Dreaddit test set (715 segments), mean &plusmn; standard deviation.
+        </p>
+        <dl class="rp-figures">
+          <div>
+            <dt>Mean ROC-AUC, LoRA-large</dt>
+            <dd class="rp-figure-value">0.913 <span>&plusmn; 0.003</span></dd>
+            <dd class="rp-figure-note">Full fine-tuning: 0.894 &plusmn; 0.016</dd>
+          </div>
+          <div>
+            <dt>Mean F1-score, LoRA-large</dt>
+            <dd class="rp-figure-value">0.847 <span>&plusmn; 0.005</span></dd>
+            <dd class="rp-figure-note">Full fine-tuning: 0.822 &plusmn; 0.011</dd>
+          </div>
+          <div>
+            <dt>Parameters updated, LoRA-large</dt>
+            <dd class="rp-figure-value">&asymp;&thinsp;1.07%</dd>
+            <dd class="rp-figure-note">1,181,954 trainable parameters (Table III)</dd>
+          </div>
+          <div>
+            <dt>ECE after temperature scaling</dt>
+            <dd class="rp-figure-value">0.0887 <span>&rarr;</span> 0.0343</dd>
+            <dd class="rp-figure-note">Original selected LoRA-large model; ten-seed mean 0.1003 &rarr; 0.0434</dd>
+          </div>
+        </dl>
+        <p class="rp-small">
+          The F1 and ROC-AUC differences between LoRA-large and full fine-tuning for MPNet were statistically
+          significant after Holm correction (adjusted <i>p</i> = 0.0117). The models detect stress-related
+          language in text; they do not assess or diagnose the mental health of any individual.
+        </p>
+      </section>
+
+      <!-- ========== 1. Research questions ========== -->
+      <section id="research-questions" class="rp-section" aria-labelledby="rq-heading">
+        <h2 id="rq-heading"><span class="rp-num">1</span>Research questions</h2>
+        <p>
+          The study examines how different computational models identify stress in Reddit text and the
+          factors that shape their predictions. The manuscript states four research questions:
+        </p>
+        <ol class="rp-rq">
+          <li><span class="rp-rq-label">RQ1</span>How do pretrained and fine-tuned NLP models compare with classical feature-based approaches for stress detection in Reddit text?</li>
+          <li><span class="rp-rq-label">RQ2</span>How do classifier-head-only training, full fine-tuning, and parameter-efficient LoRA compare in predictive performance and parameter efficiency across pretrained transformer models?</li>
+          <li><span class="rp-rq-label">RQ3</span>Can error analysis and explainability methods reveal systematic patterns underlying model errors and the factors influencing model predictions?</li>
+          <li><span class="rp-rq-label">RQ4</span>How well calibrated are the best-performing fully fine-tuned and parameter-efficient transformer models, and how does confidence-based selective prediction affect the tradeoff between predictive performance and coverage?</li>
+        </ol>
+      </section>
+
+      <!-- ========== 2. Data ========== -->
+      <section id="data" class="rp-section" aria-labelledby="data-heading">
+        <h2 id="data-heading"><span class="rp-num">2</span>Data</h2>
+        <p>
+          All experiments use Dreaddit (Turcan &amp; McKeown, 2019), a multi-domain Reddit dataset for stress
+          analysis. The study uses the released labeled split of 2,838 training segments and 715 test
+          segments, with binary labels for non-stress and stress/stress-related text. Eighteen redundant
+          duplicate training rows and three training texts that also appeared in the official test set were removed,
+          leaving 2,817 examples, which were split by stratification into 2,394 training and 423 validation
+          examples (85%&thinsp;/&thinsp;15%).
+        </p>
+        <p>
+          The official test set (346 non-stress and 369 stress/stress-related segments) was left unchanged
+          and used only for evaluation, not for model training, hyperparameter selection, checkpoint
+          selection, or temperature fitting. No new Reddit content was collected.
+        </p>
+      </section>
+
+      <!-- ========== 3. Methodology ========== -->
+      <section id="methodology" class="rp-section" aria-labelledby="method-heading">
+        <h2 id="method-heading"><span class="rp-num">3</span>Methodology</h2>
+        <p>
+          Two modeling frameworks are compared on the same binary task. In <em>feature-based
+          classification</em>, text is encoded into fixed representations (skip-gram Word2Vec trained on the
+          training set, or frozen embeddings from MiniLM, MPNet, and DistilBERT) and classified with XGBoost
+          and Random Forest. In <em>end-to-end classification</em>, the same three pretrained transformers
+          are adapted directly with three training strategies of increasing flexibility.
+        </p>
+
+        <figure class="rp-figure">
+          <img
+            src="{{ url_for('static', filename='research/fig2-modeling-frameworks.webp') }}"
+            alt="Diagram of the two modeling frameworks. Left: feature-based classification, where Word2Vec or frozen pretrained transformer representations (MiniLM, MPNet, DistilBERT) feed a classical ensemble classifier (Random Forest or XGBoost). Right: end-to-end transformer classification with three training strategies: classifier head only, full fine-tuning, and LoRA adapters. Both produce a non-stress or stress/stress-related prediction."
+            width="1600" height="965" loading="lazy" decoding="async"
+          >
+          <figcaption>
+            <span class="rp-caption-label">Fig. 2.</span>
+            Overview of the two modeling frameworks evaluated for stress classification. The feature-based
+            approach uses fixed text representations with separate classical classifiers, while the
+            end-to-end approach adapts pretrained transformer models directly for classification using
+            different training strategies. Blue modules indicate frozen parameters and orange modules
+            indicate trainable parameters or low-rank updates in the end-to-end training strategies.
+          </figcaption>
+        </figure>
+
+        <div class="rp-defs">
+          <h3>Training strategies</h3>
+          <dl>
+            <dt>Classifier-head-only</dt>
+            <dd>The pretrained backbone is frozen; only the classification head is trained.</dd>
+            <dt>Full fine-tuning</dt>
+            <dd>All backbone and classification-head parameters are trained (MiniLM 22.7M, DistilBERT 67.0M, MPNet 109.5M trainable parameters).</dd>
+            <dt>LoRA</dt>
+            <dd>
+              Trainable low-rank updates (<i>W</i>&prime; = <i>W</i> + (&alpha;/<i>r</i>)<i>BA</i>) on the
+              attention query and value projections, with the classification head trainable. Three
+              capacities: LoRA-small (<i>r</i> = 4, &alpha; = 8), LoRA-medium (<i>r</i> = 8, &alpha; = 16), and
+              LoRA-large (<i>r</i> = 16, &alpha; = 32), each with dropout 0.10.
+            </dd>
+          </dl>
+        </div>
+
+        <div class="rp-defs">
+          <h3>Evaluation protocol</h3>
+          <ul>
+            <li>Metrics: accuracy, precision, recall, F1-score, ROC-AUC, and G-mean (geometric mean of sensitivity and specificity), with stress/stress-related text as the positive class.</li>
+            <li>Initial experiments were run with seeds 42, 123, and 2026. A follow-up compared full fine-tuning and LoRA-large over ten paired seeds with matched effective batch size (eight) and validation-based learning-rate selection, using exact paired sign-flip permutation tests with Holm correction.</li>
+            <li>Model configurations, hyperparameters, and checkpoints were selected on validation performance.</li>
+            <li>Reliability analyses: error analysis and LIME on the fully fine-tuned MPNet model; calibration (Brier score, reliability diagrams, ECE with ten bins) and temperature scaling fit on validation logits; confidence-based selective prediction at thresholds 0.50&ndash;0.90.</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- ========== 4. Results ========== -->
+      <section id="results" class="rp-section" aria-labelledby="results-heading">
+        <h2 id="results-heading"><span class="rp-num">4</span>Experimental results</h2>
+
+        <h3>4.1&ensp;Feature-based classification</h3>
+        <p>
+          The best Word2Vec configuration (XGBoost) reached an average F1-score of 0.731&nbsp;&plusmn;&nbsp;0.018
+          and ROC-AUC of 0.773&nbsp;&plusmn;&nbsp;0.013. Every fixed transformer representation improved on
+          this baseline; DistilBERT embeddings with XGBoost were strongest, with an F1-score of
+          0.787&nbsp;&plusmn;&nbsp;0.000.
+        </p>
+
+        <figure class="rp-table-figure">
+          <figcaption class="rp-table-caption">
+            <span class="rp-caption-label">Table I.</span>
+            Three-seed test-set performance of feature-based stress-classification methods
+          </figcaption>
+          <div class="rp-table-scroll" tabindex="0" role="region" aria-label="Table I, scrollable">
+            <table class="rp-table">
+              <thead>
+                <tr><th scope="col">Representation</th><th scope="col">Downstream classifier</th><th scope="col">Accuracy</th><th scope="col">G-mean</th><th scope="col">F1-score</th><th scope="col">ROC-AUC</th></tr>
+              </thead>
+              <tbody>
+                <tr><th scope="row">Word2Vec</th><td>XGBoost</td><td>69.93 &plusmn; 2.07</td><td>68.99 &plusmn; 2.13</td><td>73.07 &plusmn; 1.81</td><td>77.30 &plusmn; 1.29</td></tr>
+                <tr><th scope="row">MiniLM</th><td>XGBoost</td><td>75.24 &plusmn; 0.00</td><td>74.93 &plusmn; 0.00</td><td>76.92 &plusmn; 0.00</td><td>82.16 &plusmn; 0.00</td></tr>
+                <tr><th scope="row">MiniLM</th><td>Random Forest</td><td>73.38 &plusmn; 1.66</td><td>73.00 &plusmn; 1.62</td><td>75.29 &plusmn; 1.67</td><td>81.55 &plusmn; 0.46</td></tr>
+                <tr><th scope="row">MPNet</th><td>XGBoost</td><td>74.69 &plusmn; 0.00</td><td>74.51 &plusmn; 0.00</td><td>76.03 &plusmn; 0.00</td><td>83.70 &plusmn; 0.00</td></tr>
+                <tr><th scope="row">MPNet</th><td>Random Forest</td><td>75.48 &plusmn; 0.49</td><td>75.33 &plusmn; 0.58</td><td>76.71 &plusmn; 0.21</td><td>83.32 &plusmn; 0.42</td></tr>
+                <tr><th scope="row">DistilBERT</th><td>XGBoost</td><td><b>76.92 &plusmn; 0.00</b></td><td><b>76.50 &plusmn; 0.00</b></td><td><b>78.71 &plusmn; 0.00</b></td><td><b>85.60 &plusmn; 0.00</b></td></tr>
+                <tr><th scope="row">DistilBERT</th><td>Random Forest</td><td>75.52 &plusmn; 0.61</td><td>75.17 &plusmn; 0.53</td><td>77.26 &plusmn; 0.74</td><td>84.24 &plusmn; 0.32</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="rp-table-note">
+            <i>Note.</i> Values are mean &plusmn; standard deviation across seeds 42, 123, and 2026 on a 0&ndash;100
+            scale. Fixed transformer embeddings were deterministic and XGBoost did not use stochastic
+            subsampling, so their three identical fits (SD 0.00) do not provide evidence of variation across
+            randomized runs. Bold indicates the highest mean value in each column. Published Dreaddit F1
+            benchmarks from Turcan and McKeown are majority (68.08), n-grams (74.41), n-grams with features
+            (77.00), logistic regression with domain-specific Word2Vec and features (79.80), and BERT-base
+            (80.65); these are external reference results obtained under a different experimental protocol.
+          </p>
+        </figure>
+
+        <h3>4.2&ensp;Classifier-head-only training and full fine-tuning</h3>
+        <p>
+          Full fine-tuning improved over classifier-head-only training on all three backbones. MiniLM
+          classifier-head-only training tended to predict a single class: in the seed-42 run it labeled 714 of
+          715 test samples as stress. Among these configurations, fully fine-tuned MPNet was
+          strongest, with ROC-AUC 0.893&nbsp;&plusmn;&nbsp;0.013, F1-score 0.830&nbsp;&plusmn;&nbsp;0.009, and
+          accuracy 0.812&nbsp;&plusmn;&nbsp;0.013.
+        </p>
+
+        <figure class="rp-table-figure">
+          <figcaption class="rp-table-caption">
+            <span class="rp-caption-label">Table II.</span>
+            Three-seed test-set performance of classifier-head-only training and full fine-tuning
+          </figcaption>
+          <div class="rp-table-scroll" tabindex="0" role="region" aria-label="Table II, scrollable">
+            <table class="rp-table">
+              <thead>
+                <tr><th scope="col">Backbone</th><th scope="col">Training method</th><th scope="col">Accuracy</th><th scope="col">G-mean</th><th scope="col">F1-score</th><th scope="col">ROC-AUC</th></tr>
+              </thead>
+              <tbody>
+                <tr><th scope="row">MiniLM</th><td>Classifier-head-only</td><td>51.79 &plusmn; 0.08</td><td>6.12 &plusmn; 1.29</td><td>68.17 &plusmn; 0.04</td><td>67.09 &plusmn; 1.96</td></tr>
+                <tr><th scope="row">MiniLM</th><td>Full fine-tuning</td><td>77.86 &plusmn; 1.50</td><td>76.61 &plusmn; 2.29</td><td>80.49 &plusmn; 0.55</td><td>86.72 &plusmn; 1.03</td></tr>
+                <tr><th scope="row">MPNet</th><td>Classifier-head-only</td><td>75.94 &plusmn; 0.37</td><td>75.35 &plusmn; 0.41</td><td>78.08 &plusmn; 0.29</td><td>85.36 &plusmn; 0.08</td></tr>
+                <tr><th scope="row">MPNet</th><td>Full fine-tuning</td><td><b>81.17 &plusmn; 1.34</b></td><td><b>80.44 &plusmn; 1.63</b></td><td><b>83.04 &plusmn; 0.91</b></td><td><b>89.29 &plusmn; 1.33</b></td></tr>
+                <tr><th scope="row">DistilBERT</th><td>Classifier-head-only</td><td>75.94 &plusmn; 0.56</td><td>75.07 &plusmn; 1.12</td><td>78.39 &plusmn; 0.24</td><td>84.33 &plusmn; 0.48</td></tr>
+                <tr><th scope="row">DistilBERT</th><td>Full fine-tuning</td><td>80.19 &plusmn; 0.93</td><td>79.97 &plusmn; 0.85</td><td>81.36 &plusmn; 1.08</td><td>88.02 &plusmn; 0.42</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="rp-table-note">
+            <i>Note.</i> Values are mean &plusmn; standard deviation across seeds 42, 123, and 2026 on a 0&ndash;100
+            scale. Stress/stress-related text was treated as the positive class. Bold indicates the highest
+            mean value in each column.
+          </p>
+        </figure>
+
+        <h3>4.3&ensp;Parameter-efficient fine-tuning (LoRA)</h3>
+        <p>
+          LoRA trained between 0.17% and 1.31% of model parameters. For MPNet, all three LoRA
+          configurations achieved slightly higher average F1-scores than full fine-tuning; for DistilBERT,
+          LoRA and full fine-tuning were very similar; for MiniLM, full fine-tuning achieved a slightly higher
+          average F1-score than its LoRA configurations. There was no consistent monotonic relationship
+          between LoRA rank and performance across backbones.
+        </p>
+
+        <figure class="rp-table-figure rp-table-figure--wide">
+          <figcaption class="rp-table-caption">
+            <span class="rp-caption-label">Table III.</span>
+            Three-seed test-set performance and parameter efficiency of full fine-tuning and LoRA
+          </figcaption>
+          <div class="rp-table-scroll" tabindex="0" role="region" aria-label="Table III, scrollable">
+            <table class="rp-table rp-table--grouped">
+              <thead>
+                <tr><th scope="col">Backbone</th><th scope="col">Training method</th><th scope="col">Accuracy</th><th scope="col">G-mean</th><th scope="col">F1-score</th><th scope="col">ROC-AUC</th><th scope="col">Trainable parameters</th><th scope="col">Trainable (%)</th></tr>
+              </thead>
+              <tbody>
+                <tr><th scope="row">MPNet</th><td>Full fine-tuning</td><td>81.17 &plusmn; 1.34</td><td>80.44 &plusmn; 1.63</td><td>83.04 &plusmn; 0.91</td><td>89.29 &plusmn; 1.33</td><td>109,488,002</td><td>100.00</td></tr>
+                <tr><th scope="row">MPNet</th><td>LoRA-small</td><td>82.38 &plusmn; 0.48</td><td>82.07 &plusmn; 0.53</td><td>83.61 &plusmn; 0.45</td><td>90.70 &plusmn; 0.32</td><td>739,586</td><td>0.67</td></tr>
+                <tr><th scope="row">MPNet</th><td>LoRA-medium</td><td>82.61 &plusmn; 0.40</td><td>82.35 &plusmn; 0.42</td><td>83.73 &plusmn; 0.51</td><td>90.76 &plusmn; 0.46</td><td>887,042</td><td>0.80</td></tr>
+                <tr><th scope="row">MPNet</th><td>LoRA-large</td><td><b>82.75 &plusmn; 0.49</b></td><td><b>82.47 &plusmn; 0.57</b></td><td><b>83.90 &plusmn; 0.45</b></td><td><b>91.06 &plusmn; 0.31</b></td><td>1,181,954</td><td>1.07</td></tr>
+              </tbody>
+              <tbody>
+                <tr><th scope="row">DistilBERT</th><td>Full fine-tuning</td><td>80.19 &plusmn; 0.93</td><td><b>79.97 &plusmn; 0.85</b></td><td>81.36 &plusmn; 1.08</td><td>88.02 &plusmn; 0.42</td><td>66,955,010</td><td>100.00</td></tr>
+                <tr><th scope="row">DistilBERT</th><td>LoRA-small</td><td>79.77 &plusmn; 0.32</td><td>79.39 &plusmn; 0.32</td><td>81.29 &plusmn; 0.32</td><td>87.91 &plusmn; 0.03</td><td>665,858</td><td>0.98</td></tr>
+                <tr><th scope="row">DistilBERT</th><td>LoRA-medium</td><td>79.86 &plusmn; 0.37</td><td>79.55 &plusmn; 0.30</td><td>81.25 &plusmn; 0.48</td><td>88.04 &plusmn; 0.25</td><td>739,586</td><td>1.09</td></tr>
+                <tr><th scope="row">DistilBERT</th><td>LoRA-large</td><td><b>80.23 &plusmn; 0.77</b></td><td>79.97 &plusmn; 0.71</td><td><b>81.51 &plusmn; 0.85</b></td><td><b>88.07 &plusmn; 0.36</b></td><td>887,042</td><td>1.31</td></tr>
+              </tbody>
+              <tbody>
+                <tr><th scope="row">MiniLM</th><td>Full fine-tuning</td><td>77.86 &plusmn; 1.50</td><td>76.61 &plusmn; 2.29</td><td><b>80.49 &plusmn; 0.55</b></td><td>86.72 &plusmn; 1.03</td><td>22,713,986</td><td>100.00</td></tr>
+                <tr><th scope="row">MiniLM</th><td>LoRA-small</td><td>75.29 &plusmn; 2.86</td><td>73.71 &plusmn; 4.85</td><td>78.21 &plusmn; 0.78</td><td>85.38 &plusmn; 1.33</td><td>37,634</td><td>0.17</td></tr>
+                <tr><th scope="row">MiniLM</th><td>LoRA-medium</td><td>77.62 &plusmn; 0.37</td><td>77.10 &plusmn; 0.41</td><td>79.52 &plusmn; 0.44</td><td>86.83 &plusmn; 0.14</td><td>74,498</td><td>0.33</td></tr>
+                <tr><th scope="row">MiniLM</th><td>LoRA-large</td><td><b>78.09 &plusmn; 0.53</b></td><td><b>77.61 &plusmn; 0.44</b></td><td>79.87 &plusmn; 0.71</td><td><b>87.25 &plusmn; 0.21</b></td><td>148,226</td><td>0.65</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="rp-table-note">
+            <i>Note.</i> Values are mean &plusmn; standard deviation across seeds 42, 123, and 2026 on a 0&ndash;100
+            scale. Trainable (%) uses the PEFT-reported denominator, which counts both the frozen original
+            classification head and its saved trainable copy (MPNet LoRA-large: 1,181,954&thinsp;/&thinsp;110,669,956
+            = 1.068%). Bold indicates the highest mean performance value within each backbone. Model
+            configurations were selected using validation-set performance before test-set evaluation. MPNet
+            LoRA-large was used in the subsequent reliability analyses because it achieved the highest
+            validation F1-score among the MPNet LoRA configurations in the original seed-42 experiment.
+          </p>
+        </figure>
+
+        <h3>4.4&ensp;Matched ten-seed comparison</h3>
+        <p>
+          Because full fine-tuning and LoRA used different training settings in the original experiments, a
+          follow-up compared them over ten paired seeds (42, 123, 2026, 7, 13, 101, 202, 404, 777, 1729) at the
+          same effective batch size. For MPNet, LoRA-large attained an F1-score of 0.8473 versus 0.8217 for full
+          fine-tuning, and a ROC-AUC of 0.9125 versus 0.8941.
+        </p>
+
+        <figure class="rp-table-figure">
+          <figcaption class="rp-table-caption">
+            <span class="rp-caption-label">Summary.</span>
+            Paired differences, LoRA-large minus full fine-tuning, in the matched ten-seed experiment
+          </figcaption>
+          <div class="rp-table-scroll" tabindex="0" role="region" aria-label="Matched ten-seed summary, scrollable">
+            <table class="rp-table">
+              <thead>
+                <tr><th scope="col">Backbone</th><th scope="col">Metric</th><th scope="col">Mean difference (95% bootstrap CI)</th><th scope="col">Holm-adjusted <i>p</i></th><th scope="col">Significant</th></tr>
+              </thead>
+              <tbody>
+                <tr><th scope="row">MPNet</th><td>F1-score</td><td>0.0256 (0.0192&ndash;0.0326)</td><td>0.0117</td><td>Yes</td></tr>
+                <tr><th scope="row">MPNet</th><td>ROC-AUC</td><td>0.0184 (0.0100&ndash;0.0293)</td><td>0.0117</td><td>Yes</td></tr>
+                <tr><th scope="row">DistilBERT</th><td>F1-score</td><td>&mdash;</td><td>0.3828</td><td>No</td></tr>
+                <tr><th scope="row">DistilBERT</th><td>ROC-AUC</td><td>&mdash;</td><td>0.0156</td><td>Yes</td></tr>
+                <tr><th scope="row">MiniLM</th><td>F1-score</td><td>&mdash;</td><td>0.3828</td><td>No</td></tr>
+                <tr><th scope="row">MiniLM</th><td>ROC-AUC</td><td>&mdash;</td><td>0.0645</td><td>No</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="rp-table-note">
+            <i>Note.</i> Compiled from Section V-B of the manuscript; this summary is not a numbered table in the
+            manuscript. Exact paired sign-flip permutation tests with Holm correction across six comparisons.
+            Mean differences are reported in the manuscript for MPNet only (&mdash; = not reported). Across the
+            ten seeds, MPNet LoRA-large achieved a mean ROC-AUC of 0.913&nbsp;&plusmn;&nbsp;0.003 and F1-score of
+            0.847&nbsp;&plusmn;&nbsp;0.005; full fine-tuning achieved 0.894&nbsp;&plusmn;&nbsp;0.016 and
+            0.822&nbsp;&plusmn;&nbsp;0.011. MPNet full fine-tuning selected the highest tested learning rate, and
+            several other configurations selected the lowest, so their optima may lie outside the tested grids.
+          </p>
+        </figure>
+      </section>
+
+      <!-- ========== 5. Error analysis ========== -->
+      <section id="error-analysis" class="rp-section" aria-labelledby="error-heading">
+        <h2 id="error-heading"><span class="rp-num">5</span>Error analysis &amp; explainability</h2>
+        <p>
+          Error analysis used the original selected fully fine-tuned MPNet model (three-seed design). On the
+          715-example test set it produced 328 true positives, 256 true negatives, 90 false positives, and 41
+          false negatives: roughly 2.20 times more false positives than false negatives. Because the test set
+          is fairly balanced, this imbalance cannot be readily attributed to class imbalance.
+        </p>
+
+        <div class="rp-confusion-wrap">
+          <table class="rp-confusion">
+            <caption>Confusion counts, fully fine-tuned MPNet, official test set (<i>n</i> = 715)</caption>
+            <thead>
+              <tr><td></td><th scope="col">Predicted stress</th><th scope="col">Predicted non-stress</th></tr>
+            </thead>
+            <tbody>
+              <tr><th scope="row">Labeled stress (369)</th><td>328 <span>TP</span></td><td>41 <span>FN</span></td></tr>
+              <tr><th scope="row">Labeled non-stress (346)</th><td>90 <span>FP</span></td><td>256 <span>TN</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <ul class="rp-list">
+          <li>False positives averaged 88.99 words versus 79.98 for true negatives, with lower mean confidence (0.882 vs. 0.911) and lower mean sentiment (0.038 vs. 0.134).</li>
+          <li>False negatives had a mean confidence of about 0.839, compared with 0.927 for true positives. Differences in sentence count and Flesch&ndash;Kincaid score were not particularly significant.</li>
+          <li>First-person and self-referential unigrams (&ldquo;I&rsquo;m,&rdquo; &ldquo;I&rsquo;ve&rdquo;) and the bigram &ldquo;feel like&rdquo; were common in false positives. Variants of &ldquo;can&rsquo;t&rdquo; and &ldquo;cannot&rdquo; appeared about 3.24 times per 1,000 words in true positives, 0.59 in true negatives, and 1.62 in false positives.</li>
+          <li>In LIME explanations, &ldquo;I&rdquo; contributed toward the stress class in 7 of 10 sampled false positives, and &ldquo;my&rdquo; in 2 of 10. Words such as &ldquo;anxiety,&rdquo; &ldquo;panic,&rdquo; &ldquo;struggling,&rdquo; and &ldquo;emotional&rdquo; contributed toward stress in examples that were ultimately predicted non-stress, indicating that individual words are not always sufficient to determine a prediction.</li>
+        </ul>
+
+        <figure class="rp-figure rp-figure--narrow">
+          <img
+            src="{{ url_for('static', filename='research/fig5-stress-terms-by-outcome.webp') }}"
+            alt="Heatmap of occurrences per 1,000 words for selected stress-related terms by prediction outcome (TP, TN, FP, FN). can't / cannot: 3.24, 0.59, 1.62, 0.00. alone: 0.68, 0.49, 0.25, 0.60. tired: 0.48, 0.05, 0.13, 0.00. afraid: 0.41, 0.20, 0.25, 0.00. worried: 0.31, 0.05, 0.25, 0.00. sad: 0.14, 0.00, 0.25, 0.30."
+            width="900" height="540" loading="lazy" decoding="async"
+          >
+          <figcaption>
+            <span class="rp-caption-label">Fig. 5.</span>
+            Normalized frequencies of selected stress-related terms across true-positive, true-negative,
+            false-positive, and false-negative MPNet predictions. Values represent occurrences per 1,000 words
+            within each prediction group.
+          </figcaption>
+        </figure>
+
+        <p class="rp-small">
+          LIME provides local approximations of model behavior, not an actual representation of how the model
+          makes its decisions; the manuscript treats these explanations as evidence of the influence of
+          multiple signals, not as evidence that the model relies only on lexical cues.
+        </p>
+      </section>
+
+      <!-- ========== 6. Calibration ========== -->
+      <section id="calibration" class="rp-section" aria-labelledby="calibration-heading">
+        <h2 id="calibration-heading"><span class="rp-num">6</span>Calibration &amp; selective prediction</h2>
+        <p>
+          Incorrect predictions generally had lower confidence than correct ones, but both MPNet configurations
+          produced some highly confident errors (fully fine-tuned: 0.920 mean confidence when correct vs. 0.868
+          when incorrect; LoRA-large: 0.928 vs. 0.814). Temperature scaling improved calibration without
+          changing predicted labels; accuracy and G-mean were unchanged and ROC-AUC was essentially unchanged.
+        </p>
+
+        <div class="rp-table-pair">
+          <figure class="rp-table-figure">
+            <figcaption class="rp-table-caption">
+              <span class="rp-caption-label">Table IV.</span>
+              Calibration before and after temperature scaling in the original selected-model analysis
+              (three-seed design, selected models; not matched ten-seed runs)
+            </figcaption>
+            <div class="rp-table-scroll" tabindex="0" role="region" aria-label="Table IV, scrollable">
+              <table class="rp-table">
+                <thead>
+                  <tr><th scope="col">Model</th><th scope="col">Probabilities</th><th scope="col">Temperature</th><th scope="col">ECE</th><th scope="col">Brier score</th></tr>
+                </thead>
+                <tbody>
+                  <tr><th scope="row">Full FT</th><td>Original</td><td>1.0000</td><td>0.1010</td><td>0.1499</td></tr>
+                  <tr><th scope="row">Full FT</th><td>Temperature-scaled</td><td>1.5341</td><td><b>0.0616</b></td><td><b>0.1404</b></td></tr>
+                  <tr><th scope="row">LoRA-L</th><td>Original</td><td>1.0000</td><td>0.0887</td><td>0.1383</td></tr>
+                  <tr><th scope="row">LoRA-L</th><td>Temperature-scaled</td><td>1.7399</td><td><b>0.0343</b></td><td><b>0.1287</b></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="rp-table-note">
+              <i>Note.</i> Full FT denotes MPNet full fine-tuning, and LoRA-L denotes MPNet LoRA-large. Lower ECE
+              and Brier scores indicate better calibration. Bold indicates the better result within each model.
+            </p>
+          </figure>
+
+          <figure class="rp-table-figure">
+            <figcaption class="rp-table-caption">
+              <span class="rp-caption-label">Table V.</span>
+              Selective-prediction performance using temperature-scaled probabilities in the original
+              selected-model analysis (three-seed design, selected models; not matched ten-seed runs)
+            </figcaption>
+            <div class="rp-table-scroll" tabindex="0" role="region" aria-label="Table V, scrollable">
+              <table class="rp-table">
+                <thead>
+                  <tr><th scope="col">Model</th><th scope="col">Threshold</th><th scope="col">Coverage (%)</th><th scope="col">Accuracy (%)</th><th scope="col">G-mean (%)</th></tr>
+                </thead>
+                <tbody>
+                  <tr><th scope="row">Full FT</th><td>0.50</td><td>100.00</td><td>81.68</td><td>81.10</td></tr>
+                  <tr><th scope="row">Full FT</th><td>0.60</td><td>96.36</td><td>83.02</td><td>82.38</td></tr>
+                  <tr><th scope="row">Full FT</th><td>0.70</td><td>93.29</td><td>83.21</td><td>82.54</td></tr>
+                  <tr><th scope="row">Full FT</th><td>0.80</td><td>84.34</td><td>85.90</td><td>85.10</td></tr>
+                  <tr><th scope="row">Full FT</th><td>0.90</td><td>0.00</td><td>&mdash;</td><td>&mdash;</td></tr>
+                  <tr class="rp-row-break"><th scope="row">LoRA-L</th><td>0.50</td><td>100.00</td><td>81.96</td><td>81.63</td></tr>
+                  <tr><th scope="row">LoRA-L</th><td>0.60</td><td>90.91</td><td>85.23</td><td>84.85</td></tr>
+                  <tr><th scope="row">LoRA-L</th><td>0.70</td><td>80.28</td><td>87.11</td><td>86.55</td></tr>
+                  <tr><th scope="row">LoRA-L</th><td>0.80</td><td>69.79</td><td>89.18</td><td>88.23</td></tr>
+                  <tr><th scope="row">LoRA-L</th><td>0.90</td><td>46.85</td><td>94.63</td><td>93.29</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="rp-table-note">
+              <i>Note.</i> Coverage, accuracy, and G-mean are reported on a 0&ndash;100 scale. Accuracy and G-mean
+              were calculated only over predictions retained at or above the specified confidence threshold. No
+              temperature-scaled Full FT predictions reached a confidence of 0.90.
+            </p>
+          </figure>
+        </div>
+
+        <p>
+          In the matched ten-seed follow-up, temperature scaling reduced MPNet LoRA-large mean ECE from 0.1003 to
+          0.0434 (Brier 0.1342 to 0.1237) and MPNet full fine-tuning mean ECE from 0.1415 to 0.0691 (Brier 0.1721
+          to 0.1499). At a 0.90 threshold, LoRA-large retained on average 47.33% of predictions with 94.74%
+          accuracy, compared with 3.52% retained for full fine-tuning; in 8 of the 10 full fine-tuning runs, no
+          predictions reached a calibrated confidence of 0.90.
+        </p>
+        <p>
+          Confidence therefore carries some information about prediction correctness, but confidence alone is not
+          sufficient to reliably filter out incorrect predictions.
+        </p>
+      </section>
+
+      <!-- ========== 7. Key findings ========== -->
+      <section id="findings" class="rp-section" aria-labelledby="findings-heading">
+        <h2 id="findings-heading"><span class="rp-num">7</span>Key findings</h2>
+        <ol class="rp-findings">
+          <li>
+            <strong>Representation and task adaptation both matter.</strong>
+            The best Word2Vec model reached an average F1-score of 0.731&nbsp;&plusmn;&nbsp;0.018 and the best fixed
+            transformer representation 0.787&nbsp;&plusmn;&nbsp;0.000; the strongest MPNet adapted configurations
+            reached average F1-scores between approximately 0.830 and 0.839 across three seeds.
+          </li>
+          <li>
+            <strong>Classifier-head-only training was not consistently strong</strong> in the configurations
+            evaluated, which does not establish that frozen representations are inadequate: pooling and
+            classifier-training choices differed between pipelines. Gains from full fine-tuning were smaller for
+            MPNet and DistilBERT than for MiniLM.
+          </li>
+          <li>
+            <strong>LoRA offers a favorable performance&ndash;parameter trade-off.</strong>
+            Adapting only 0.17%&ndash;1.31% of parameters, LoRA was comparable to full fine-tuning for MPNet and
+            very similar for DistilBERT, though not higher for MiniLM. In the matched ten-seed MPNet experiment, LoRA-large outperformed full fine-tuning on F1 (0.847 vs. 0.822) and
+            ROC-AUC (0.913 vs. 0.894), both significant after Holm correction. Higher LoRA rank did not
+            consistently yield better performance, so rank should be chosen on validation data.
+          </li>
+          <li>
+            <strong>Aggregate metrics are insufficient to characterize reliability.</strong>
+            Errors were skewed toward false positives, affective and self-referential language appears to
+            contribute to confusion between text that expresses stress and text that merely mentions
+            stress-related topics, and some errors occurred with high confidence. Temperature scaling improved
+            calibration, and selective prediction improved accuracy on retained predictions at the cost of
+            coverage.
+          </li>
+        </ol>
+      </section>
+
+      <!-- ========== 8. Limitations ========== -->
+      <section id="limitations" class="rp-section" aria-labelledby="limitations-heading">
+        <h2 id="limitations-heading"><span class="rp-num">8</span>Limitations &amp; scope</h2>
+
+        <div class="rp-scope-note" role="note">
+          <p class="rp-scope-title">Stress-related language detection, not clinical diagnosis</p>
+          <p>
+            The task identifies text containing stress or stress-related content; it does not diagnose mental
+            health. Dreaddit annotations describe text content, not the author&rsquo;s mental health state. The study
+            involved no clinical providers or patients, and the manuscript states that such a model should not be
+            used alone in mental health diagnosis, treatment, or any other high-stakes scenario without further
+            human review and validation.
+          </p>
+        </div>
+
+        <ul class="rp-list">
+          <li>One publicly available Reddit dataset and one training&ndash;validation split were used, so results do not represent performance across time, communities, populations, or datasets.</li>
+          <li>Initial experiments used three random seeds; only the full fine-tuning versus LoRA-large comparison used ten paired seeds. MPNet full fine-tuning selected the upper boundary of its learning-rate grid, so comparisons do not establish superiority over all possible hyperparameter settings.</li>
+          <li>Only three transformer backbones and one parameter-efficient method were explored. Energy use and broader computational cost were not measured.</li>
+          <li>LIME was applied to a small reproducible sample and does not provide a full picture of model behavior.</li>
+          <li>Uncertainty was assessed only through prediction confidence on in-distribution Dreaddit data; uncertainty from distribution shift, label ambiguity, or model parameters was not assessed.</li>
+          <li>No attempt was made to identify, contact, or re-identify any Reddit author.</li>
+        </ul>
+      </section>
+
+      <!-- ========== 9. Reproducibility ========== -->
+      <section id="reproducibility" class="rp-section" aria-labelledby="repro-heading">
+        <h2 id="repro-heading"><span class="rp-num">9</span>Reproducibility</h2>
+        <p>
+          An anonymized reproducibility artifact is available at
+          <a href="https://github.com/nlp-artifact-review/stress-nlp-artifact-review" rel="noopener">github.com/nlp-artifact-review/stress-nlp-artifact-review</a>.
+          According to the manuscript, it includes the full experimental notebook, analysis pipeline, pinned
+          Python environment, dataset-access instructions, a CPU-only script that recalculates ten-seed statistics
+          from archived predictions, and a GPU script that reruns the matched full fine-tuning and LoRA-large
+          configurations.
+        </p>
+        <p class="rp-small">
+          Transformer experiments ran in Google Colab on an NVIDIA A100-SXM4-40GB GPU with PyTorch 2.11.0 (CUDA
+          13.0), Transformers 5.16.1, Sentence-Transformers 6.0.1, Datasets 4.8.4, PEFT 0.20.0, Accelerate 1.14.0,
+          and PyArrow 23.0.1. The manuscript&rsquo;s AI-use statement is given in its Section X.
+        </p>
+      </section>
+
+      <!-- ========== Full paper ========== -->
+      <section id="full-paper" class="rp-section" aria-labelledby="paper-heading">
+        <h2 id="paper-heading">Full paper</h2>
+        <p>
+          The complete manuscript, including related work, all figures, and the full reference list, is
+          available as a PDF.
+        </p>
+        <div class="rp-actions rp-actions--inline">
+          <a class="rp-btn rp-btn--primary" href="{{ pdf_url }}" target="_blank" rel="noopener">Read Full Paper (PDF)</a>
+          <a class="rp-btn rp-btn--secondary" href="{{ pdf_download_url }}" download="{{ paper_filename }}">Download PDF</a>
+        </div>
+
+        {# The viewer is inserted by research.js only on wide, fine-pointer screens:
+           mobile browsers render embedded PDFs poorly (often just page one), and
+           skipping it keeps the 2.8 MB file off the initial page load. #}
+        <div class="rp-viewer" data-pdf-src="{{ pdf_url }}#view=FitH" data-pdf-title="{{ page_title }} (PDF)">
+          <p class="rp-viewer-fallback">
+            Your device opens PDFs in its own viewer. Use <a href="{{ pdf_url }}" target="_blank" rel="noopener">Read Full Paper (PDF)</a>
+            to view the manuscript, or <a href="{{ pdf_download_url }}" download="{{ paper_filename }}">download it</a>.
+          </p>
+        </div>
+      </section>
+
+      <!-- ========== Citation ========== -->
+      <section id="rp-cite" class="rp-section" aria-labelledby="cite-heading">
+        <h2 id="cite-heading">Cite This Work</h2>
+        <p class="rp-citation">
+          Sekhri, A. (2026). <i>Toward parameter-efficient and trustworthy transformers for stress detection in
+          Reddit posts</i> [Manuscript, not peer reviewed]. https://www.mybravesprout.com/research
+        </p>
+
+        <div class="rp-bibtex">
+          <div class="rp-bibtex-bar">
+            <span>BibTeX</span>
+            <button type="button" class="rp-copy" data-copy-target="rp-bibtex-code">Copy</button>
+            <span class="rp-visually-hidden" role="status" data-copy-status></span>
+          </div>
+<pre id="rp-bibtex-code"><code>@misc{sekhri2026stress,
+  author       = {Sekhri, Aarav},
+  title        = {Toward Parameter-Efficient and Trustworthy Transformers
+                  for Stress Detection in {Reddit} Posts},
+  year         = {2026},
+  month        = oct,
+  howpublished = {Manuscript},
+  note         = {Not peer reviewed},
+  url          = {https://www.mybravesprout.com/research}
+}</code></pre>
+        </div>
+        <p class="rp-small">
+          This manuscript has no DOI, journal, or preprint-server identifier. The citation will be updated if the
+          work is formally published.
+        </p>
+      </section>
+
+      <!-- ========== Context ========== -->
+      <section class="rp-section rp-context" aria-labelledby="context-heading">
+        <h2 id="context-heading">About this page</h2>
+        <p>
+          This research is by Aarav Sekhri, founder of MyBraveSprout, which builds free, parent-guided
+          conversation activities for children with selective mutism. The study reflects a broader interest in
+          how computation can support communication and mental health. It stands apart from the MyBraveSprout
+          app: it uses only the public Dreaddit dataset, and no MyBraveSprout user data was involved.
+        </p>
+      </section>
+
+    </div>
+  </div>
+</main>
+
+<footer class="rp-footer">
+  <div class="rp-footer-inner">
+    <p>
+      This page is maintained by the author on mybravesprout.com. It is not a journal or preprint server, and the
+      manuscript has not been peer reviewed. Research mentorship is gratefully acknowledged; the manuscript is
+      not a publication of, and is not endorsed by, Rochester Institute of Technology.
+    </p>
+    <nav aria-label="Footer">
+      <a href="{{ url_for('home') }}">MyBraveSprout</a>
+      <a href="{{ url_for('our_story') }}">Our Story</a>
+      <a href="{{ url_for('privacy') }}">Privacy</a>
+      <a href="{{ url_for('terms') }}">Terms</a>
+      <a href="mailto:mybravesprout@gmail.com">Contact</a>
+    </nav>
+  </div>
+</footer>
+
+{% endblock %}
