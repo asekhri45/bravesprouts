@@ -191,6 +191,80 @@
     }
 }
 
+/* With five tabs, the desktop row is tightest just above each breakpoint
+   (951px and 1351px), where the logo, contact callout and buttons leave the
+   least room. These steps keep the tabs clear of both neighbours; sizes
+   were measured against the header at the top of the page, where its
+   buttons are largest. */
+@media (min-width: 951px) and (max-width: 1050px) {
+    .navbar .top-tabs {
+        gap: 7px;
+    }
+
+    .navbar .top-tab {
+        font-size: 0.74rem;
+    }
+}
+
+@media (min-width: 1351px) {
+    .navbar .top-tabs {
+        gap: 20px;
+    }
+}
+
+@media (min-width: 1351px) and (max-width: 1535px) {
+    .navbar .top-tabs {
+        gap: 14px;
+    }
+
+    .navbar .top-tab {
+        font-size: 0.92rem;
+    }
+}
+
+@media (min-width: 1351px) and (max-width: 1440px) {
+    .navbar .top-tabs {
+        gap: 12px;
+    }
+
+    .navbar .top-tab {
+        font-size: 0.84rem;
+    }
+}
+
+/* Five tabs no longer fit on one line on phones, so they wrap into two
+   centred rows (Home / Our Story / Parent Resources, then Research /
+   Acknowledgments). max-width forces that 3 + 2 split instead of a lone
+   tab on the second row; the extra row is added to the header height. */
+@media (max-width: 440px) {
+    :root {
+        --nav-height: 184px !important;
+    }
+
+    .navbar .top-tabs {
+        flex-wrap: wrap;
+        max-width: 270px;
+        margin: 0 auto;
+        column-gap: 16px;
+        row-gap: 0;
+    }
+
+    .navbar .top-tab {
+        padding: 3px 0 4px;
+    }
+}
+
+@media (max-width: 340px) {
+    :root {
+        --nav-height: 190px !important;
+    }
+
+    .navbar .top-tabs {
+        max-width: 240px;
+        column-gap: 10px !important;
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .nav-contact-email {
         transition: none;
